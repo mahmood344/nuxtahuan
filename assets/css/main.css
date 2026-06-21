@@ -13,31 +13,32 @@
   font-style: normal;
   font-weight: 300;
 }
-@font-face {
+/* @font-face {
   font-family: vazir;
   src: url("~/assets/fonts/Vazir/Vazir-FD-WOL.ttf"),
   url("~/assets/fonts/Vazir/Vazir-FD-WOL.eot");
   font-style: normal;
   font-weight: 300;
-}
+} */
 
 @theme {
   /* Brand Colors */
   --color-primary: #2629A6;
   --color-primary-dark: #1F228C;
   --color-primary-light: #EEF0FF;
+  --color-secondary: #DEB788;
 
-  /* Gray Scale - This is where you define the missing gray colors */
+  /* Gray Scale */
   --color-gray-100: #F3F4F6;
-  --color-gray-200: #E5E7EB; /* Example */
+  --color-gray-200: #E5E7EB;
   --color-gray-300: #D1D5DB;
-  --color-gray-400: #9CA3AF; /* <--- Define this one */
+  --color-gray-400: #9CA3AF;
   --color-gray-500: #6B7280;
   --color-gray-600: #4B5563;
   --color-gray-700: #374151;
-  --color-gray-800: #1F2937; /* Example */
+  --color-gray-800: #1F2937;
 
-  /* Red Colors */
+  /* Red */
   --color-red-300: #FCA5A5;
   --color-red-500: #EF4444;
 
@@ -53,6 +54,6 @@
   }
 }
 html{
-  font-family: vazir;
-  font-size: 14px
+  font-family: pelak;
+  font-size: 16px
 }

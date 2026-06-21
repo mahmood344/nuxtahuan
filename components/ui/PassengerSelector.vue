@@ -1,5 +1,5 @@
 <template>
-  <div dir="rtl" class="flex w-full justify-center p-4 font-vazir">
+  <div dir="rtl" class="flex w-full justify-center p-4">
 
     <div class="relative w-full max-w-[360px] h-[54px] bg-white border border-gray-300 rounded-[12px] flex items-center">
 

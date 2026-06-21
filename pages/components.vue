@@ -122,14 +122,14 @@
           v-model="loadingModel"
         />
     <UiBaseAutocomplete
-  v-model="selectedCity"
-  :items="['تهران' , 'cities1' , 'cities2']"
-  item-text="name"
-  item-value="id"
-  placeholder="شهر را انتخاب کنید"
-  :clearable="false"
-  rtl
-/>
+          label="انتخاب شهر"
+          placeholder="نام شهر را تایپ کنید..."
+          :items="['تهران' , 'cities1' , 'cities2']"
+          v-model="selectedCity"
+          clearable
+          icon=''
+          iconPosition="left"
+        />
       </div>
        <div class="border border-primary rounded-xl p-4 space-y-3">
         <h2 class="text-2xl font-bold mb-4">checkbox</h2>
@@ -190,43 +190,84 @@
         <h2 class="text-2xl font-bold mb-4">loading</h2>
           <UiBaseLoadingSkeleton />
         </div>
-        <div class="border border-primary rounded-xl p-4 space-y-3">
-        <h2 class="text-2xl font-bold mb-4">colors</h2>
-        <div class="color-card dark-bg rounded-lg w-50 text-center text-white" style="background-color: #253E91;">
-            <div class="name">Primary</div>
-            <div class="hex">#253E91</div>
-        </div>
+        <div class="border rounded-xl p-4 space-y-4 border-[var(--color-primary)]">
 
-        <!-- Secondary -->
-        <div class="color-card dark-bg rounded-lg w-50 text-center text-white" style="background-color: #D29E3C;">
-            <div class="name">Secondary</div>
-            <div class="hex">#D29E3C</div>
-        </div>
+<h2 class="text-2xl font-bold mb-4">Theme Colors</h2>
 
-        <!-- Background -->
-        <div class="color-card light-bg rounded-lg w-50 text-center" style="background-color: #E9EDF0;">
-            <div class="name">Background</div>
-            <div class="hex">#E9EDF0</div>
-        </div>
+<div class="flex flex-wrap gap-3">
 
-        <!-- Surface -->
-        <div class="color-card light-bg rounded-lg w-50 border-1 w-50 text-center" style="background-color: #FFFFFF;">
-            <div class="name">Surface</div>
-            <div class="hex">#FFFFFF</div>
-        </div>
+<div class="color-card w-44 p-3 rounded-lg text-center text-white"
+style="background:var(--color-primary)">
+--color-primary
+</div>
+<div class="color-card w-44 p-3 rounded-lg text-center text-white"
+style="background:var(--color-secondary)">
+--color-secondary
+</div>
+<div class="color-card w-44 p-3 rounded-lg text-center text-white"
+style="background:var(--color-primary-dark)">
+--color-primary-dark
+</div>
 
-        <!-- Text Main -->
-        <div class="color-card dark-bg rounded-lg w-50 text-center" style="background-color: #1E293B;">
-            <div class="name">Text Main</div>
-            <div class="hex">#1E293B</div>
-        </div>
+<div class="color-card w-44 p-3 rounded-lg text-center"
+style="background:var(--color-primary-light); color:var(--color-primary-dark)">
+--color-primary-light
+</div>
 
-        <!-- Text Muted -->
-        <div class="color-card dark-bg rounded-lg w-50 text-center text-white" style="background-color: #64748B;">
-            <div class="name">Text Muted</div>
-            <div class="hex">#64748B</div>
-        </div>
-        </div>
+<div class="color-card w-44 p-3 rounded-lg text-center"
+style="background:var(--color-gray-100)">
+--color-gray-100
+</div>
+
+<div class="color-card w-44 p-3 rounded-lg text-center"
+style="background:var(--color-gray-200)">
+--color-gray-200
+</div>
+
+<div class="color-card w-44 p-3 rounded-lg text-center"
+style="background:var(--color-gray-300)">
+--color-gray-300
+</div>
+
+<div class="color-card w-44 p-3 rounded-lg text-center text-white"
+style="background:var(--color-gray-400)">
+--color-gray-400
+</div>
+
+<div class="color-card w-44 p-3 rounded-lg text-center text-white"
+style="background:var(--color-gray-500)">
+--color-gray-500
+</div>
+
+<div class="color-card w-44 p-3 rounded-lg text-center text-white"
+style="background:var(--color-gray-600)">
+--color-gray-600
+</div>
+
+<div class="color-card w-44 p-3 rounded-lg text-center text-white"
+style="background:var(--color-gray-700)">
+--color-gray-700
+</div>
+
+<div class="color-card w-44 p-3 rounded-lg text-center text-white"
+style="background:var(--color-gray-800)">
+--color-gray-800
+</div>
+
+<div class="color-card w-44 p-3 rounded-lg text-center"
+style="background:var(--color-red-300)">
+--color-red-300
+</div>
+
+<div class="color-card w-44 p-3 rounded-lg text-center text-white"
+style="background:var(--color-red-500)">
+--color-red-500
+</div>
+
+</div>
+
+</div>
+
         <div class="border border-primary rounded-xl p-4 space-y-3">
         <h2 class="text-2xl font-bold mb-4">datePicker</h2>
       <div dir="rtl" class="w-full flex items-center">
