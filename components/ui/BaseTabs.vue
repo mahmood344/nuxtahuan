@@ -1,7 +1,7 @@
 <script setup>
 const props = defineProps({
   items: {
-    type: Array, // ["نام ایرلاین", "دیرترین", "زودترین", "ارزان‌ترین", "گران‌ترین"]
+    type: Array,
     required: true,
   },
   modelValue: {
@@ -14,7 +14,10 @@ const emit = defineEmits(['update:modelValue'])
 </script>
 
 <template>
-  <div class="flex w-full bg-[#EEEEEE] rounded-lg overflow-hidden">
+  <div
+    class="flex w-full rounded-lg overflow-hidden"
+    style="background-color: var(--color-gray-100);"
+  >
     <button
       v-for="item in items"
       :key="item"
@@ -22,8 +25,8 @@ const emit = defineEmits(['update:modelValue'])
       class="flex-1 py-3 text-sm font-medium transition-colors duration-200"
       :class="[
         modelValue === item
-          ? 'bg-[#1F228C] text-white' // حالت فعال (آبی پررنگ)
-          : 'text-[#1F228C] hover:bg-gray-200' // حالت عادی (متن آبی)
+          ? 'bg-[var(--color-primary-dark)] text-[var(--color-white)]'
+          : 'text-[var(--color-primary-dark)] hover:bg-[var(--color-gray-200)]'
       ]"
     >
       {{ item }}

@@ -29,15 +29,15 @@ const props = defineProps({
 
 const colors = {
   primary: {
-    filled: 'bg-primary text-white hover:bg-primary-dark',
-    outline: 'border border-primary text-primary hover:bg-primary-light',
-    soft: 'bg-primary-light text-primary border border-primary/20'
+    filled: 'bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-dark)]',
+    outline: 'border border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary-light)]',
+    soft: 'bg-[var(--color-primary-light)] text-[var(--color-primary)] border border-[var(--color-primary)]/20'
   },
 
   gray: {
-    filled: 'bg-gray-600 text-white hover:bg-gray-700',
-    outline: 'border border-gray-400 text-gray-600 hover:bg-gray-50',
-    soft: 'bg-gray-100 text-gray-700 border border-gray-200'
+    filled: 'bg-[var(--color-gray-600)] text-white hover:bg-[var(--color-gray-700)]',
+    outline: 'border border-[var(--color-gray-400)] text-[var(--color-gray-600)] hover:bg-[var(--color-gray-100)]',
+    soft: 'bg-[var(--color-gray-100)] text-[var(--color-gray-700)] border border-[var(--color-gray-200)]'
   }
 };
 
@@ -45,7 +45,7 @@ const isDisabled = computed(() => props.disabled || props.loading);
 
 const btnStyle = computed(() => {
   if (isDisabled.value) {
-    return 'bg-gray-300 text-gray-500 border border-gray-300 cursor-not-allowed opacity-70';
+    return 'bg-[var(--color-gray-300)] text-[var(--color-gray-500)] border border-[var(--color-gray-300)] cursor-not-allowed opacity-70';
   }
 
   return (
@@ -56,7 +56,7 @@ const btnStyle = computed(() => {
 
 const activeClass = computed(() => {
   return props.active && !isDisabled.value
-    ? 'ring-2 ring-primary'
+    ? 'ring-2 ring-[var(--color-primary)]'
     : '';
 });
 </script>

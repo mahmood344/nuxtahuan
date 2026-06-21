@@ -14,7 +14,7 @@ const props = defineProps({
   },
   color: {
     type: String,
-    default: '#2629A6',
+    default: 'var(--color-primary)',
   },
   disabled: {
     type: Boolean,
@@ -48,7 +48,7 @@ const handleChange = () => {
       class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 shrink-0"
       :style="{
         borderColor: color,
-        backgroundColor: '#fff',
+        backgroundColor: 'var(--color-white)',
       }"
     >
       <div
@@ -58,7 +58,14 @@ const handleChange = () => {
       ></div>
     </div>
 
-    <span v-if="label" :class="{ 'text-gray-500': disabled }">
+    <span
+      v-if="label"
+      :style="{
+        color: disabled
+          ? 'var(--color-gray-400)'
+          : 'var(--color-gray-700)'
+      }"
+    >
       {{ label }}
     </span>
   </label>
