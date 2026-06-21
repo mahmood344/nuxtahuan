@@ -227,6 +227,20 @@
             <div class="hex">#64748B</div>
         </div>
         </div>
+        <div class="border border-primary rounded-xl p-4 space-y-3">
+        <h2 class="text-2xl font-bold mb-4">datePicker</h2>
+      <div dir="rtl" class="w-full flex items-center">
+        <UiBaseDatePicker></UiBaseDatePicker>
+</div>
+        </div>
+<div class="border border-primary rounded-xl p-4 space-y-3">
+        <h2 class="text-2xl font-bold mb-4">select city</h2>
+        <UiOriginDestinationSelector></UiOriginDestinationSelector>
+</div>
+<div class="border border-primary rounded-xl p-4 space-y-3">
+        <h2 class="text-2xl font-bold mb-4">select passenger</h2>
+        <UiPassengerSelector></UiPassengerSelector>
+</div>
   </div>
 </template>
 <script setup>
@@ -235,7 +249,7 @@
 const selectedOption = ref('A');
 const isAgreed = ref(false);
 const activeTab = ref('ارزان‌ترین')
-
+const date = ref('')
 // آدرس URL عکس سفارشی
     const customImageUrl = 'https://raw.githubusercontent.com/yavuzceliker/sample-images/main/image-1021.jpg';
 </script>
