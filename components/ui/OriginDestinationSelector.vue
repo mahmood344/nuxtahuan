@@ -50,7 +50,7 @@
           :class="{ disableBtn: !isFormValid }"
           :disabled="!isFormValid"
           @click="swapFields"
-          class="p-2 rounded-full bg-white shadow-sm flex items-center justify-center border border-gray-300 relative z-10 hover:scale-110 transition-all"
+          class="p-1 rounded-full bg-white shadow-sm flex items-center justify-center border border-gray-300 relative z-10 hover:scale-110 transition-all"
         >
           <i class="bi bi-arrow-left-right w-5 h-5 text-gray-600"></i>
         </button>
