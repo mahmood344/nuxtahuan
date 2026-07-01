@@ -1,5 +1,17 @@
 <script setup>
-import { ref } from "vue";
+import { ref, watch } from "vue";
+
+const props = defineProps({
+  sendTravelType: {
+    type: String,
+    default: "one-way"
+  }
+})
+
+const emit = defineEmits([
+  "update:departDate",
+  "update:returnDate"
+])
 
 const departDate = ref("");
 const returnDate = ref("");
@@ -19,22 +31,51 @@ const openDepartPicker = () => {
 };
 
 const openReturnPicker = () => {
+  if (props.sendTravelType === "one-way") return
   showreturnDate.value = true;
 };
 
 const clearDepartDate = () => {
   departDate.value = "";
+  emit("update:departDate", null)
 };
 
 const clearReturnDate = () => {
   returnDate.value = "";
+  emit("update:returnDate", null)
 };
+
+/* -----------------------
+watch برای emit تاریخ رفت
+----------------------- */
+watch(departDate, (newVal) => {
+  emit("update:departDate", newVal || null)
+})
+
+/* -----------------------
+watch برای emit تاریخ برگشت
+----------------------- */
+watch(returnDate, (newVal) => {
+  emit("update:returnDate", newVal || null)
+})
+
+/* -----------------------
+اگر نوع سفر یک‌طرفه شد،
+تاریخ برگشت پاک شود
+----------------------- */
+watch(() => props.sendTravelType, (newType) => {
+  if (newType === "one-way") {
+    returnDate.value = ""
+    showreturnDate.value = false
+    emit("update:returnDate", null)
+  }
+})
 </script>
 
 <template>
   <div dir="rtl" class="flex w-full justify-center p-4">
     <div
-      class="relative flex w-full max-w-[500px] h-[50px] bg-[var(--color-white)] border border-[var(--color-gray-300)] rounded-[10px] overflow-visible"
+      class="relative flex w-full max-w-[500px] h-[54px] bg-[var(--color-white)] border border-[var(--color-gray-300)] rounded-[10px] overflow-visible"
     >
 
       <!-- تاریخ رفت -->
@@ -51,7 +92,7 @@ const clearReturnDate = () => {
           :value="departDate"
           placeholder="تاریخ رفت"
           @click="openDepartPicker"
-          class="w-full h-full px-4 pt-1.5 text-[14px] font-bold text-[var(--color-gray-800)] placeholder:text-[var(--color-gray-400)] bg-transparent outline-none cursor-pointer border-none"
+          class="w-full h-full px-4 pt-1.5 text-[10px] font-bold text-[var(--color-gray-800)] placeholder:text-[var(--color-gray-400)] bg-transparent outline-none cursor-pointer border-none"
         />
 
         <!-- clear -->
@@ -71,8 +112,9 @@ const clearReturnDate = () => {
           :styles="styles"
           v-model="departDate"
           class="hidden"
+          :auto-submit="false"
           :show="showdepartDate"
-          format="jYYYY/jMM/jDD"
+          format="YYYY/MM/DD"
           mode="single"
           locale="fa,en"
           @close="showdepartDate=false"
@@ -86,25 +128,31 @@ const clearReturnDate = () => {
       <div class="w-px h-full bg-[var(--color-gray-300)]"></div>
 
       <!-- تاریخ برگشت -->
-      <div class="flex-1 relative pr-8">
-
+      <div
+        class="flex-1 relative pr-8"
+        :class="props.sendTravelType === 'one-way'
+          ? 'bg-gray-100 rounded-tl-lg rounded-bl-lg'
+          : 'bg-transparent'"
+      >
         <label
+          v-if="props.sendTravelType !== 'one-way'"
           class="absolute -top-3 right-6 z-10 bg-[var(--color-white)] px-2 text-[10px] leading-5 text-[var(--color-gray-400)]"
         >
           تاریخ برگشت
         </label>
 
         <input
+          :disabled="props.sendTravelType === 'one-way'"
           readonly
           :value="returnDate"
           placeholder="تاریخ برگشت"
           @click="openReturnPicker"
-          class="w-full h-full px-4 pt-1.5 text-[14px] font-bold text-[var(--color-gray-800)] placeholder:text-[var(--color-gray-400)] bg-transparent outline-none cursor-pointer border-none"
+          class="w-full h-full px-4 pt-1.5 text-[10px] font-bold text-[var(--color-gray-800)] placeholder:text-[var(--color-gray-400)] bg-transparent outline-none cursor-pointer border-none"
         />
 
         <!-- clear -->
         <button
-          v-if="returnDate"
+          v-if="returnDate && props.sendTravelType !== 'one-way'"
           @click="clearReturnDate"
           class="absolute top-1/2 right-4 -translate-y-1/2 z-20 text-[var(--color-gray-400)] hover:text-[var(--color-red-500)] transition-colors"
         >
@@ -117,9 +165,10 @@ const clearReturnDate = () => {
 
         <PersianDatePicker
           :styles="styles"
+          :auto-submit="false"
           v-model="returnDate"
           class="hidden"
-          format="jYYYY/jMM/jDD"
+          format="YYYY/MM/DD"
           mode="single"
           locale="fa,en"
           :show="showreturnDate"

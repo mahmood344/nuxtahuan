@@ -14,31 +14,50 @@
           @click="isMabdaOpen = !isMabdaOpen; isMaghsadOpen = false"
           class="w-full h-full flex items-center px-6 cursor-pointer text-gray-700"
         >
-          <span v-if="mabda">{{ mabda }}</span>
-          <span v-else class="text-gray-400">انتخاب مبدا</span>
-          
-          <!-- آیکون هوشمند: اگر شهر انتخاب شده بود ضربدر، در غیر این صورت فلش رو به پایین -->
           <i 
             v-if="mabda"
-            @click.stop="mabda = ''; isMabdaOpen = false"
-            class="bi bi-x mr-auto text-gray-400 text-xl hover:text-red-500 transition-colors"
+            @click.stop="clearMabda"
+            class="bi bi-x text-gray-400 text-xl hover:text-red-500 transition-colors"
             title="پاک کردن"
           ></i>
           <i 
             v-else
-            class="bi bi-chevron-down mr-auto text-gray-400 text-xs"
+            class="bi bi-chevron-down text-gray-400 text-xs"
           ></i>
+          <span v-if="mabda" class="mr-2">{{ mabda.cityNicName }}</span>
+          <span v-else class="text-gray-400 font-bold text-[10px] mr-2">انتخاب مبدا</span>
         </div>
 
         <!-- لیست شهرهای مبدا -->
         <div v-if="isMabdaOpen" class="custom-dropdown">
-          <div class="px-4 py-2 text-[11px] text-gray-400 bg-gray-50/50">پرتردد</div>
+          <!-- input سرچ -->
+          <div class="relative w-full">
+            <input
+              v-model="searchMabda"
+              placeholder="جستجوی شهر..."
+              class="w-full px-3 py-2 text-sm border-b border-[var(--color-gray-100)] outline-none"
+            />
+            <span
+              v-if="loadingMabda"
+              class="absolute left-3 top-2 animate-spin text-gray-400"
+            >
+              <i class="bi bi-arrow-repeat"></i>
+            </span>
+          </div>
+
+          <!-- عنوان پرتردد -->
+          <div class="px-4 py-2 text-[11px] text-gray-400 bg-gray-50/50">
+            پرتردد
+          </div>
+
+          <!-- لیست شهرها -->
           <div 
-            v-for="city in cities" :key="city"
-            @click="mabda = city; isMabdaOpen = false"
+            v-for="city in (searchMabda ? dropdownCities : popularCities)"
+            :key="city.id || city.cityCode || city.iataCode"
+            @click="selectMabda(city)"
             class="city-item"
           >
-            {{ city }}
+            {{ city.cityNicName }}
           </div>
         </div>
       </div>
@@ -58,7 +77,7 @@
 
       <!-- بخش مقصد -->
       <div class="flex-1 h-full relative group">
-        <label class="absolute -top-3 right-6 z-20 bg-white px-2 text-[11px] text-gray-400">
+        <label class="absolute -top-3 right-1 z-20 bg-white px-2 text-[11px] text-gray-400">
           مقصد (شهر)
         </label>
         
@@ -66,31 +85,48 @@
           @click="isMaghsadOpen = !isMaghsadOpen; isMabdaOpen = false"
           class="w-full h-full flex items-center px-6 cursor-pointer text-gray-700"
         >
-          <span v-if="maghsad">{{ maghsad }}</span>
-          <span v-else class="text-gray-400">انتخاب مقصد</span>
-          
-          <!-- آیکون هوشمند: اگر شهر انتخاب شده بود ضربدر، در غیر این صورت فلش رو به پایین -->
           <i 
             v-if="maghsad"
-            @click.stop="maghsad = ''; isMaghsadOpen = false"
-            class="bi bi-x mr-auto text-gray-400 text-xl hover:text-red-500 transition-colors"
+            @click.stop="clearMaghsad"
+            class="bi bi-x text-gray-400 text-xl hover:text-red-500 transition-colors"
             title="پاک کردن"
           ></i>
           <i 
             v-else
-            class="bi bi-chevron-down mr-auto text-gray-400 text-xs"
+            class="bi bi-chevron-down text-gray-400 text-xs"
           ></i>
+          <span v-if="maghsad" class="mr-2">{{ maghsad.cityNicName }}</span>
+          <span v-else class="text-gray-400 font-bold text-[10px] mr-2">انتخاب مقصد</span>
         </div>
 
         <!-- لیست شهرهای مقصد -->
         <div v-if="isMaghsadOpen" class="custom-dropdown">
-          <div class="px-4 py-2 text-[11px] text-gray-400 bg-gray-50/50">پرتردد</div>
+          <!-- input سرچ -->
+          <div class="relative w-full">
+            <input
+              v-model="searchMaghsad"
+              placeholder="جستجوی شهر..."
+              class="w-full px-3 py-2 text-sm border-b border-[var(--color-gray-100)] outline-none"
+            />
+            <span
+              v-if="loadingMaghsad"
+              class="absolute left-3 top-2 animate-spin text-gray-400"
+            >
+              <i class="bi bi-arrow-repeat"></i>
+            </span>
+          </div>
+
+          <div class="px-4 py-2 text-[11px] text-gray-400 bg-gray-50/50">
+            پرتردد
+          </div>
+
           <div 
-            v-for="city in cities" :key="city"
-            @click="maghsad = city; isMaghsadOpen = false"
+            v-for="city in (searchMaghsad ? dropdownCities : popularCities)"
+            :key="city.id || city.cityCode || city.iataCode"
+            @click="selectMaghsad(city)"
             class="city-item"
           >
-            {{ city }}
+            {{ city.cityNicName }}
           </div>
         </div>
       </div>
@@ -99,29 +135,279 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch, onMounted } from "vue"
+import { useFlightStore } from "@/stores/flights"
 
-const mabda = ref('');
-const maghsad = ref('');
-const isMabdaOpen = ref(false);
-const isMaghsadOpen = ref(false);
+const props = defineProps({
+  sendFlightType: {
+    type: String,
+    default: "domestic"
+  }
+})
 
-const cities = ref(['تهران', 'اصفهان', 'شیراز', 'مشهد', 'تبریز', 'رشت', 'اهواز']);
+const emit = defineEmits([
+  'update:mabda',
+  'update:maghsad',
+]);
 
+const flightStore = useFlightStore()
+
+const mabda = ref(null)
+const maghsad = ref(null)
+
+const searchMabda = ref("")
+const searchMaghsad = ref("")
+
+const isMabdaOpen = ref(false)
+const isMaghsadOpen = ref(false)
+
+const dropdownCities = ref([])
+
+const loadingMabda = ref(false)
+const loadingMaghsad = ref(false)
+
+const isSelecting = ref(false)
+
+const internationalPopularCities = ref([])
+const {public:{baseUrl}} = useRuntimeConfig()
+/* -----------------------
+استخراج کد مناسب جهت ارسال به والد (Emit)
+در پرواز داخلی: cityCode
+در پرواز خارجی: iataCode
+----------------------- */
+const getCodeForEmit = (city) => {
+  if (!city) return null
+  return props.sendFlightType === "domestic" ? city.cityCode : city.iataCode
+}
+
+/* -----------------------
+popular cities
+----------------------- */
+const popularCities = computed(() => {
+  if (props.sendFlightType === "domestic") {
+    return flightStore.popularCities || []
+  }
+  return internationalPopularCities.value
+})
+
+/* -----------------------
+پرتردد خارجی
+----------------------- */
+const fetchInternationalPopular = async () => {
+  try {
+    const res = await $fetch(`https://api.ahuan.ir/api/BasicInfo/default-airports`)
+    console.log(res , 'res');
+    internationalPopularCities.value = res || []
+  } catch (err) {
+    console.error("popular airports error", err)
+  }
+}
+
+/* -----------------------
+فیلتر داخلی
+----------------------- */
+const filterDomesticCities = (query) => {
+  if (!flightStore?.iranAirports) return []
+  return flightStore.iranAirports.filter(city =>
+    city.cityNicName.toLowerCase().includes(query.toLowerCase())
+  )
+}
+
+/* -----------------------
+search cities
+----------------------- */
+const searchCities = async (query, type) => {
+  if (!query) {
+    dropdownCities.value = []
+    return
+  }
+
+  if (props.sendFlightType === "domestic") {
+    dropdownCities.value = filterDomesticCities(query)
+    return
+  }
+
+  try {
+    if (type === "mabda") loadingMabda.value = true
+    if (type === "maghsad") loadingMaghsad.value = true
+
+    const apiUrl = `https://api.ahuan.ir/api/BasicInfo/airports/${query}`
+    const res = await $fetch(apiUrl)
+
+    if (Array.isArray(res)) {
+      dropdownCities.value = res
+    } else if (res && typeof res === 'object') {
+      dropdownCities.value = [res]
+    } else {
+      dropdownCities.value = []
+    }
+  } catch (err) {
+    console.error("Airport search error:", err)
+    dropdownCities.value = []
+  } finally {
+    if (type === "mabda") loadingMabda.value = false
+    if (type === "maghsad") loadingMaghsad.value = false
+  }
+}
+
+/* -----------------------
+watch mabda
+----------------------- */
+watch(searchMabda, (val) => {
+  if (isSelecting.value) return
+
+  if (val) {
+    searchCities(val, "mabda")
+    isMabdaOpen.value = true
+  } else {
+    dropdownCities.value = popularCities.value
+  }
+})
+
+/* -----------------------
+watch maghsad
+----------------------- */
+watch(searchMaghsad, (val) => {
+  if (isSelecting.value) return
+
+  if (val) {
+    searchCities(val, "maghsad")
+    isMaghsadOpen.value = true
+  } else {
+    dropdownCities.value = popularCities.value
+  }
+})
+
+/* -----------------------
+flightType change (تغییر نوع پرواز و پاکسازی ورودی‌ها)
+----------------------- */
+watch(() => props.sendFlightType, async (type) => {
+  if (type === "international") {
+    await fetchInternationalPopular()
+  }
+
+  // پاک کردن مقادیر و امیت null
+  mabda.value = null
+  searchMabda.value = ""
+  emit('update:mabda', null)
+
+  maghsad.value = null
+  searchMaghsad.value = ""
+  emit('update:maghsad', null)
+
+  isMabdaOpen.value = false
+  isMaghsadOpen.value = false
+
+  dropdownCities.value = popularCities.value
+}, { immediate: true })
+
+/* -----------------------
+form valid
+----------------------- */
 const isFormValid = computed(() => {
-  return mabda.value && maghsad.value;
-});
+  return mabda.value && maghsad.value
+})
 
+/* -----------------------
+swap
+----------------------- */
 const swapFields = () => {
-  if (!isFormValid.value) return;
-  const temp = mabda.value;
-  mabda.value = maghsad.value;
-  maghsad.value = temp;
-};
+  if (!isFormValid.value) return
+
+  isSelecting.value = true
+
+  const temp = mabda.value
+  mabda.value = maghsad.value
+  maghsad.value = temp
+
+  const tempSearch = searchMabda.value
+  searchMabda.value = searchMaghsad.value
+  searchMaghsad.value = tempSearch
+
+  isMabdaOpen.value = false
+  isMaghsadOpen.value = false
+  dropdownCities.value = []
+
+  // ارسال کد مناسب جابجا شده به والد
+  emit('update:mabda', getCodeForEmit(mabda.value))
+  emit('update:maghsad', getCodeForEmit(maghsad.value))
+
+  setTimeout(() => {
+    isSelecting.value = false
+  }, 100)
+}
+
+/* -----------------------
+select city
+----------------------- */
+const selectMabda = (city) => {
+  isSelecting.value = true
+
+  mabda.value = city
+  searchMabda.value = city.cityNicName
+
+  // ارسال کد مناسب به والد
+  emit('update:mabda', getCodeForEmit(city))
+
+  isMabdaOpen.value = false
+  dropdownCities.value = []
+
+  setTimeout(() => {
+    isSelecting.value = false
+  }, 100)
+}
+
+const selectMaghsad = (city) => {
+  isSelecting.value = true
+
+  maghsad.value = city
+  searchMaghsad.value = city.cityNicName
+
+  // ارسال کد مناسب به والد
+  emit('update:maghsad', getCodeForEmit(city))
+
+  isMaghsadOpen.value = false
+  dropdownCities.value = []
+
+  setTimeout(() => {
+    isSelecting.value = false
+  }, 100)
+}
+
+/* -----------------------
+clear
+----------------------- */
+const clearMabda = () => {
+  mabda.value = null
+  searchMabda.value = ""
+  emit('update:mabda', null)
+
+  dropdownCities.value = popularCities.value
+  isMabdaOpen.value = true
+}
+
+const clearMaghsad = () => {
+  maghsad.value = null
+  searchMaghsad.value = ""
+  emit('update:maghsad', null)
+
+  dropdownCities.value = popularCities.value
+  isMaghsadOpen.value = true
+}
+
+/* -----------------------
+mounted
+----------------------- */
+onMounted(async () => {
+  if (props.sendFlightType === "international") {
+    await fetchInternationalPopular()
+  }
+  dropdownCities.value = popularCities.value
+})
 </script>
 
 <style scoped>
-/* استایل لیست شهرها دقیقا مطابق عکس */
+/* استایل لیست شهرها */
 .custom-dropdown {
   position: absolute;
   top: calc(100% + 8px);
@@ -141,7 +427,7 @@ const swapFields = () => {
   font-size: 14px;
   color: #374151;
   cursor: pointer;
-  border-bottom: 1px solid #f3f4f6; /* خط زیر هر شهر */
+  border-bottom: 1px solid #f3f4f6;
   transition: background 0.2s;
 }
 
