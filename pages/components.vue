@@ -35,6 +35,20 @@
 />
     </div>
 
+
+<div class="border border-primary rounded-xl p-4 space-y-3">
+      <h2 class="font-semibold">stepper</h2>
+    
+    <Stepper :activeStep="0" />
+    </div>
+<div class="border border-primary rounded-xl p-4 space-y-3">
+      <h2 class="font-semibold">DateCarousel</h2>
+     <DateCarousel 
+      :days-count="20" 
+      @date-selected="handleDateChange" 
+    />
+    
+    </div>
 <div class="border border-primary rounded-xl p-4 space-y-3">
       <h2 class="font-semibold">Inputs</h2>
       <UiBaseInput
@@ -286,7 +300,10 @@ style="background:var(--color-red-500)">
 </template>
 <script setup>
 
-
+const handleDateChange = (dateObj) => {
+  console.log('تاریخ انتخاب شده برای جستجو:', dateObj.fullDate)
+  // اینجا می‌تونی تابع جستجوی پرواز یا قطار رو صدا بزنی
+}
 const selectedOption = ref('A');
 const isAgreed = ref(false);
 const activeTab = ref('ارزان‌ترین')

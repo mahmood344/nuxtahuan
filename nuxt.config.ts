@@ -1,12 +1,21 @@
 import tailwindcss from "@tailwindcss/vite";
+
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   modules: ['@pinia/nuxt'],
   runtimeConfig: {
     baseUrl: 'https://api.ahuan.ir'
   },
-    css: ['~/assets/css/main.css','~/assets/css/bootstrap-icons.css'],
+  css: ['~/assets/css/main.css', '~/assets/css/bootstrap-icons.css'],
   devtools: { enabled: false },
+  app: {
+    head: {
+      htmlAttrs: {
+        lang: 'fa',
+        dir: 'rtl'
+      }
+    }
+  },
   vite: {
     plugins: [
       tailwindcss(),

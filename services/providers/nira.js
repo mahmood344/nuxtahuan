@@ -1,112 +1,146 @@
-import { parseNiraClasses, parseNiraPrices } from '../adapters/niraParser.js'
-import { useFlightStore } from '../../stores/flights.js' // مسیر استور را در صورت نیاز اصلاح کنید
+import { useFlightStore } from '../../stores/flights.js'
 
 const BASE_URL = 'https://api.ahuan.ir/api'
 
+function normalizeNiraResponse(raw, airlineCode) {
+  if (!raw) return null
+  if (typeof raw === 'object') return raw
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim()
+    if (trimmed === 'SIGN') return null
+    try { return JSON.parse(trimmed) } catch (e) { return null }
+  }
+  return null
+}
+
+function extractAvailableFlights(response) {
+  const paths = [response?.AvailableFlights, response?.data?.AvailableFlights, response?.d?.AvailableFlights, response?.result?.AvailableFlights]
+  return paths.find(path => Array.isArray(path)) || []
+}
+
 /**
- * جستجوی پروازهای نیرا برای یک ایرلاین خاص
- * @param {string} airlineCode - کد دو حرفی ایرلاین (مثلاً VR, Y9)
- * @param {object} params - پارامترهای جستجو
+ * تبدیل هر آبجکت NIRA به یک یا چند آیتم استاندارد
  */
+function mapNiraFlightToStandardFlights(f, index, airlineCode, params) {
+  const flightAirline = f.Airline || airlineCode
+  const flightNo = f.FlightNo || index
+  const adultTotalPrices = f.AdultTotalPrices || f.AdultTotalPrice || ""
+
+  // --- سناریو ۱: پرواز دارای AdultTotalPrices است (پروازهای فعال) ---
+  if (adultTotalPrices && typeof adultTotalPrices === 'string' && adultTotalPrices.trim() !== "") {
+    const priceParts = adultTotalPrices.trim().split(/\s+/).filter(Boolean)
+    
+    return priceParts.map(part => {
+      const [rbd, rawPrice] = part.split(':').map(s => s?.trim().toUpperCase())
+      const numericPrice = Number(rawPrice)
+      const hasValidPrice = rawPrice !== '-' && !isNaN(numericPrice) && numericPrice > 0
+
+      return {
+        id: `NIRA-${flightAirline}-${flightNo}-${f.DepartureDateTime}-${rbd}`,
+        provider: 'NIRA',
+        airline: flightAirline,
+        flightNumber: String(flightNo),
+        origin: f.Origin || params.from,
+        destination: f.Destination || params.to,
+        departure: f.DepartureDateTime,
+        arrival: f.ArrivalDateTime,
+        aircraftTypeCode: f.AircraftTypeCode || '',
+        aircraftTypeName: f.AircraftTypeName || '',
+        bookingClass: rbd,
+        rbd: rbd,
+        priceFrom: hasValidPrice ? numericPrice : 0,
+        currency: f.CurrencyCode || 'IRR',
+        disabled: false, // طبق دستور شما: چون در AdultTotalPrices هست، هرگز disable نمی‌شود
+        statusMessage: hasValidPrice ? 'قابل خرید' : 'استعلام نرخ',
+        needsFare: true,
+        meta: { rbd, raw: f }
+      }
+    })
+  }
+
+  // --- سناریو ۲: پرواز فاقد AdultTotalPrices است (پروازهای غیرفعال) ---
+  const classesStatus = f.ClassesStatus || ""
+  if (classesStatus && typeof classesStatus === 'string') {
+    const statusTokens = classesStatus.replace(/\//g, ' ').trim().split(/\s+/).filter(Boolean)
+    
+    return statusTokens.map(token => {
+      // پیدا کردن کد کلاس (حروف اول) و وضعیت (حرف آخر)
+      // مثال: YC -> RBD: Y, Status: C
+      const rbd = token.substring(0, token.length - 1).toUpperCase()
+      const statusChar = token.substring(token.length - 1).toUpperCase()
+      
+      let statusMessage = 'غیرقابل خرید'
+      if (statusChar === 'C') statusMessage = 'کنسل شده'
+      else if (statusChar === 'X') statusMessage = 'تکمیل ظرفیت'
+
+      return {
+        id: `NIRA-${flightAirline}-${flightNo}-${f.DepartureDateTime}-${rbd || token}`,
+        provider: 'NIRA',
+        airline: flightAirline,
+        flightNumber: String(flightNo),
+        origin: f.Origin || params.from,
+        destination: f.Destination || params.to,
+        departure: f.DepartureDateTime,
+        arrival: f.ArrivalDateTime,
+        aircraftTypeCode: f.AircraftTypeCode || '',
+        aircraftTypeName: f.AircraftTypeName || '',
+        bookingClass: rbd || token,
+        rbd: rbd || token,
+        priceFrom: 0,
+        currency: f.CurrencyCode || 'IRR',
+        disabled: true, // طبق دستور شما: چون AdultTotalPrices ندارد، disable می‌شود
+        statusMessage: statusMessage,
+        needsFare: false,
+        meta: { rbd, statusChar, raw: f }
+      }
+    })
+  }
+
+  return [] // اگر هیچکدام نبود
+}
+
 export async function searchNiraFlightForAirline(airlineCode, params) {
-  // کنترل پارامترهای ورودی برای جلوگیری از ارسال فیلدهای خالی
-  if (!params.from || !params.to) {
-    console.warn(`مبدا یا مقصد برای ایرلاین ${airlineCode} ارسال نشده است.`)
-    return []
-  }
-
-  // پیدا کردن اعتبارنامه مربوط به ایرلاین از روی استور
   const flightStore = useFlightStore()
-  const airlineInfo = flightStore.airlines?.find(a => a.code === airlineCode)
-  const creds = airlineInfo?.credentials
-
-  // اگر اعتبارنامه یافت نشد، لاگ بزند ولی می‌توانید مقادیر پیش‌فرض بگذارید یا درخواست را رد کنید
-  if (!creds || !creds.username || !creds.password) {
-    console.warn(`اعتبارنامه معتبری برای ایرلاین ${airlineCode} یافت نشد.`)
-    return []
-  }
-
-  // فرمت تاریخ ورودی
-  const formattedDate = params.departureDate || ''
+  const creds = flightStore.airlines?.find(a => a.code === airlineCode)?.credentials
+  if (!creds?.username || !creds?.password) return []
 
   try {
     const raw = await $fetch(`${BASE_URL}/Nira/Availability`, {
       method: 'GET',
       params: {
-        AirLine: airlineCode, // اعمال داینامیک کد ایرلاین
-        OfficeUser: creds.username, // نام کاربری داینامیک از استور
-        OfficePass: creds.password, // رمز عبور داینامیک از استور
-        cbSource: String(params.from).toUpperCase(),
-        cbTarget: String(params.to).toUpperCase(),
-        DepartureDate: formattedDate,
-        cbAdultQty: String(params.adults || '1'),
-        cbChildQty: String(params.children || '0'),
-        cbInfantQty: String(params.infants || '0'),
-        cbDay1: 0,
-        cbMonth1: 0
+        AirLine: airlineCode,
+        OfficeUser: creds.username,
+        OfficePass: creds.password,
+        cbSource: params.from.toUpperCase(),
+        cbTarget: params.to.toUpperCase(),
+        DepartureDate: params.departureDate,
+        cbAdultQty: params.adults || 1,
+        cbChildQty: params.children || 0,
+        cbInfantQty: params.infants || 0,
+        cbDay1: 0, cbMonth1: 0
       }
     })
 
-    if (!Array.isArray(raw)) return []
+    const response = normalizeNiraResponse(raw, airlineCode)
+    const availableFlights = extractAvailableFlights(response)
+    
+    const allTickets = availableFlights.flatMap((f, idx) => 
+      mapNiraFlightToStandardFlights(f, idx, airlineCode, params)
+    )
 
-    return raw.map(f => {
-      const classInfo = parseNiraClasses(f.ClassesStatus)
-      const priceInfo = parseNiraPrices(f.AdultTotalPrices)
-
-      const hasSeats = classInfo.available && classInfo.seats > 0
-      const hasPrice = priceInfo.min > 0
-
-      let disabled = false
-      let statusMessage = 'قابل خرید'
-
-      if (!hasSeats) {
-        disabled = true
-        statusMessage = 'ظرفیت تکمیل'
-      } else if (!hasPrice) {
-        disabled = true
-        statusMessage = 'فاقد نرخ معتبر'
-      }
-
-      // تعیین ایرلاین بازگشتی
-      const flightAirline = f.Airline || airlineCode
-
-      return {
-        id: `NIRA-${flightAirline}-${f.FlightNo}-${f.DepartureDateTime}`,
-        provider: 'NIRA',
-        airline: flightAirline,
-        flightNumber: String(f.FlightNo),
-        origin: f.Origin,
-        destination: f.Destination,
-        departure: f.DepartureDateTime,
-        arrival: f.ArrivalDateTime,
-        cabin: 'economy',
-        capacity: classInfo.seats,
-        // اگر قیمت نداشت، ۰ می‌گذاریم تا بعداً در مرتب‌سازی به انتهای لیست هدایت شود
-        priceFrom: hasPrice ? priceInfo.min : 0, 
-        currency: f.CurrencyCode || 'IRR',
-        disabled, // اضافه شدن پروازها حتی اگر غیرفعال باشند
-        statusMessage,
-        needsFare: true,
-        meta: {
-          airline: flightAirline,
-          route: `${f.Origin}-${f.Destination}`,
-          rbd: classInfo.rbd,
-          departureDate: formattedDate,
-          flightNo: String(f.FlightNo)
-        },
-        fareDetails: null
-      }
+    // مرتب‌سازی نهایی
+    return allTickets.sort((a, b) => {
+      if (a.disabled !== b.disabled) return a.disabled ? 1 : -1
+      if (a.priceFrom > 0 && b.priceFrom > 0) return a.priceFrom - b.priceFrom
+      return 0
     })
+
   } catch (error) {
-    console.error(`خطا در دریافت اطلاعات از سرویس دسترس‌پذیری نیرا برای ایرلاین ${airlineCode}:`, error)
+    console.error(`NIRA Error [${airlineCode}]:`, error)
     return []
   }
 }
 
-/**
- * تابع کمکی در صورتی که همچنان در بخش‌های دیگر پروژه به متد searchNiraFlights نیاز باشد
- */
 export async function searchNiraFlights(params) {
-  const defaultAirline = 'VR'
-  return searchNiraFlightForAirline(defaultAirline, params)
+  return searchNiraFlightForAirline('VR', params)
 }
