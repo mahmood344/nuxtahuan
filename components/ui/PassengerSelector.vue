@@ -1,7 +1,7 @@
 <template>
   <div dir="rtl" class="flex w-full justify-center p-4">
 
-    <div class="relative w-full max-w-[360px] h-[54px] bg-white border border-gray-300 rounded-[12px] flex items-center">
+    <div class="relative w-full max-w-[500px] h-[54px] bg-white border border-gray-300 rounded-[12px] flex items-center">
 
       <!-- label مثل مبدا و مقصد -->
       <label class="absolute -top-3 right-6 z-20 bg-white px-2 text-[11px] text-gray-400">
@@ -13,7 +13,7 @@
         @click="isOpen = !isOpen"
         class="w-full h-full flex items-center px-6 cursor-pointer text-gray-700"
       >
-        <span class="font-semibold text-[14px]">
+        <span class="font-semibold text-[10px]">
           {{ totalPassengers }} مسافر
         </span>
 
@@ -170,15 +170,40 @@
 import { ref, computed } from "vue"
 
 const isOpen = ref(false)
-
-const counts = ref({
-  adult: 1,
-  child: 0,
-  infant: 0
+const props = defineProps({
+  adl: {
+    type: Number,
+    default: 1
+  },
+  chd: {
+    type: Number,
+    default: 0
+  },
+  inf: {
+    type: Number,
+    default: 0
+  }
 })
-
+const counts = ref({
+  adult: props.adl,
+  child: props.chd,
+  infant: props.inf
+})
+watch(
+  counts,
+  (val) => {
+    emit("update:adl", val.adult)
+    emit("update:chd", val.child)
+    emit("update:inf", val.infant)
+  },
+  { deep: true }
+)
 const MAX = 9
-
+const emit = defineEmits([
+  "update:adl",
+  "update:chd",
+  "update:inf"
+])
 const totalPassengers = computed(() => {
   return counts.value.adult + counts.value.child + counts.value.infant
 })

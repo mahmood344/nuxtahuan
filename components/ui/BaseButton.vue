@@ -1,6 +1,9 @@
 <script setup>
 import { computed } from 'vue';
-
+const isHtmlIcon = computed(() => {
+  if (!props.icon) return false
+  return props.icon.includes('<')
+})
 const props = defineProps({
   label: String,
   icon: String,
@@ -33,11 +36,15 @@ const colors = {
     outline: 'border border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary-light)]',
     soft: 'bg-[var(--color-primary-light)] text-[var(--color-primary)] border border-[var(--color-primary)]/20'
   },
-
   gray: {
     filled: 'bg-[var(--color-gray-600)] text-white hover:bg-[var(--color-gray-700)]',
     outline: 'border border-[var(--color-gray-400)] text-[var(--color-gray-600)] hover:bg-[var(--color-gray-100)]',
     soft: 'bg-[var(--color-gray-100)] text-[var(--color-gray-700)] border border-[var(--color-gray-200)]'
+  },
+  white: {
+    filled: 'bg-white text-[var(--color-gray-800)] hover:bg-[var(--color-gray-100)] border border-[var(--color-gray-200)]',
+    outline: 'border border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary-light)]',
+    soft: 'bg-white/10 text-white border border-white/30 hover:bg-white/20'
   }
 };
 
@@ -96,12 +103,28 @@ const activeClass = computed(() => {
 
     <template v-else>
       <span>{{ label }}</span>
-
-      <span
-        v-if="icon"
-        v-html="icon"
-        :class="iconSize || 'text-lg'"
-      />
+<span
+  v-if="icon"
+  :class="[iconSize || 'text-xl', 'drop-shadow-md', 'icon-effect']"
+>
+  <span v-if="isHtmlIcon" v-html="icon"></span>
+  <span v-else>{{ icon }}</span>
+</span>
     </template>
   </button>
 </template>
+<style scoped>
+.icon-effect {
+  display: inline-flex;
+  transition: transform 0.25s ease, filter 0.25s ease;
+}
+
+button:hover .icon-effect {
+  transform: scale(1.12);
+}
+
+button:active .icon-effect {
+  transform: scale(0.85) rotate(-8deg);
+  filter: brightness(1.25);
+}
+</style>

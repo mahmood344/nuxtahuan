@@ -1,7 +1,7 @@
 <template>
-  <div>
-    <TicketBooking></TicketBooking>
-  </div>
+  <Header></Header>
+  <slot></slot>
+  <Footer></Footer>
 </template>
 
 <script>

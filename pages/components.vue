@@ -1,6 +1,18 @@
 <template>
-  <div class="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
+  <div class="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<div class="border border-primary rounded-xl p-4 space-y-3">
+      <h2 class="font-semibold">range slider</h2>
+      <UiBaseRangeSlider
+        v-model="filters.departureTimeRange"
+  :min="timeRangeLimits[0]" 
+  :max="timeRangeLimits[1]" 
+  :step="30" 
+  :formatValue="formatTime"
+      >
+
+      </UiBaseRangeSlider>
+</div>
     <div class="border border-primary rounded-xl p-4 space-y-3">
       <h2 class="font-semibold">Buttons</h2>
     
@@ -35,6 +47,20 @@
 />
     </div>
 
+
+<div class="border border-primary rounded-xl p-4 space-y-3">
+      <h2 class="font-semibold">stepper</h2>
+    
+    <Stepper :activeStep="0" />
+    </div>
+<div class="border border-primary rounded-xl p-4 space-y-3">
+      <h2 class="font-semibold">DateCarousel</h2>
+     <DateCarousel 
+      :days-count="20" 
+      @date-selected="handleDateChange" 
+    />
+    
+    </div>
 <div class="border border-primary rounded-xl p-4 space-y-3">
       <h2 class="font-semibold">Inputs</h2>
       <UiBaseInput
@@ -285,12 +311,65 @@ style="background:var(--color-red-500)">
   </div>
 </template>
 <script setup>
-
-
+import { useFlightStore } from '~/stores/flights'
+const allFlights  = useFlightStore()
+const handleDateChange = (dateObj) => {
+  console.log('تاریخ انتخاب شده برای جستجو:', dateObj.fullDate)
+  // اینجا می‌تونی تابع جستجوی پرواز یا قطار رو صدا بزنی
+}
 const selectedOption = ref('A');
 const isAgreed = ref(false);
 const activeTab = ref('ارزان‌ترین')
 const date = ref('')
 // آدرس URL عکس سفارشی
     const customImageUrl = 'https://raw.githubusercontent.com/yavuzceliker/sample-images/main/image-1021.jpg';
+    const filters = ref({
+      // ... سایر فیلترها ...
+      departureTimeRange: [400, 2400] // مقدار اولیه: از 4:00 تا 24:00 (مثلا)
+    });
+
+    // تابع فرمت کننده زمان برای نمایش بهتر
+    const formatTime = (value) => {
+      const hours = Math.floor(value / 100);
+      const minutes = value % 100;
+      // const formattedHours = String(hours).padStart(2, '0'); // اگر فرمت HH:MM می خواهید
+      // const formattedMinutes = String(minutes).padStart(2, '0');
+      // return `${formattedHours}:${formattedMinutes}`;
+      return `${hours}:${String(minutes).padStart(2, '0')}`; // فرمت 4:00, 14:30
+    };
+    const timeRangeLimits = computed(() => {
+  if (!allFlights.flights.length) return [0, 2400];
+
+  // استخراج ساعت از رشته‌های departure
+  const times = allFlights.flights.map(flight => {
+    const dateStr = flight.departure; // فرمت: "2026-07-22 07:30:00" یا "2026-07-22T20:30:00"
+    const timePart = dateStr.split(' ')[1] || dateStr.split('T')[1];
+    const [hours, minutes] = timePart.split(':');
+    return parseInt(hours) * 100 + parseInt(minutes);
+  });
+
+  return [
+    Math.floor(Math.min(...times) / 30) * 30, // رند کردن به پایین برای نیم‌ساعت
+    Math.ceil(Math.max(...times) / 30) * 30   // رند کردن به بالا برای نیم‌ساعت
+  ];
+});
+const fetchAndFilterFlights = () => {
+  filteredFlights.value = allFlights.flights.filter(flight => {
+    // تبدیل زمان پرواز به عدد (مثلاً 07:30 -> 450)
+    const timePart = flight.departure.split(' ')[1] || flight.departure.split('T')[1];
+    const [h, m] = timePart.split(':');
+    const flightTimeValue = parseInt(h) * 60 + parseInt(m);
+
+    // تبدیل بازه فیلتر به دقیقه (از همان تابع formatTime استفاده کنید یا مشابه آن)
+    const [start, end] = filters.value.departureTimeRange;
+    const startMin = Math.floor(start / 100) * 60 + (start % 100);
+    const endMin = Math.floor(end / 100) * 60 + (end % 100);
+
+    // بررسی بازه
+    const isInTimeRange = flightTimeValue >= startMin && flightTimeValue <= endMin;
+
+    // سایر فیلترها (قیمت، ایرلاین و...)
+    return isInTimeRange /* && سایر شرط‌ها */;
+  });
+};
 </script>
