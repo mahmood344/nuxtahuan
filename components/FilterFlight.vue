@@ -1,139 +1,128 @@
 <template>
-  <div class="bg-white p-6 shadow-sm rounded-2xl border border-gray-100 w-full max-w-sm">
-    <h2 class="text-xl font-bold text-gray-800 mb-6 border-b border-gray-100 pb-4">
-      فیلترها
-    </h2>
-
-    <!-- فیلتر قیمت -->
-    <div class="mb-8">
-      <h3 class="font-semibold text-gray-700 mb-4">قیمت</h3>{{timeRangeLimits}}
+  <div class="filter-flight-container">
+    <h3 class="filter-title">ساعت حرکت</h3>
+    
+    <div class="slider-wrapper" v-if="currentFilters.departureTimeRange">
+      <!-- اسلایدر بازه زمانی ساعت پرواز -->
       <UiBaseRangeSlider
-       v-model="filters.departureTimeRange"
-        :min="timeRangeLimits[0]" 
-        :max="timeRangeLimits[1]" 
+        v-model="currentFilters.departureTimeRange"
+        :min="timeRangeLimits[0]"
+        :max="timeRangeLimits[1]"
         :step="30" 
-        :formatValue="formatTime"
-        :trackColor="'#dbeafe'"  
-        :rangeColor="'#2563eb'"
       />
-    </div>
-
-    <!-- فیلتر ساعت حرکت -->
-    <div class="mb-8">
-      <h3 class="font-semibold text-gray-700 mb-6">ساعت حرکت</h3>
-      <div class="relative">
-        <input type="range" class="w-full h-1.5 bg-blue-100 rounded-lg appearance-none cursor-pointer accent-blue-600" />
-        <div class="flex justify-between text-[10px] text-gray-400 mt-3 px-1 rotate-[-30deg] origin-top-right">
-          <span>صبح</span>
-          <span>ظهر</span>
-          <span>عصر</span>
-          <span>شب</span>
-          <span>نیمه شب</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- نوع بلیط -->
-    <div class="mb-8">
-      <h3 class="font-semibold text-gray-700 mb-4">نوع بلیط</h3>
-      <div class="space-y-3">
-        <label class="flex items-center gap-3 cursor-pointer group">
-          <input type="checkbox" class="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500" checked />
-          <span class="text-gray-600 group-hover:text-blue-600 transition">اکونومی</span>
-        </label>
-        <label class="flex items-center gap-3 cursor-pointer group">
-          <input type="checkbox" class="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500" checked />
-          <span class="text-gray-600 group-hover:text-blue-600 transition">بیزینس</span>
-        </label>
-      </div>
-    </div>
-
-    <!-- نوع پرواز -->
-    <div>
-      <h3 class="font-semibold text-gray-700 mb-4">نوع پرواز</h3>
-      <div class="space-y-3">
-        <label class="flex items-center gap-3 cursor-pointer group">
-          <input type="checkbox" class="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500" checked />
-          <span class="text-gray-600 group-hover:text-blue-600 transition">چارترى</span>
-        </label>
-        <label class="flex items-center gap-3 cursor-pointer group">
-          <input type="checkbox" class="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500" checked />
-          <span class="text-gray-600 group-hover:text-blue-600 transition">سیستمی</span>
-        </label>
+      
+      <!-- نمایش متنی بازه انتخاب شده -->
+      <div class="time-labels">
+        <span>از ساعت: {{ formatTime(currentFilters.departureTimeRange[0]) }}</span>
+        <span>تا ساعت: {{ formatTime(currentFilters.departureTimeRange[1]) }}</span>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, defineProps, defineEmits } from 'vue';
-// مسیر import را چک کنید، باید به کامپوننت UiRangeSlider اشاره کند
-
+import { computed, onMounted } from 'vue';
 
 const props = defineProps({
+  // تمام پروازها برای محاسبه داینامیک محدوده اسلایدر
   allFlightsData: { 
     type: Array,
+    required: true,
+    default: () => []
+  },
+  // فیلترهای فعال متصل شده از والد با v-model:filters
+  filters: {
+    type: Object,
     required: true
   }
 });
 
 const emit = defineEmits(['update:filters']);
 
-// وضعیت فیلترها (فقط ساعت حرکت، نوع بلیط، نوع پرواز)
-const filters = ref({
-  departureTimeRange: [0, 2400], // مقدار اولیه برای ساعت حرکت
-  ticketType: [], // آرایه برای چک باکس ها (مثلا 1 یا 2)
-  flightType: '' // مقدار رشته ای برای نوع پرواز
+// مدیریت دوطرفه تغییرات فیلترها
+const currentFilters = computed({
+  get: () => props.filters,
+  set: (newFilters) => emit('update:filters', newFilters)
 });
 
-// محاسبه محدوده ساعت حرکت بر اساس داده های دریافتی
+// محاسبه کمترین و بیشترین ساعت پروازهای موجود
 const timeRangeLimits = computed(() => {
-  if (!props.allFlightsData || props.allFlightsData.length === 0) return [0, 2400];
+  return [0, 2400];
+});
+
+// این تابع کمکی برای پیدا کردن ساعت اولین پرواز و آخرین پرواز جهت مقداردهی اولیه دستگیره‌ها است
+const getFlightsActualTimeRange = () => {
+  if (!props.allFlightsData || props.allFlightsData.length === 0) {
+    return [0, 2400];
+  }
 
   const times = props.allFlightsData.map(flight => {
-    if (!flight.departure) return 0;
+    if (!flight.departure) return null;
     const dateStr = flight.departure;
     const timePart = dateStr.includes(' ') ? dateStr.split(' ')[1] : dateStr.split('T')[1];
-    if (!timePart) return 0; 
+    if (!timePart) return null;
     const [hours, minutes] = timePart.split(':');
-    return parseInt(hours) * 100 + parseInt(minutes);
-  });
+    return parseInt(hours, 10) * 100 + parseInt(minutes, 10);
+  }).filter(t => t !== null);
 
   if (times.length === 0) return [0, 2400];
 
   const minTime = Math.min(...times);
   const maxTime = Math.max(...times);
 
-  const roundToNearest30 = (timeValue) => {
-    const minutes = timeValue % 100;
-    const hours = Math.floor(timeValue / 100);
-    const totalMinutes = hours * 60 + minutes;
-    const roundedTotalMinutes = Math.round(totalMinutes / 30) * 30;
-    return Math.floor(roundedTotalMinutes / 60) * 100 + (roundedTotalMinutes % 60);
+  // گرد کردن به نزدیک‌ترین نیم‌ساعت
+  const roundTo30 = (v) => {
+    const mins = v % 100;
+    const hrs = Math.floor(v / 100);
+    const total = hrs * 60 + mins;
+    const rounded = Math.round(total / 30) * 30;
+    return Math.floor(rounded / 60) * 100 + (rounded % 60);
   };
 
-  return [
-    roundToNearest30(minTime),
-    roundToNearest30(maxTime)
-  ];
-});
-
-
-// فرمت کننده ساعت برای نمایش
-const formatTime = (value) => {
-  const hours = Math.floor(value / 100);
-  const minutes = value % 100;
-  const formattedMinutes = String(minutes).padStart(2, '0');
-  return `${hours}:${formattedMinutes}`; 
+  return [roundTo30(minTime), roundTo30(maxTime)];
 };
 
-// واچ برای ارسال تغییرات فیلتر به کامپوننت والد
-watch(filters, (newFilters) => {
-  emit('update:filters', newFilters);
-}, { deep: true });
+// فرمت کردن عدد زمان (مثلا 720) به فرمت متنی (مثلا "07:20")
+const formatTime = (value) => {
+  if (value === undefined || value === null) return '00:00';
+  const hours = Math.floor(value / 100);
+  const minutes = value % 100;
+  const formattedHours = String(hours).padStart(2, '0');
+  const formattedMinutes = String(minutes).padStart(2, '0');
+  return `${formattedHours}:${formattedMinutes}`; 
+};
 
 onMounted(() => {
-  // تنظیم مقدار اولیه اسلایدر ساعت حرکت بر اساس داده های بارگذاری شده
-  filters.value.departureTimeRange = timeRangeLimits.value;
+  // زمان لود صفحه، بازه فیلتر را روی ساعت واقعی اولین و آخرین پرواز تنظیم می‌کنیم
+  const [actualMin, actualMax] = getFlightsActualTimeRange();
+  
+  // اگر فیلتر از قبل مقدار پیش‌فرض را دارد، آن را به محدوده واقعی تغییر بده
+  if (props.filters.departureTimeRange && 
+      props.filters.departureTimeRange[0] === 0 && 
+      props.filters.departureTimeRange[1] === 2400) {
+    currentFilters.value.departureTimeRange = [actualMin, actualMax];
+  }
 });
 </script>
+
+<style scoped>
+.filter-flight-container {
+  padding: 15px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+}
+.filter-title {
+  font-size: 16px;
+  margin-bottom: 15px;
+}
+.slider-wrapper {
+  margin-top: 10px;
+}
+.time-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  font-size: 14px;
+  color: #666;
+}
+</style>

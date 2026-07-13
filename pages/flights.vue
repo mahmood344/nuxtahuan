@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-[#f4f6fb] pb-24 md:bg-white md:pb-10  mt-[60px] " dir="ltr">
+  <div class="min-h-screen bg-[#f4f4f4] pb-24 md:bg-white md:pb-10 mt-[60px]" dir="ltr">
     <!-- هدر/استپر فقط دسکتاپ -->
     <header class="hidden md:block relative h-[97px] w-full bg-[var(--color-secondary)] -mt-10">
       <div class="absolute inset-0" style="background-image: url('/imgs/flight/header.png');"></div>
@@ -7,7 +7,7 @@
         <Stepper :steps="flightSteps" :active-step="0" active-color="#1a237e" />
       </div>
     </header>
-<!-- {{ flightStore.flights }} -->
+    <!-- {{ flightStore.flights }} -->
     <main class="mx-auto mt-0 md:mt-[100px] max-w-7xl px-0 md:px-4">
       <div class="grid grid-cols-1 gap-8 lg:grid-cols-12">
 
@@ -16,7 +16,10 @@
            <!-- <div class="sticky top-24"> -->
              <FlightSearchPanel mode="aside" :showServices="true" />
            <!-- </div> -->
-           <FilterFlight></FilterFlight>
+           <FilterFlight 
+      v-model:filters="activeFilters" 
+      :allFlightsData="flights" 
+    />
         </aside>
 
         <!-- نتایج -->
@@ -73,44 +76,44 @@
 
           <!-- کنترل‌های موبایل -->
           <div class="lg:hidden mb-4 px-2" dir="rtl">
-  <div class="flex items-center justify-start gap-2">
-    <div class="relative">
-      <UiBaseButton
-        @click="isSortDropdownOpen = !isSortDropdownOpen"
-  label="مرتب‌سازی"
-  variant="soft"
-  color="primary"
-  class="inline-flex items-center justify-end gap-1.5 !rounded-full bg-white shadow-xl px-5 py-4 text-[12px] font-bold text-gray-600 border border-gray-100 shadow-sm"
-  icon="↕️"
-/>
-      <transition name="fade">
-        <div
-          v-if="isSortDropdownOpen"
-          class="absolute right-0 top-full mt-2 z-50 min-w-[160px] rounded-2xl bg-white p-2 shadow-xl"
-        >
-          <button
-            v-for="tab in sortOptions"
-            :key="tab"
-            @click="selectSortOption(tab)"
-            class="w-full text-right rounded-xl px-3 py-2 text-[11px] font-bold transition-all"
-            :class="activeTab === tab ? 'bg-[var(--color-primary-dark)] text-white' : 'text-gray-600 hover:bg-gray-50'"
-            type="button"
-          >
-            {{ tab }}
-          </button>
-        </div>
-      </transition>
-    </div>
-    <UiBaseButton
-       @click="isFilterModalOpen = true"
-  label="فیلترها"
-  variant="soft"
-  color="primary"
-    class="inline-flex items-center justify-end gap-1.5 !rounded-full bg-white px-5 py-4 text-[12px] shadow-xl font-bold text-gray-600 border border-gray-100 shadow-sm"
-  icon="⚙️"
-/>
-  </div>
-</div>
+            <div class="flex items-center justify-start gap-2">
+              <div class="relative">
+                <UiBaseButton
+                  @click="isSortDropdownOpen = !isSortDropdownOpen"
+                  label="مرتب‌سازی"
+                  variant="soft"
+                  color="primary"
+                  class="inline-flex items-center justify-end gap-1.5 !rounded-full bg-white shadow-xl px-5 py-4 text-[12px] font-bold text-gray-600 border border-gray-100 shadow-sm"
+                  icon="↕️"
+                />
+                <transition name="fade">
+                  <div
+                    v-if="isSortDropdownOpen"
+                    class="absolute right-0 top-full mt-2 z-50 min-w-[160px] rounded-2xl bg-white p-2 shadow-xl"
+                  >
+                    <button
+                      v-for="tab in sortOptions"
+                      :key="tab"
+                      @click="selectSortOption(tab)"
+                      class="w-full text-right rounded-xl px-3 py-2 text-[11px] font-bold transition-all"
+                      :class="activeTab === tab ? 'bg-[var(--color-primary-dark)] text-white' : 'text-gray-600 hover:bg-gray-50'"
+                      type="button"
+                    >
+                      {{ tab }}
+                    </button>
+                  </div>
+                </transition>
+              </div>
+              <UiBaseButton
+                @click="isFilterModalOpen = true"
+                label="فیلترها"
+                variant="soft"
+                color="primary"
+                class="inline-flex items-center justify-end gap-1.5 !rounded-full bg-white px-5 py-4 text-[12px] shadow-xl font-bold text-gray-600 border border-gray-100 shadow-sm"
+                icon="⚙️"
+              />
+            </div>
+          </div>
 
 
           <!-- شمارش -->
@@ -126,31 +129,38 @@
 
           <!-- لیست پروازها -->
           <div v-if="sortedFlights.length > 0" class="space-y-4 px-2 md:px-0">
-  
-  <FlightTicketCard
-      v-for="(flight, index) in sortedFlights"
-      :key="flight.id || index"
-      :tickets="[flight]"
-      :passenger="passengerInfo"
-      :is-main-page="true"
-      :is-next-page="false"
-      :choose-step="1"
-      @firstChoosed="handleFlightSelect"
-      @showDetailes="showFlightDetails"
-      :flight="flight"
-  @select="handleSelectFlight"
-    />
+            <!-- استفاده از TransitionGroup برای انیمیشن لیست -->
+            <TransitionGroup
+              name="list"
+              tag="div"
+              class="space-y-4"
+              enter-active-class="animate-enter"
+              leave-active-class="animate-leave"
+            >
+              <FlightTicketCard
+                v-for="(flight, index) in sortedFlights"
+                :key="flight.id || index"  
+                :tickets="[flight]"
+                :passenger="passengerInfo"
+                :is-main-page="true"
+                :is-next-page="false"
+                :choose-step="1"
+                @firstChoosed="handleFlightSelect"
+                @showDetailes="showFlightDetails"
+                :flight="flight"
+                @select="handleSelectFlight"
+              />
+            </TransitionGroup>
+          </div>
 
-</div>
-
-<!-- عدم یافتن پرواز -->
-<div
-  v-else-if="searchStarted && flightStore.searchFinished && !flightStore.loading"
-  class="text-center py-20 text-gray-500 border-2 border-dashed border-gray-150 rounded-[2rem] bg-white shadow-sm mx-2 md:mx-0"
->
-  <p class="font-bold text-gray-700">پروازی در تاریخ انتخاب‌شده یافت نشد.</p>
-  <p class="text-xs text-gray-400 mt-2">لطفاً تاریخ یا مسیر دیگری را امتحان کنید.</p>
-</div>
+          <!-- عدم یافتن پرواز -->
+          <div
+            v-else-if="searchStarted && flightStore.searchFinished && !flightStore.loading"
+            class="text-center py-20 text-gray-500 border-2 border-dashed border-gray-150 rounded-[2rem] bg-white shadow-sm mx-2 md:mx-0"
+          >
+            <p class="font-bold text-gray-700">پروازی در تاریخ انتخاب‌شده یافت نشد.</p>
+            <p class="text-xs text-gray-400 mt-2">لطفاً تاریخ یا مسیر دیگری را امتحان کنید.</p>
+          </div>
         </div>
       </div>
     </main>
@@ -298,71 +308,50 @@ function isFlightUnavailable(flight) {
 
   return isCanceled || isSoldOut || invalidPrice
 }
-// const sortedFlights = computed(() => {
-//   const list = [...flights.value]
+const activeFilters = ref({
+  departureTimeRange: [0, 2400],
+  // در صورت نیاز سایر فیلترها (مانند ایرلاین، قیمت و...) را اینجا اضافه کنید
+});
+const getFlightTimeAsNumber = (departureStr) => {
+  if (!departureStr) return null;
+  
+  const timePart = departureStr.includes(' ') 
+    ? departureStr.split(' ')[1] 
+    : departureStr.includes('T') ? departureStr.split('T')[1] 
+    : null;
 
-//   return list.sort((a, b) => {
-//     const aUnavailable = isFlightUnavailable(a)
-//     const bUnavailable = isFlightUnavailable(b)
+  if (!timePart) return null;
 
-//     // پروازهای غیرقابل خرید همیشه آخر لیست
-//     if (aUnavailable !== bUnavailable) {
-//       return aUnavailable ? 1 : -1
-//     }
+  const [hours, minutes] = timePart.split(':');
+  const h = parseInt(hours, 10);
+  const m = parseInt(minutes, 10);
 
-//     if (activeTab.value === 'ارزان‌ترین') {
-//       const aPrice = Number(a?.priceFrom)
-//       const bPrice = Number(b?.priceFrom)
-
-//       const safeAPrice =
-//         Number.isFinite(aPrice) && aPrice > 0 ? aPrice : Number.MAX_SAFE_INTEGER
-
-//       const safeBPrice =
-//         Number.isFinite(bPrice) && bPrice > 0 ? bPrice : Number.MAX_SAFE_INTEGER
-
-//       return safeAPrice - safeBPrice
-//     }
-
-//     if (activeTab.value === 'گران‌ترین') {
-//       const aPrice = Number(a?.priceFrom)
-//       const bPrice = Number(b?.priceFrom)
-
-//       const safeAPrice =
-//         Number.isFinite(aPrice) && aPrice > 0 ? aPrice : -1
-
-//       const safeBPrice =
-//         Number.isFinite(bPrice) && bPrice > 0 ? bPrice : -1
-
-//       return safeBPrice - safeAPrice
-//     }
-
-//     if (activeTab.value === 'نام ایرلاین') {
-//       return String(a.airlineName || a.airline || '').localeCompare(
-//         String(b.airlineName || b.airline || ''),
-//         'fa'
-//       )
-//     }
-
-//     if (activeTab.value === 'زودترین') {
-//       return String(a.departTime || a.departure || '').localeCompare(
-//         String(b.departTime || b.departure || '')
-//       )
-//     }
-
-//     if (activeTab.value === 'دیرترین') {
-//       return String(b.departTime || b.departure || '').localeCompare(
-//         String(a.departTime || a.departure || '')
-//       )
-//     }
-
-//     return 0
-//   })
-// })
-
+  if (isNaN(h) || isNaN(m)) return null;
+  return h * 100 + m;
+};
 const sortedFlights = computed(() => {
-  const list = [...flights.value]
+  if (!flights.value) return [];
 
-  // مرتب‌سازی اصلی
+  // فیلتر کردن
+  const filteredList = flights.value.filter(flight => {
+    // اگر فیلتر مقداری ندارد یا روی حالت پیش‌فرض (0 تا 2400) است، فیلتر اعمال نشود
+    if (!activeFilters.value.departureTimeRange) return true;
+    
+    const [minTime, maxTime] = activeFilters.value.departureTimeRange;
+    
+    // اگر فیلتر روی کل بازه (سراسر شبانه‌روز) تنظیم شده است، فیلتر را رد کن
+    if (minTime === 0 && maxTime === 2400) return true;
+
+    const flightTime = getFlightTimeAsNumber(flight.departure);
+    if (flightTime === null) return true; // پروازهای بدون زمان حذف نشوند
+
+    return flightTime >= minTime && flightTime <= maxTime;
+  });
+
+  // کپی برای مرتب‌سازی
+  const list = [...filteredList];
+
+  // مرتب‌سازی اصلی بر اساس تب فعال
   switch (activeTab.value) {
     case 'ارزان‌ترین':
       list.sort((a, b) => Number(a.priceFrom || 0) - Number(b.priceFrom || 0))
@@ -383,7 +372,7 @@ const sortedFlights = computed(() => {
 
     case 'زودترین':
       list.sort((a, b) =>
-        String(a.departure || '').localeCompare(String(b.departure || ''))
+        String(a.departure || '').localeCompare(String(a.departure || ''))
       )
       break
 
@@ -394,12 +383,12 @@ const sortedFlights = computed(() => {
       break
   }
 
-  // انتقال پروازهای غیرقابل خرید به انتهای لیست
+  // تفکیک پروازهای موجود از ناموجود
   return [
     ...list.filter(f => !isFlightUnavailable(f)),
     ...list.filter(f => isFlightUnavailable(f))
-  ]
-})
+  ];
+});
 
 const selectSortOption = (option) => {
   activeTab.value = option
@@ -511,7 +500,62 @@ watch(
 )
 </script>
 
-<style scoped>
+<style>
+/* انیمیشن‌های ورود و خروج برای TransitionGroup */
+.list-enter-active,
+.list-leave-active {
+  transition: all 0.3s ease; /* مدت زمان و نوع انیمیشن */
+}
+
+/* حالت اولیه هنگام ورود آیتم */
+.list-enter-from {
+  opacity: 0;
+  transform: translateX(30px); /* شروع از سمت راست */
+}
+
+/* حالت نهایی هنگام خروج آیتم */
+.list-leave-to {
+  opacity: 0;
+  transform: translateX(-30px); /* پایان در سمت چپ */
+}
+
+/* انیمیشن جابجایی آیتم‌ها وقتی جایشان در لیست تغییر می‌کند */
+.list-move {
+  transition: transform 1s ease;
+}
+
+/* مهم: برای اینکه آیتم‌های در حال خروج، فضای خالی را بلافاصله اشغال نکنند */
+.list-leave-active {
+  position: absolute;
+}
+
+/* انیمیشن ورود دلخواه (اختیاری) */
+.animate-enter {
+  opacity: 0;
+  transform: scale(0.9);
+}
+
+/* انیمیشن خروج دلخواه (اختیاری) */
+.animate-leave {
+  opacity: 0;
+  transf: scale(1.1);
+}
+
+/* اگر از انیمیشن‌های CSS پیچیده‌تر استفاده می‌کنید، می‌توانید keyframes تعریف کنید */
+/*
+@keyframes slideIn {
+  from { transform: translateX(30px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes slideOut {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(-30px); opacity: 0; }
+}
+.list-enter-active { animation: slideIn 0.5s ease; }
+.list-leave-active { animation: slideOut 0.5s ease; position: absolute; }
+*/
+
+/* کلاس‌های fade اصلی که برای مودال‌ها استفاده می‌شود */
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.3s ease;
@@ -519,14 +563,6 @@ watch(
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
-}
-
-.diamond {
-  width: 14px;
-  height: 14px;
-  transform: rotate(45deg);
-  border-radius: 2px;
-  display: inline-block;
 }
 
 .overflow-x-auto::-webkit-scrollbar {
