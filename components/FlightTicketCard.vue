@@ -170,6 +170,9 @@
                 <span class="text-[12px]">{{ returnArrivalTime }}</span>
                 <span class="text-[12px]">{{ returnDepartureTime }}</span>
               </div>
+              <div class="mt-1 flex justify-center text-sm text-gray-500">
+              <span dir="rtl" class="text-[12px]">{{ formatFlightDateShort(flight.returnDeparture) }}</span>
+            </div>
             </template>
           </div>
 
