@@ -5,20 +5,20 @@ import {
   searchMahanAvailability,
   mapMahanOfferToFlight
 } from './providers/mahan.js'
-// تابع کمکی برای ایجاد محدودیت زمانی در درخواست‌ها
+
 function withTimeout(promise, ms = 8000) {
-  let timeoutId;
-  const timeoutPromise = new Promise((resolve) => {
+  let timeoutId
+
+  const timeoutPromise = new Promise((_, reject) => {
     timeoutId = setTimeout(() => {
-      console.warn(`درخواست ایرلاین بعد از ${ms} میلی‌ثانیه متوقف شد (Timeout).`);
-      resolve([]); // در صورت تایم‌اوت، لیست خالی برمی‌گرداند
-    }, ms);
-  });
+      reject(new Error(`Timeout after ${ms}ms`))
+    }, ms)
+  })
 
   return Promise.race([
     promise.finally(() => clearTimeout(timeoutId)),
     timeoutPromise
-  ]);
+  ])
 }
 
 export async function searchAllProviders(searchParams) {
@@ -36,18 +36,17 @@ export async function searchAllProviders(searchParams) {
     )
   })
 
-  // ۱. ریست کردن وضعیت‌ها در شروع جستجو
   flightStore.loading = true
-  flightStore.backgroundLoading = true
+  flightStore.backgroundLoading = false
   flightStore.searchFinished = false
   flightStore.flights = []
 
   if (!fromCode || !toCode) {
-  flightStore.loading = false
-  flightStore.backgroundLoading = false
-  flightStore.searchFinished = true
-  return []
-}
+    flightStore.loading = false
+    flightStore.backgroundLoading = false
+    flightStore.searchFinished = true
+    return []
+  }
 
   const allFlights = []
   let firstResultShown = false
@@ -60,100 +59,96 @@ export async function searchAllProviders(searchParams) {
     })
   }
 
-  const tasks = niraAirlines.map(async (airline) => {
+  const showFirstResults = () => {
+    if (!firstResultShown && allFlights.length > 0) {
+      firstResultShown = true
+      flightStore.setFlights(sortFlights(allFlights))
+      flightStore.loading = false
+      flightStore.backgroundLoading = true
+    }
+  }
+
+  const appendFlights = (flights) => {
+    if (Array.isArray(flights) && flights.length > 0) {
+      allFlights.push(...flights)
+      flightStore.setFlights(sortFlights(allFlights))
+      showFirstResults()
+    }
+  }
+
+  const providerTasks = []
+
+  // NIRA providers
+  for (const airline of niraAirlines) {
+    const task = (async () => {
+      try {
+        const flights = await withTimeout(
+          searchNiraFlightForAirline(airline.code, {
+            from: fromCode,
+            to: toCode,
+            departureDate: date,
+            adults: searchParams.adults || 1,
+            children: searchParams.children || 0,
+            infants: searchParams.infants || 0
+          }),
+          8000
+        )
+
+        appendFlights(flights)
+      } catch (error) {
+        console.error(`خطا در ایرلاین ${airline.code}:`, error)
+      }
+    })()
+
+    providerTasks.push(task)
+  }
+
+  // Mahan provider
+  const mahanTask = (async () => {
     try {
-      // استفاده از Timeout برای جلوگیری از گیر کردن لودینگ
-      const flights = await withTimeout(
-        searchNiraFlightForAirline(airline.code, {
-          from: fromCode,
-          to: toCode,
-          departureDate: date,
-          adults: searchParams.adults || 1,
-          children: searchParams.children || 0,
-          infants: searchParams.infants || 0
-        }),
-        8000 // ۸ ثانیه فرصت برای هر ایرلاین
+      console.log('ارسال درخواست به ماهان...')
+
+      const mahanCred = {
+        userName: 'APIAHOVAN',
+        password: 'AHVN@3298',
+        baseUrl: 'https://reservations.mahanair.co.ir/webservices/services/AAResWebServices',
+        agancyName: 'Ahuan'
+      }
+
+      const payload = buildMahanAvailabilityPayload({
+        searchParams,
+        credentials: mahanCred
+      })
+
+      console.log('Mahan payload:', payload)
+
+      const res = await withTimeout(
+        searchMahanAvailability(payload),
+        1500000
       )
 
-      if (Array.isArray(flights) && flights.length > 0) {
-        allFlights.push(...flights)
-        flightStore.setFlights(sortFlights(allFlights))
-
-        // تغییر لودینگ بزرگ به کوچک پس از اولین دریافت موفق
-        if (!firstResultShown) {
-          firstResultShown = true
-          setTimeout(() => {
-            // فقط اگر جستجو هنوز تمام نشده بود، لودینگ بزرگ را بردار و بک‌گراند را روشن بذار
-            if (!flightStore.searchFinished) {
-              flightStore.loading = false
-              flightStore.backgroundLoading = true
-            }
-          }, 500)
-        }
-      }
-    } catch (error) {
-      console.error(`خطا در ایرلاین ${airline.code}:`, error)
-    }
-  })
-const mahanTask = async () => {
-  try {
-    console.log("ارسال درخواست به ماهان...")
-
-    const mahanCred = {
-      userName: "APIAHOVAN",
-      password: "AHVN@3298",
-      baseUrl: "https://reservations.mahanair.co.ir/webservices/services/AAResWebServices",
-      agancyName: "Ahuan"
-    }
-
-    const payload = buildMahanAvailabilityPayload({
-      searchParams,
-      credentials: mahanCred
-    })
-
-    const res = await withTimeout(
-      searchMahanAvailability(payload),
-      8000
-    )
-
-    const offers = res?.flightOffers || []
-
-    if (offers.length > 0) {
+      const offers = res?.flightOffers || []
       const mapped = offers.map(mapMahanOfferToFlight)
 
-      allFlights.push(...mapped)
-      flightStore.setFlights(sortFlights(allFlights))
-      console.log(allFlights , 'allFlights');
-      
-      if (!firstResultShown) {
-        firstResultShown = true
-        setTimeout(() => {
-          if (!flightStore.searchFinished) {
-            flightStore.loading = false
-            flightStore.backgroundLoading = true
-          }
-        }, 500)
-      }
-    } else {
-      console.log("ماهان پروازی نداشت")
+      appendFlights(mapped)
+    } catch (err) {
+      console.error('خطا ماهان:', err)
+    }
+  })()
+
+  providerTasks.push(mahanTask)
+
+  try {
+    await Promise.allSettled(providerTasks)
+  } finally {
+    // اگر هیچ نتیجه‌ای نیامده بود، لودینگ اول را همینجا ببند
+    if (!firstResultShown) {
+      flightStore.loading = false
     }
 
-  } catch (err) {
-    console.error("خطا ماهان:", err)
-  }
-}
-tasks.push(mahanTask())
-  try {
-    // منتظر ماندن برای تمام شدن تمام درخواست‌ها (یا تایم‌اوت شدن آن‌ها)
-    await Promise.allSettled(tasks)
-  } finally {
-    console.log('--- تمام درخواست‌ها با موفقیت یا خطا خاتمه یافتند ---')
-    
-    // ۲. خاموش کردن قطعی تمام لودینگ‌ها در پایان
-    flightStore.loading = false
     flightStore.backgroundLoading = false
     flightStore.searchFinished = true
   }
-
+console.log(allFlights , 'allFlights');
   return sortFlights(allFlights)
 }

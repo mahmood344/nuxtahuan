@@ -7,7 +7,7 @@
         <Stepper :steps="flightSteps" :active-step="0" active-color="#1a237e" />
       </div>
     </header>
-
+<!-- {{ flightStore.flights }} -->
     <main class="mx-auto mt-0 md:mt-[100px] max-w-7xl px-0 md:px-4">
       <div class="grid grid-cols-1 gap-8 lg:grid-cols-12">
 
@@ -16,6 +16,7 @@
            <!-- <div class="sticky top-24"> -->
              <FlightSearchPanel mode="aside" :showServices="true" />
            <!-- </div> -->
+           <FilterFlight></FilterFlight>
         </aside>
 
         <!-- نتایج -->
@@ -47,15 +48,15 @@
               class="sticky top-3 z-40 mb-4"
             >
               <div class="bg-blue-50 border border-blue-200 text-blue-700 text-xs md:text-sm px-4 py-3 rounded-2xl shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                <div class="flex items-center gap-2">
-                  <div class="w-2.5 h-2.5 rounded-full bg-[#1a237e] animate-pulse"></div>
-                  <span class="font-medium">
-                    جستجو هنوز در حال انجام است...
+                <div class="flex items-center w-full justify-center gap-2">
+                  <div v-for="(n , index) in 3" :key="index" class="w-2.5 h-2.5 rounded-full bg-[#1a237e] animate-pulse"></div>
+                  <span class="font-medium font-bold">
+                    جستجو هنوز در حال انجام است
                   </span>
                 </div>
-                <span class="font-bold">
+                <!-- <span class="font-bold">
                   {{ pricedFlightsCount }} پرواز دارای قیمت
-                </span>
+                </span> -->
               </div>
             </div>
           </transition>
@@ -115,7 +116,7 @@
           <!-- شمارش -->
           <div class="mb-4 text-center text-xs text-gray-400 font-medium px-2">
             <span v-if="flightStore.loading">در حال جستجوی پروازها...</span>
-            <span v-else>تعداد {{ sortedFlights.length }} پرواز یافت شد</span>
+            <span v-else>تعداد {{ pricedFlightsCount }} پرواز یافت شد</span>
           </div>
 
           <!-- Tabs دسکتاپ -->
@@ -125,132 +126,31 @@
 
           <!-- لیست پروازها -->
           <div v-if="sortedFlights.length > 0" class="space-y-4 px-2 md:px-0">
-            <div
-              v-for="(flight, index) in sortedFlights"
-              :key="index"
-              class="relative overflow-hidden rounded-[24px] bg-white shadow-[0_8px_30px_rgba(15,23,42,0.08)] border border-gray-100"
-            >
-              <div class="p-4">
-                <!-- ردیف بالا -->
-                <div class="flex items-start justify-between gap-3">
-                  <div class="flex-shrink-0">
-                    <img
-                      :src="flight.logoUrl || 'https://placehold.co/120x45?text=Logo'"
-                      alt="logo"
-                      class="h-11 w-auto object-contain"
-                      @error="$event.target.src='https://placehold.co/120x45?text=Logo'"
-                    />
-                  </div>
+  
+  <FlightTicketCard
+      v-for="(flight, index) in sortedFlights"
+      :key="flight.id || index"
+      :tickets="[flight]"
+      :passenger="passengerInfo"
+      :is-main-page="true"
+      :is-next-page="false"
+      :choose-step="1"
+      @firstChoosed="handleFlightSelect"
+      @showDetailes="showFlightDetails"
+      :flight="flight"
+  @select="handleSelectFlight"
+    />
 
-                  <div class="flex flex-wrap justify-end gap-2">
-                    <span class="rounded-md bg-gray-100 px-2.5 py-1 text-[10px] font-bold text-gray-500">
-                      {{ flight.cabinClass || flight.cabin || 'اکونومی' }}
-                    </span>
-                    <span class="rounded-md bg-gray-100 px-2.5 py-1 text-[10px] font-bold text-gray-500">
-                      {{ flight.isSystem ? 'سیستمی' : 'چارتری' }}
-                    </span>
-                    <span class="rounded-md bg-gray-100 px-2.5 py-1 text-[10px] font-bold text-gray-500">
-                      {{ flight.flightNumber || 'Faker100' }}
-                    </span>
-                  </div>
-                </div>
+</div>
 
-                <!-- مسیر -->
-                <div class="mt-5">
-                  <div class="flex items-start justify-between gap-3" dir="rtl">
-                    <!-- مبدا -->
-                    <div class="w-[88px] text-right">
-                      <div class="mb-1 flex items-center justify-end gap-1 text-[11px] text-gray-400">
-                        <span>📍</span>
-                        <span>مبدا</span>
-                      </div>
-                      <div class="text-[15px] font-black text-gray-800">
-                        {{ baseSearchParamsFromRoute.from || 'تهران' }}
-                      </div>
-                      <div class="mt-1 text-[12px] text-gray-500">
-                        {{ flight.departTime || flight.departure || '--:--' }}
-                      </div>
-                    </div>
-
-                    <!-- خط منحنی -->
-                    <div class="relative flex-1 px-2 pt-4">
-                      <div class="relative h-12">
-                        <svg viewBox="0 0 320 80" class="absolute left-0 top-0 h-full w-full text-gray-300" fill="none">
-                          <path
-                            d="M10,60 C90,10 230,10 310,60"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-dasharray="5 6"
-                            stroke-linecap="round"
-                          />
-                        </svg>
-
-                        <div class="absolute left-1/2 top-[6px] -translate-x-1/2 text-gray-300 text-[18px]">
-                          ✈
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- مقصد -->
-                    <div class="w-[88px] text-left">
-                      <div class="mb-1 flex items-center justify-start gap-1 text-[11px] text-gray-400">
-                        <span>📍</span>
-                        <span>مقصد</span>
-                      </div>
-                      <div class="text-[15px] font-black text-gray-800">
-                        {{ baseSearchParamsFromRoute.to || 'مشهد' }}
-                      </div>
-                      <div class="mt-1 text-[12px] text-gray-500">
-                        {{ flight.arrivalTime || flight.arrival || '--:--' }}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="mt-3 text-center text-[13px] font-bold text-red-500">
-                    ۳ صندلی باقی مانده
-                  </div>
-                </div>
-              </div>
-
-              <div class="border-t border-dashed border-gray-200"></div>
-
-              <!-- پایین کارت -->
-              <div class="flex items-end justify-between px-4 py-4" dir="rtl">
-                <button
-                  @click="selectFlight(flight)"
-                  class="rounded-full bg-[#2b2f93] px-6 py-3 text-sm font-bold text-white shadow-[0_8px_18px_rgba(43,47,147,0.18)] active:scale-95 transition"
-                >
-                  انتخاب پرواز
-                </button>
-
-                <div class="text-right">
-                  <div class="text-[26px] font-black leading-none text-[#2b2f93]">
-                    {{ formatPrice(flight.priceFrom) }}
-                  </div>
-                  <div class="mt-1 text-[12px] font-bold text-gray-500">
-                    ریال
-                  </div>
-                </div>
-              </div>
-
-              <!-- تزئینات پایین -->
-              <div class="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 flex gap-1.5">
-                <span class="diamond bg-cyan-400"></span>
-                <span class="diamond bg-[#d8b07a]"></span>
-                <span class="diamond bg-cyan-400"></span>
-                <span class="diamond bg-[#d8b07a]"></span>
-              </div>
-            </div>
-          </div>
-
-          <!-- عدم یافتن -->
-          <div
-            v-else-if="searchStarted && flightStore.searchFinished && !flightStore.loading"
-            class="text-center py-20 text-gray-500 border-2 border-dashed border-gray-150 rounded-[2rem] bg-white shadow-sm mx-2 md:mx-0"
-          >
-            <p class="font-bold text-gray-700">پروازی در تاریخ انتخاب‌شده یافت نشد.</p>
-            <p class="text-xs text-gray-400 mt-2">لطفاً تاریخ یا مسیر دیگری را امتحان کنید.</p>
-          </div>
+<!-- عدم یافتن پرواز -->
+<div
+  v-else-if="searchStarted && flightStore.searchFinished && !flightStore.loading"
+  class="text-center py-20 text-gray-500 border-2 border-dashed border-gray-150 rounded-[2rem] bg-white shadow-sm mx-2 md:mx-0"
+>
+  <p class="font-bold text-gray-700">پروازی در تاریخ انتخاب‌شده یافت نشد.</p>
+  <p class="text-xs text-gray-400 mt-2">لطفاً تاریخ یا مسیر دیگری را امتحان کنید.</p>
+</div>
         </div>
       </div>
     </main>
@@ -356,31 +256,149 @@ const pricedFlightsCount = computed(() => {
   return flights.value.filter((flight) => hasValidPrice(flight?.priceFrom)).length
 })
 
+function isFlightUnavailable(flight) {
+  const text = [
+    flight?.status,
+    flight?.availabilityStatus,
+    flight?.state,
+    flight?.ticketStatus,
+    flight?.statusMessage,
+    flight?.description
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+
+  const price = Number(flight?.priceFrom)
+  const capacity = Number(flight?.capacity)
+  const returnCapacity = Number(flight?.returnCapacity)
+
+  const isCanceled =
+    flight?.canceled === true ||
+    flight?.cancelled === true ||
+    text.includes('cancel') ||
+    text.includes('canceled') ||
+    text.includes('cancelled') ||
+    text.includes('کنسل') ||
+    text.includes('باطل')
+
+  const isSoldOut =
+    flight?.disabled === true ||
+    text.includes('sold out') ||
+    text.includes('soldout') ||
+    text.includes('unavailable') ||
+    text.includes('full') ||
+    text.includes('تکمیل') ||
+    text.includes('تکمیل ظرفیت') ||
+    text.includes('غیرقابل خرید') ||
+    (Number.isFinite(capacity) && capacity <= 0) ||
+    (Number.isFinite(returnCapacity) && returnCapacity <= 0)
+
+  const invalidPrice = !Number.isFinite(price) || price <= 0
+
+  return isCanceled || isSoldOut || invalidPrice
+}
+// const sortedFlights = computed(() => {
+//   const list = [...flights.value]
+
+//   return list.sort((a, b) => {
+//     const aUnavailable = isFlightUnavailable(a)
+//     const bUnavailable = isFlightUnavailable(b)
+
+//     // پروازهای غیرقابل خرید همیشه آخر لیست
+//     if (aUnavailable !== bUnavailable) {
+//       return aUnavailable ? 1 : -1
+//     }
+
+//     if (activeTab.value === 'ارزان‌ترین') {
+//       const aPrice = Number(a?.priceFrom)
+//       const bPrice = Number(b?.priceFrom)
+
+//       const safeAPrice =
+//         Number.isFinite(aPrice) && aPrice > 0 ? aPrice : Number.MAX_SAFE_INTEGER
+
+//       const safeBPrice =
+//         Number.isFinite(bPrice) && bPrice > 0 ? bPrice : Number.MAX_SAFE_INTEGER
+
+//       return safeAPrice - safeBPrice
+//     }
+
+//     if (activeTab.value === 'گران‌ترین') {
+//       const aPrice = Number(a?.priceFrom)
+//       const bPrice = Number(b?.priceFrom)
+
+//       const safeAPrice =
+//         Number.isFinite(aPrice) && aPrice > 0 ? aPrice : -1
+
+//       const safeBPrice =
+//         Number.isFinite(bPrice) && bPrice > 0 ? bPrice : -1
+
+//       return safeBPrice - safeAPrice
+//     }
+
+//     if (activeTab.value === 'نام ایرلاین') {
+//       return String(a.airlineName || a.airline || '').localeCompare(
+//         String(b.airlineName || b.airline || ''),
+//         'fa'
+//       )
+//     }
+
+//     if (activeTab.value === 'زودترین') {
+//       return String(a.departTime || a.departure || '').localeCompare(
+//         String(b.departTime || b.departure || '')
+//       )
+//     }
+
+//     if (activeTab.value === 'دیرترین') {
+//       return String(b.departTime || b.departure || '').localeCompare(
+//         String(a.departTime || a.departure || '')
+//       )
+//     }
+
+//     return 0
+//   })
+// })
+
 const sortedFlights = computed(() => {
   const list = [...flights.value]
 
-  if (activeTab.value === 'ارزان‌ترین') {
-    return list.sort((a, b) => Number(a.priceFrom || 0) - Number(b.priceFrom || 0))
+  // مرتب‌سازی اصلی
+  switch (activeTab.value) {
+    case 'ارزان‌ترین':
+      list.sort((a, b) => Number(a.priceFrom || 0) - Number(b.priceFrom || 0))
+      break
+
+    case 'گران‌ترین':
+      list.sort((a, b) => Number(b.priceFrom || 0) - Number(a.priceFrom || 0))
+      break
+
+    case 'نام ایرلاین':
+      list.sort((a, b) =>
+        String(a.airlineName || a.airline || '').localeCompare(
+          String(b.airlineName || b.airline || ''),
+          'fa'
+        )
+      )
+      break
+
+    case 'زودترین':
+      list.sort((a, b) =>
+        String(a.departure || '').localeCompare(String(b.departure || ''))
+      )
+      break
+
+    case 'دیرترین':
+      list.sort((a, b) =>
+        String(b.departure || '').localeCompare(String(a.departure || ''))
+      )
+      break
   }
-  if (activeTab.value === 'گران‌ترین') {
-    return list.sort((a, b) => Number(b.priceFrom || 0) - Number(a.priceFrom || 0))
-  }
-  if (activeTab.value === 'نام ایرلاین') {
-    return list.sort((a, b) =>
-      String(a.airlineName || a.airline || '').localeCompare(String(b.airlineName || b.airline || ''), 'fa')
-    )
-  }
-  if (activeTab.value === 'زودترین') {
-    return list.sort((a, b) =>
-      String(a.departTime || a.departure || '').localeCompare(String(b.departTime || b.departure || ''))
-    )
-  }
-  if (activeTab.value === 'دیرترین') {
-    return list.sort((a, b) =>
-      String(b.departTime || b.departure || '').localeCompare(String(a.departTime || a.departure || ''))
-    )
-  }
-  return list
+
+  // انتقال پروازهای غیرقابل خرید به انتهای لیست
+  return [
+    ...list.filter(f => !isFlightUnavailable(f)),
+    ...list.filter(f => isFlightUnavailable(f))
+  ]
 })
 
 const selectSortOption = (option) => {

@@ -309,68 +309,81 @@ export const useFlightStore = defineStore('flights', {
       }
     ],
 
-    airlines: [
-      {
-        code: 'I3',
-        name: 'آتا',
-        credentials: { username: 'THR155.WS', password: 'Ahuan1348' }
-      },
-      {
-        code: 'Y9',
-        name: 'کیش‌ایر',
-        credentials: { username: 'THR100.WS', password: 'Ahuan1348' }
-      },
-      {
-        code: 'QB',
-        name: 'قشم‌ایر',
-        credentials: { username: 'THR166.WS', password: 'Ahuan1348' }
-      },
-      {
-        code: 'HH',
-        name: 'تابان',
-        credentials: { username: 'THR168.WS', password: 'Ahuan1348' }
-      },
-      {
-        code: 'EP',
-        name: 'آسمان',
-        credentials: { username: 'THR100.WS', password: 'Ahuan1348' }
-      },
-      {
-        code: 'ZV',
-        name: 'زاگرس',
-        credentials: { username: 'THR197.WS', password: 'Ahuan1348' }
-      },
-      {
-        code: 'NV',
-        name: 'نفت',
-        credentials: { username: 'THR100.WS', password: 'Ahuan1348' }
-      },
-      {
-        code: 'VR',
-        name: 'وارش',
-        credentials: { username: 'THR215.WS', password: 'A2930' }
-      },
-      {
-        code: 'IRZ',
-        name: 'ساها',
-        credentials: { username: 'THR140.WS', password: '123456789' }
-      },
-      {
-        code: 'FP',
-        name: 'فلای‌پرشیا',
-        credentials: { username: 'THR106.WS', password: '123456789' }
-      },
-      {
-        code: 'IV',
-        name: 'کاسپین',
-        credentials: { username: 'THR100.WS', password: 'Ahuan1348' }
-      },
-      {
-        code: 'PA',
-        name: 'پارس‌ایر',
-        credentials: { username: 'THR226.WS', password: 'Ahouvan@2026' }
-      }
-    ],
+   airlines : [
+  {
+    code: 'I3',
+    name: 'آتا',
+    credentials: { username: 'THR155.WS', password: 'Ahuan1348' },
+    logo: '/imgs/flight/airlines/ata.png'
+  },
+  {
+    code: 'Y9',
+    name: 'کیش‌ایر',
+    credentials: { username: 'THR100.WS', password: 'Ahuan1348' },
+    logo: '/imgs/flight/airlines/kishair.png'
+  },
+  {
+    code: 'QB',
+    name: 'قشم‌ایر',
+    credentials: { username: 'THR166.WS', password: 'Ahuan1348' },
+    logo: '/imgs/flight/airlines/gheshm.png'
+  },
+  {
+    code: 'HH',
+    name: 'تابان',
+    credentials: { username: 'THR168.WS', password: 'Ahuan1348' },
+    logo: '/imgs/flight/airlines/taban.png'
+  },
+  {
+    code: 'EP',
+    name: 'آسمان',
+    credentials: { username: 'THR100.WS', password: 'Ahuan1348' },
+    logo: '/imgs/flight/airlines/aseman.png'
+  },
+  {
+    code: 'ZV',
+    name: 'زاگرس',
+    credentials: { username: 'THR197.WS', password: 'Ahuan1348' },
+    logo: '/imgs/flight/airlines/zagros.png'
+  },
+  {
+    code: 'NV',
+    name: 'نفت',
+    credentials: { username: 'THR100.WS', password: 'Ahuan1348' },
+    logo: '/imgs/flight/airlines/naft.png'
+  },
+  {
+    code: 'VR',
+    name: 'وارش',
+    credentials: { username: 'THR215.WS', password: 'A2930' },
+    logo: '/imgs/flight/airlines/varesh.png'
+  },
+  {
+    code: 'IRZ',
+    name: 'ساها',
+    credentials: { username: 'THR140.WS', password: '123456789' },
+    logo: '/imgs/flight/airlines/saha.png'
+  },
+  {
+    code: 'FP',
+    name: 'فلای‌پرشیا',
+    credentials: { username: 'THR106.WS', password: '123456789' },
+    logo: '/imgs/flight/airlines/flypersia.png'
+  },
+  {
+    code: 'IV',
+    name: 'کاسپین',
+    credentials: { username: 'THR100.WS', password: 'Ahuan1348' },
+    logo: '/imgs/flight/airlines/caspian.png'
+  },
+  {
+    code: 'PA',
+    name: 'پارس‌ایر',
+    credentials: { username: 'THR226.WS', password: 'Ahouvan@2026' },
+    logo: '/imgs/flight/airlines/parsair1.png' // یا parsair1.png
+  }
+],
+
 
     flights: [],
     loading: false,
