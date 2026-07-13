@@ -342,6 +342,7 @@ const sortedFlights = computed(() => {
     // اگر فیلتر روی کل بازه (سراسر شبانه‌روز) تنظیم شده است، فیلتر را رد کن
     if (minTime === 0 && maxTime === 2400) return true;
 
+    // مبنای فیلتر زمان حرکت پرواز رفت است
     const flightTime = getFlightTimeAsNumber(flight.departure);
     if (flightTime === null) return true; // پروازهای بدون زمان حذف نشوند
 
@@ -350,6 +351,17 @@ const sortedFlights = computed(() => {
 
   // کپی برای مرتب‌سازی
   const list = [...filteredList];
+
+  // تابع کمکی برای گرفتن زمان دقیق پرواز رفت جهت مقایسه عددی
+  const getOutboundDepartureTime = (flight) => {
+    // در پروازهای رفت و برگشت (مانند ماهان)، مبنای ما همیشه فیلد departure اصلی است که زمان رفت را نشان می‌دهد.
+    const depTime = flight.departure;
+    if (!depTime) return 0;
+    
+    // تبدیل به میلی‌ثانیه برای مقایسه دقیق ریاضی
+    const parsed = new Date(depTime).getTime();
+    return isNaN(parsed) ? 0 : parsed;
+  };
 
   // مرتب‌سازی اصلی بر اساس تب فعال
   switch (activeTab.value) {
@@ -371,15 +383,13 @@ const sortedFlights = computed(() => {
       break
 
     case 'زودترین':
-      list.sort((a, b) =>
-        String(a.departure || '').localeCompare(String(a.departure || ''))
-      )
+      // مقایسه صعودی بر اساس زمان پرواز رفت (صبح به شب)
+      list.sort((a, b) => getOutboundDepartureTime(a) - getOutboundDepartureTime(b))
       break
 
     case 'دیرترین':
-      list.sort((a, b) =>
-        String(b.departure || '').localeCompare(String(a.departure || ''))
-      )
+      // مقایسه نزولی بر اساس زمان پرواز رفت (شب به صبح)
+      list.sort((a, b) => getOutboundDepartureTime(b) - getOutboundDepartureTime(a))
       break
   }
 
@@ -389,6 +399,8 @@ const sortedFlights = computed(() => {
     ...list.filter(f => isFlightUnavailable(f))
   ];
 });
+
+
 
 const selectSortOption = (option) => {
   activeTab.value = option
