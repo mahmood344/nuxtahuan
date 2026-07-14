@@ -324,6 +324,7 @@ export async function searchAllProviders(searchParams) {
     `تمام نتایج جستجوی تاریخ ${date}:`,
     allFlights
   )
+console.log(allFlights , 'allFlights');
 
   return sortFlights(allFlights)
 }

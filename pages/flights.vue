@@ -161,6 +161,10 @@
             <p class="font-bold text-gray-700">پروازی در تاریخ انتخاب‌شده یافت نشد.</p>
             <p class="text-xs text-gray-400 mt-2">لطفاً تاریخ یا مسیر دیگری را امتحان کنید.</p>
           </div>
+          <div class="grid grid-cols-1 gap-8 lg:grid-cols-12 border-4">نمایش بلیط های انتخاب شده </div>
+          <div class="grid grid-cols-1 gap-8 lg:grid-cols-12 border-4">مشخصات فردی</div>
+                    <div class="grid grid-cols-1 gap-8 lg:grid-cols-12 border-4">اطلاعات تماس</div>
+
         </div>
       </div>
     </main>
@@ -513,75 +517,83 @@ watch(
 </script>
 
 <style>
-/* انیمیشن‌های ورود و خروج برای TransitionGroup */
 .list-enter-active,
 .list-leave-active {
-  transition: all 0.3s ease; /* مدت زمان و نوع انیمیشن */
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.35s ease;
+  will-change: transform, opacity;
 }
 
-/* حالت اولیه هنگام ورود آیتم */
+.list-move {
+  transition: transform 2s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
 .list-enter-from {
   opacity: 0;
-  transform: translateX(30px); /* شروع از سمت راست */
+  transform: translateY(18px) scale(0.97);
+  filter: blur(4px);
 }
 
-/* حالت نهایی هنگام خروج آیتم */
+.list-enter-to {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  filter: blur(0);
+}
+
+.list-leave-from {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  filter: blur(0);
+}
+
 .list-leave-to {
   opacity: 0;
-  transform: translateX(-30px); /* پایان در سمت چپ */
+  transform: translateY(-14px) scale(0.98);
+  filter: blur(3px);
 }
 
-/* انیمیشن جابجایی آیتم‌ها وقتی جایشان در لیست تغییر می‌کند */
-.list-move {
-  transition: transform 1s ease;
-}
-
-/* مهم: برای اینکه آیتم‌های در حال خروج، فضای خالی را بلافاصله اشغال نکنند */
 .list-leave-active {
   position: absolute;
+  width: 100%;
+  pointer-events: none;
+  z-index: 0;
 }
 
-/* انیمیشن ورود دلخواه (اختیاری) */
 .animate-enter {
-  opacity: 0;
-  transform: scale(0.9);
+  animation: ticketIn 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* انیمیشن خروج دلخواه (اختیاری) */
 .animate-leave {
-  opacity: 0;
-  transf: scale(1.1);
+  animation: ticketOut 0.25s ease forwards;
 }
 
-/* اگر از انیمیشن‌های CSS پیچیده‌تر استفاده می‌کنید، می‌توانید keyframes تعریف کنید */
-/*
-@keyframes slideIn {
-  from { transform: translateX(30px); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
-}
-@keyframes slideOut {
-  from { transform: translateX(0); opacity: 1; }
-  to { transform: translateX(-30px); opacity: 0; }
-}
-.list-enter-active { animation: slideIn 0.5s ease; }
-.list-leave-active { animation: slideOut 0.5s ease; position: absolute; }
-*/
-
-/* کلاس‌های fade اصلی که برای مودال‌ها استفاده می‌شود */
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
+@keyframes ticketIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.96);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
 }
 
-.overflow-x-auto::-webkit-scrollbar {
-  display: none;
+@keyframes ticketOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.98);
+    filter: blur(3px);
+  }
 }
-.overflow-x-auto {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
+
 </style>
