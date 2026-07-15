@@ -205,9 +205,7 @@
             <p class="font-bold text-gray-700">پروازی در تاریخ انتخاب‌شده یافت نشد.</p>
             <p class="text-xs text-gray-400 mt-2">لطفاً تاریخ یا مسیر دیگری را امتحان کنید.</p>
           </div>
-          <div class="grid grid-cols-1 gap-8 lg:grid-cols-12 border-4">نمایش بلیط های انتخاب شده </div>
-          <div class="grid grid-cols-1 gap-8 lg:grid-cols-12 border-4">مشخصات فردی</div>
-                    <div class="grid grid-cols-1 gap-8 lg:grid-cols-12 border-4">اطلاعات تماس</div>
+       
 
         </div>
       </div>
