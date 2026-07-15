@@ -309,87 +309,92 @@ export const useFlightStore = defineStore('flights', {
       }
     ],
 
-   airlines : [
-  {
-    code: 'I3',
-    name: 'آتا',
-    credentials: { username: 'THR155.WS', password: 'Ahuan1348' },
-    logo: '/imgs/flight/airlines/ata.png'
-  },
-  {
-    code: 'Y9',
-    name: 'کیش‌ایر',
-    credentials: { username: 'THR100.WS', password: 'Ahuan1348' },
-    logo: '/imgs/flight/airlines/kishair.png'
-  },
-  {
-    code: 'QB',
-    name: 'قشم‌ایر',
-    credentials: { username: 'THR166.WS', password: 'Ahuan1348' },
-    logo: '/imgs/flight/airlines/gheshm.png'
-  },
-  {
-    code: 'HH',
-    name: 'تابان',
-    credentials: { username: 'THR168.WS', password: 'Ahuan1348' },
-    logo: '/imgs/flight/airlines/taban.png'
-  },
-  {
-    code: 'EP',
-    name: 'آسمان',
-    credentials: { username: 'THR100.WS', password: 'Ahuan1348' },
-    logo: '/imgs/flight/airlines/aseman.png'
-  },
-  {
-    code: 'ZV',
-    name: 'زاگرس',
-    credentials: { username: 'THR197.WS', password: 'Ahuan1348' },
-    logo: '/imgs/flight/airlines/zagros.png'
-  },
-  {
-    code: 'NV',
-    name: 'نفت',
-    credentials: { username: 'THR100.WS', password: 'Ahuan1348' },
-    logo: '/imgs/flight/airlines/naft.png'
-  },
-  {
-    code: 'VR',
-    name: 'وارش',
-    credentials: { username: 'THR215.WS', password: 'A2930' },
-    logo: '/imgs/flight/airlines/varesh.png'
-  },
-  {
-    code: 'IRZ',
-    name: 'ساها',
-    credentials: { username: 'THR140.WS', password: '123456789' },
-    logo: '/imgs/flight/airlines/saha.png'
-  },
-  {
-    code: 'FP',
-    name: 'فلای‌پرشیا',
-    credentials: { username: 'THR106.WS', password: '123456789' },
-    logo: '/imgs/flight/airlines/flypersia.png'
-  },
-  {
-    code: 'IV',
-    name: 'کاسپین',
-    credentials: { username: 'THR100.WS', password: 'Ahuan1348' },
-    logo: '/imgs/flight/airlines/caspian.png'
-  },
-  {
-    code: 'PA',
-    name: 'پارس‌ایر',
-    credentials: { username: 'THR226.WS', password: 'Ahouvan@2026' },
-    logo: '/imgs/flight/airlines/parsair1.png' // یا parsair1.png
-  }
-],
-
+    airlines: [
+      {
+        code: 'I3',
+        name: 'آتا',
+        credentials: { username: 'THR155.WS', password: 'Ahuan1348' },
+        logo: '/imgs/flight/airlines/ata.png'
+      },
+      {
+        code: 'Y9',
+        name: 'کیش‌ایر',
+        credentials: { username: 'THR100.WS', password: 'Ahuan1348' },
+        logo: '/imgs/flight/airlines/kishair.png'
+      },
+      {
+        code: 'QB',
+        name: 'قشم‌ایر',
+        credentials: { username: 'THR166.WS', password: 'Ahuan1348' },
+        logo: '/imgs/flight/airlines/gheshm.png'
+      },
+      {
+        code: 'HH',
+        name: 'تابان',
+        credentials: { username: 'THR168.WS', password: 'Ahuan1348' },
+        logo: '/imgs/flight/airlines/taban.png'
+      },
+      {
+        code: 'EP',
+        name: 'آسمان',
+        credentials: { username: 'THR100.WS', password: 'Ahuan1348' },
+        logo: '/imgs/flight/airlines/aseman.png'
+      },
+      {
+        code: 'ZV',
+        name: 'زاگرس',
+        credentials: { username: 'THR197.WS', password: 'Ahuan1348' },
+        logo: '/imgs/flight/airlines/zagros.png'
+      },
+      {
+        code: 'NV',
+        name: 'نفت',
+        credentials: { username: 'THR100.WS', password: 'Ahuan1348' },
+        logo: '/imgs/flight/airlines/naft.png'
+      },
+      {
+        code: 'VR',
+        name: 'وارش',
+        credentials: { username: 'THR215.WS', password: 'A2930' },
+        logo: '/imgs/flight/airlines/varesh.png'
+      },
+      {
+        code: 'IRZ',
+        name: 'ساها',
+        credentials: { username: 'THR140.WS', password: '123456789' },
+        logo: '/imgs/flight/airlines/saha.png'
+      },
+      {
+        code: 'FP',
+        name: 'فلای‌پرشیا',
+        credentials: { username: 'THR106.WS', password: '123456789' },
+        logo: '/imgs/flight/airlines/flypersia.png'
+      },
+      {
+        code: 'IV',
+        name: 'کاسپین',
+        credentials: { username: 'THR100.WS', password: 'Ahuan1348' },
+        logo: '/imgs/flight/airlines/caspian.png'
+      },
+      {
+        code: 'PA',
+        name: 'پارس‌ایر',
+        credentials: { username: 'THR226.WS', password: 'Ahouvan@2026' },
+        logo: '/imgs/flight/airlines/parsair1.png'
+      }
+    ],
 
     flights: [],
     loading: false,
     backgroundLoading: false,
     searchFinished: false,
-    selectedFlight: null
+
+    selectedFlight: null,
+    selectedDepartureFlight: null,
+    selectedReturnFlight: null,
+    currentStep: 0,
+    abortController: null,
+    lastSearchParams: null
   }),
 
   getters: {
@@ -405,6 +410,60 @@ export const useFlightStore = defineStore('flights', {
         const numPrice = Number(price)
         return !Number.isNaN(numPrice) && numPrice > 0
       }).length
+    },
+
+    hasSelectedDeparture(state) {
+      return !!state.selectedDepartureFlight
+    },
+
+    hasSelectedReturn(state) {
+      return !!state.selectedReturnFlight
+    },
+
+    hasRoundTripSelection(state) {
+      if (state.selectedDepartureFlight?.isRoundTrip && state.selectedDepartureFlight?.provider !== 'NIRA') {
+        return true
+      }
+
+      return !!state.selectedDepartureFlight && !!state.selectedReturnFlight
+    },
+
+    selectedFlights(state) {
+      const items = []
+
+      if (state.selectedDepartureFlight) {
+        items.push(state.selectedDepartureFlight)
+      }
+
+      if (state.selectedReturnFlight) {
+        items.push(state.selectedReturnFlight)
+      }
+
+      return items
+    },
+
+    selectedTrip(state) {
+      if (
+        state.selectedDepartureFlight?.isRoundTrip &&
+        state.selectedDepartureFlight?.provider !== 'NIRA'
+      ) {
+        return state.selectedDepartureFlight
+      }
+
+      if (state.selectedDepartureFlight && state.selectedReturnFlight) {
+        return {
+          provider: 'NIRA',
+          isRoundTrip: true,
+          outbound: state.selectedDepartureFlight,
+          inbound: state.selectedReturnFlight,
+          priceFrom:
+            Number(state.selectedDepartureFlight?.priceFrom || 0) +
+            Number(state.selectedReturnFlight?.priceFrom || 0),
+          currency: state.selectedDepartureFlight?.currency || 'IRR'
+        }
+      }
+
+      return state.selectedDepartureFlight || null
     }
   },
 
@@ -413,7 +472,55 @@ export const useFlightStore = defineStore('flights', {
       this.flights = Array.isArray(flightsList) ? flightsList : []
     },
 
+    setCurrentStep(step) {
+      this.currentStep = step
+    },
+
+    setLastSearchParams(searchParams) {
+      this.lastSearchParams = searchParams ? { ...searchParams } : null
+    },
+
+    createNewAbortSignal() {
+      if (this.abortController) {
+        this.abortController.abort()
+      }
+
+      this.abortController = new AbortController()
+      return this.abortController.signal
+    },
+
+    cancelAllPendingRequests() {
+      if (this.abortController) {
+        this.abortController.abort()
+        this.abortController = null
+      }
+
+      this.loading = false
+      this.backgroundLoading = false
+    },
+
+    selectFlight(flight) {
+      this.selectedFlight = flight
+    },
+
+    selectDepartureFlight(flight) {
+      this.selectedDepartureFlight = flight
+      this.selectedFlight = flight
+    },
+
+    selectReturnFlight(flight) {
+      this.selectedReturnFlight = flight
+    },
+
+    clearSelectedFlights() {
+      this.selectedFlight = null
+      this.selectedDepartureFlight = null
+      this.selectedReturnFlight = null
+      this.currentStep = 0
+    },
+
     async searchFlights(searchParams) {
+      this.setLastSearchParams(searchParams)
       this.loading = true
       this.backgroundLoading = true
       this.searchFinished = false
@@ -427,6 +534,15 @@ export const useFlightStore = defineStore('flights', {
         this.backgroundLoading = false
         this.searchFinished = true
       }
+    },
+
+    async reloadLastSearch() {
+      if (!this.lastSearchParams) {
+        return
+      }
+
+      this.clearSelectedFlights()
+      await this.searchFlights(this.lastSearchParams)
     },
 
     async loadFlightDetails(flight) {

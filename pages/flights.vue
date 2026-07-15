@@ -4,7 +4,8 @@
     <header class="hidden md:block relative h-[97px] w-full bg-[var(--color-secondary)] -mt-10">
       <div class="absolute inset-0" style="background-image: url('/imgs/flight/header.png');"></div>
       <div class="absolute -bottom-15 left-0 right-0 z-10 mx-auto max-w-3xl px-4">
-        <Stepper :steps="flightSteps" :active-step="0" active-color="#1a237e" />
+        <Stepper :steps="flightSteps" :active-step="flightStore.currentStep" active-color="#1a237e" />
+
       </div>
     </header>
     <!-- {{ flightStore.flights }} -->
@@ -13,14 +14,17 @@
 
         <!-- سایدبار دسکتاپ -->
         <aside class="hidden lg:block lg:col-span-4 order-1 lg:order-2">
-           <!-- <div class="sticky top-24"> -->
-             <FlightSearchPanel mode="aside" :showServices="true" />
-           <!-- </div> -->
-           <FilterFlight 
-      v-model:filters="activeFilters" 
-      :allFlightsData="flights" 
+            <!-- sticky -->
+  <div class=" top-24 space-y-4">
+    <FlightSearchPanel mode="aside" :showServices="true" />
+<!-- showSearchResults -->
+    <FilterFlight
+      v-if="false"
+      v-model:filters="activeFilters"
+      :allFlightsData="flights"
     />
-        </aside>
+  </div>
+</aside>
 
         <!-- نتایج -->
         <div class="lg:col-span-8 order-2 lg:order-1 relative">
@@ -65,7 +69,7 @@
           </transition>
 
           <!-- تاریخ -->
-          <div class="mb-4 md:mb-6 bg-gray-100 md:bg-white px-2 py-3 md:p-2 overflow-hidden rounded-2xl">
+          <div v-if="showSearchResults" class="mb-4 md:mb-6 bg-gray-100 md:bg-white px-2 py-3 md:p-2 overflow-hidden rounded-2xl">
             <DateCarousel
               :days-count="21"
               :start-date="getStartDateForCarousel(selectedDate)"
@@ -75,7 +79,7 @@
           </div>
 
           <!-- کنترل‌های موبایل -->
-          <div class="lg:hidden mb-4 px-2" dir="rtl">
+          <div class="lg:hidden mb-4 px-2" dir="rtl" v-if="showSearchResults">
             <div class="flex items-center justify-start gap-2">
               <div class="relative">
                 <UiBaseButton
@@ -117,18 +121,57 @@
 
 
           <!-- شمارش -->
-          <div class="mb-4 text-center text-xs text-gray-400 font-medium px-2">
+          <div class="mb-4 text-center text-xs text-gray-400 font-medium px-2" v-if="showSearchResults">
             <span v-if="flightStore.loading">در حال جستجوی پروازها...</span>
             <span v-else>تعداد {{ pricedFlightsCount }} پرواز یافت شد</span>
           </div>
 
           <!-- Tabs دسکتاپ -->
-          <div class="hidden lg:flex mb-6 items-center gap-1 rounded-xl p-1 text-xs">
+          <div class="hidden lg:flex mb-6 items-center gap-1 rounded-xl p-1 text-xs" v-if="showSearchResults">
             <UiBaseTabs :items="sortOptions" v-model="activeTab" />
           </div>
+            <div v-if="showSelectedSection" class="space-y-4 px-2 md:px-0">
+  <div class="rounded-3xl bg-white p-4 shadow-sm border border-gray-100">
 
+    <div class="space-y-4">
+      <FlightTicketCard
+        v-for="(flight, index) in selectedTicketsForView"
+        :key="`selected-${flight.id || index}`"
+        :tickets="[flight]"
+        :passenger="passengerInfo"
+        :hide-select-button="true"
+        :is-main-page="true"
+        :is-next-page="false"
+        :choose-step="1"
+        :flight="flight"
+        @showDetailes="showFlightDetails"
+      />
+    </div>
+    <div class="mt-3 ml-2 flex items-center justify-between" dir="ltr">
+      <!-- <h3 class="text-sm md:text-base font-extrabold text-gray-800">
+        بلیت انتخاب‌شده
+      </h3> -->
+
+      <button
+  type="button"
+  class="rounded-2xl bg-[#1a237e] px-4 py-2 text-xs md:text-sm font-bold text-white"
+  @click="handleEditFlight"
+>
+  {{ editFlightButtonLabel }}
+</button>
+    </div>
+  </div>
+ <PassengerInfoForm
+    v-if="showSelectedSection && flightStore.currentStep >= 1"
+    ref="passengerFormRef"
+  /> <ContactInfoForm
+  v-if="showSelectedSection && flightStore.currentStep >= 1"
+      ref="contactFormRef"
+      @submit="onContinueShopping"
+ ></ContactInfoForm>
+</div>
           <!-- لیست پروازها -->
-          <div v-if="sortedFlights.length > 0" class="space-y-4 px-2 md:px-0">
+          <div v-if="showSearchResults && sortedFlights.length > 0" class="space-y-4 px-2 md:px-0">
             <!-- استفاده از TransitionGroup برای انیمیشن لیست -->
             <TransitionGroup
               name="list"
@@ -145,6 +188,7 @@
                 :is-main-page="true"
                 :is-next-page="false"
                 :choose-step="1"
+                :hide-select-button="false"
                 @firstChoosed="handleFlightSelect"
                 @showDetailes="showFlightDetails"
                 :flight="flight"
@@ -155,9 +199,9 @@
 
           <!-- عدم یافتن پرواز -->
           <div
-            v-else-if="searchStarted && flightStore.searchFinished && !flightStore.loading"
-            class="text-center py-20 text-gray-500 border-2 border-dashed border-gray-150 rounded-[2rem] bg-white shadow-sm mx-2 md:mx-0"
-          >
+  v-else-if="showSearchResults && searchStarted && flightStore.searchFinished && !flightStore.loading"
+  class="text-center py-20 text-gray-500 border-2 border-dashed border-gray-150 rounded-[2rem] bg-white shadow-sm mx-2 md:mx-0"
+>
             <p class="font-bold text-gray-700">پروازی در تاریخ انتخاب‌شده یافت نشد.</p>
             <p class="text-xs text-gray-400 mt-2">لطفاً تاریخ یا مسیر دیگری را امتحان کنید.</p>
           </div>
@@ -214,12 +258,30 @@ const isSortDropdownOpen = ref(false)
 
 const sortOptions = ['نام ایرلاین', 'دیرترین', 'زودترین', 'ارزان‌ترین', 'گران‌ترین']
 
-const flightSteps = [
-  { icon: '✈️', label: 'انتخاب پرواز' },
-  { icon: '📄', label: 'تکمیل اطلاعات' },
-  { icon: '💳', label: 'تایید و پرداخت' },
-  { icon: '🎫', label: 'دریافت بلیط' }
-]
+const activeFilters = ref({
+  departureTimeRange: [0, 2400]
+})
+
+const travelType = computed(() => String(route.query.travelType || 'one-way'))
+
+const flightSteps = computed(() => {
+  if (travelType.value === 'round-trip') {
+    return [
+      { icon: '✈️', label: 'انتخاب پرواز رفت' },
+      { icon: '🔁', label: 'انتخاب پرواز برگشت' },
+      { icon: '📄', label: 'تکمیل اطلاعات' },
+      { icon: '💳', label: 'تایید و پرداخت' },
+      { icon: '🎫', label: 'دریافت بلیط' }
+    ]
+  }
+
+  return [
+    { icon: '✈️', label: 'انتخاب پرواز' },
+    { icon: '📄', label: 'تکمیل اطلاعات' },
+    { icon: '💳', label: 'تایید و پرداخت' },
+    { icon: '🎫', label: 'دریافت بلیط' }
+  ]
+})
 
 const getStartDateForCarousel = (dateStr) => {
   if (!dateStr) return moment().format('YYYY-MM-DD')
@@ -231,13 +293,41 @@ const getStartDateForCarousel = (dateStr) => {
       String(dateStr).replace(/\//g, '-').trim(),
       ['YYYY-MM-DD', 'YYYY/MM/DD', 'jYYYY/jMM/jDD']
     )
+
     if (fallbackParsed.isValid()) {
       return fallbackParsed.subtract(10, 'days').format('YYYY-MM-DD')
     }
+
     return moment().format('YYYY-MM-DD')
   }
 
   return parsed.subtract(10, 'days').format('YYYY-MM-DD')
+}
+function handlePassengersSubmit(passengers) {
+  console.log(passengers)
+}
+const normalizeDateForApi = (dateValue) => {
+  if (!dateValue) return ''
+
+  const faDigits = '۰۱۲۳۴۵۶۷۸۹'
+  const arDigits = '٠١٢٣٤٥٦٧٨٩'
+
+  let value = String(dateValue).trim()
+
+  value = value
+    .split('')
+    .map((ch) => {
+      const faIndex = faDigits.indexOf(ch)
+      if (faIndex > -1) return String(faIndex)
+
+      const arIndex = arDigits.indexOf(ch)
+      if (arIndex > -1) return String(arIndex)
+
+      return ch
+    })
+    .join('')
+
+  return value.replace(/-/g, '/')
 }
 
 const baseSearchParamsFromRoute = computed(() => {
@@ -255,6 +345,23 @@ const baseSearchParamsFromRoute = computed(() => {
 })
 
 const flights = computed(() => flightStore.flights || [])
+
+const showSelectedSection = computed(() => {
+  if (travelType.value === 'one-way') {
+    return !!flightStore.selectedDepartureFlight
+  }
+
+  if (
+    flightStore.selectedDepartureFlight?.isRoundTrip &&
+    flightStore.selectedDepartureFlight?.provider !== 'NIRA'
+  ) {
+    return true
+  }
+
+  return !!flightStore.selectedDepartureFlight && !!flightStore.selectedReturnFlight
+})
+
+const showSearchResults = computed(() => !showSelectedSection.value)
 
 const hasValidPrice = (price) => {
   if (price === null || price === undefined || price === '' || price === '-') return false
@@ -308,71 +415,59 @@ function isFlightUnavailable(flight) {
 
   return isCanceled || isSoldOut || invalidPrice
 }
-const activeFilters = ref({
-  departureTimeRange: [0, 2400],
-  // در صورت نیاز سایر فیلترها (مانند ایرلاین، قیمت و...) را اینجا اضافه کنید
-});
+
 const getFlightTimeAsNumber = (departureStr) => {
-  if (!departureStr) return null;
-  
-  const timePart = departureStr.includes(' ') 
-    ? departureStr.split(' ')[1] 
-    : departureStr.includes('T') ? departureStr.split('T')[1] 
-    : null;
+  if (!departureStr) return null
 
-  if (!timePart) return null;
+  const timePart = departureStr.includes(' ')
+    ? departureStr.split(' ')[1]
+    : departureStr.includes('T')
+      ? departureStr.split('T')[1]
+      : null
 
-  const [hours, minutes] = timePart.split(':');
-  const h = parseInt(hours, 10);
-  const m = parseInt(minutes, 10);
+  if (!timePart) return null
 
-  if (isNaN(h) || isNaN(m)) return null;
-  return h * 100 + m;
-};
+  const [hours, minutes] = timePart.split(':')
+  const h = parseInt(hours, 10)
+  const m = parseInt(minutes, 10)
+
+  if (isNaN(h) || isNaN(m)) return null
+  return h * 100 + m
+}
+
 const sortedFlights = computed(() => {
-  if (!flights.value) return [];
+  if (!flights.value) return []
 
-  // فیلتر کردن
-  const filteredList = flights.value.filter(flight => {
-    // اگر فیلتر مقداری ندارد یا روی حالت پیش‌فرض (0 تا 2400) است، فیلتر اعمال نشود
-    if (!activeFilters.value.departureTimeRange) return true;
-    
-    const [minTime, maxTime] = activeFilters.value.departureTimeRange;
-    
-    // اگر فیلتر روی کل بازه (سراسر شبانه‌روز) تنظیم شده است، فیلتر را رد کن
-    if (minTime === 0 && maxTime === 2400) return true;
+  const filteredList = flights.value.filter((flight) => {
+    if (!activeFilters.value.departureTimeRange) return true
 
-    // مبنای فیلتر زمان حرکت پرواز رفت است
-    const flightTime = getFlightTimeAsNumber(flight.departure);
-    if (flightTime === null) return true; // پروازهای بدون زمان حذف نشوند
+    const [minTime, maxTime] = activeFilters.value.departureTimeRange
 
-    return flightTime >= minTime && flightTime <= maxTime;
-  });
+    if (minTime === 0 && maxTime === 2400) return true
 
-  // کپی برای مرتب‌سازی
-  const list = [...filteredList];
+    const flightTime = getFlightTimeAsNumber(flight.departure)
+    if (flightTime === null) return true
 
-  // تابع کمکی برای گرفتن زمان دقیق پرواز رفت جهت مقایسه عددی
+    return flightTime >= minTime && flightTime <= maxTime
+  })
+
+  const list = [...filteredList]
+
   const getOutboundDepartureTime = (flight) => {
-    // در پروازهای رفت و برگشت (مانند ماهان)، مبنای ما همیشه فیلد departure اصلی است که زمان رفت را نشان می‌دهد.
-    const depTime = flight.departure;
-    if (!depTime) return 0;
-    
-    // تبدیل به میلی‌ثانیه برای مقایسه دقیق ریاضی
-    const parsed = new Date(depTime).getTime();
-    return isNaN(parsed) ? 0 : parsed;
-  };
+    const depTime = flight.departure
+    if (!depTime) return 0
 
-  // مرتب‌سازی اصلی بر اساس تب فعال
+    const parsed = new Date(depTime).getTime()
+    return Number.isNaN(parsed) ? 0 : parsed
+  }
+
   switch (activeTab.value) {
     case 'ارزان‌ترین':
       list.sort((a, b) => Number(a.priceFrom || 0) - Number(b.priceFrom || 0))
       break
-
     case 'گران‌ترین':
       list.sort((a, b) => Number(b.priceFrom || 0) - Number(a.priceFrom || 0))
       break
-
     case 'نام ایرلاین':
       list.sort((a, b) =>
         String(a.airlineName || a.airline || '').localeCompare(
@@ -381,83 +476,71 @@ const sortedFlights = computed(() => {
         )
       )
       break
-
     case 'زودترین':
-      // مقایسه صعودی بر اساس زمان پرواز رفت (صبح به شب)
       list.sort((a, b) => getOutboundDepartureTime(a) - getOutboundDepartureTime(b))
       break
-
     case 'دیرترین':
-      // مقایسه نزولی بر اساس زمان پرواز رفت (شب به صبح)
       list.sort((a, b) => getOutboundDepartureTime(b) - getOutboundDepartureTime(a))
       break
   }
 
-  // تفکیک پروازهای موجود از ناموجود
   return [
-    ...list.filter(f => !isFlightUnavailable(f)),
-    ...list.filter(f => isFlightUnavailable(f))
-  ];
-});
+    ...list.filter((f) => !isFlightUnavailable(f)),
+    ...list.filter((f) => isFlightUnavailable(f))
+  ]
+})
 
+const selectedTicketsForView = computed(() => {
+  if (
+    flightStore.selectedDepartureFlight?.isRoundTrip &&
+    flightStore.selectedDepartureFlight?.provider !== 'NIRA'
+  ) {
+    return [flightStore.selectedDepartureFlight]
+  }
 
+  return [flightStore.selectedDepartureFlight, flightStore.selectedReturnFlight].filter(Boolean)
+})
+
+const passengerInfo = computed(() => ({
+  adults: baseSearchParamsFromRoute.value.adults,
+  children: baseSearchParamsFromRoute.value.children,
+  infants: baseSearchParamsFromRoute.value.infants
+}))
 
 const selectSortOption = (option) => {
   activeTab.value = option
   isSortDropdownOpen.value = false
 }
 
-const formatPrice = (value) => {
-  if (!value) return '۰'
-  return Number(value).toLocaleString('fa-IR')
-}
-
-const normalizeDateForApi = (dateValue) => {
-  if (!dateValue) return ''
-
-  const faDigits = '۰۱۲۳۴۵۶۷۸۹'
-  const arDigits = '٠١٢٣٤٥٦٧٨٩'
-
-  let value = String(dateValue).trim()
-
-  value = value
-    .split('')
-    .map((ch) => {
-      const faIndex = faDigits.indexOf(ch)
-      if (faIndex > -1) return String(faIndex)
-
-      const arIndex = arDigits.indexOf(ch)
-      if (arIndex > -1) return String(arIndex)
-
-      return ch
-    })
-    .join('')
-
-  value = value.replace(/-/g, '/')
-  return value
-}
-
-const performSearch = async (dateStr) => {
+const buildSearchPayload = ({
+  from,
+  to,
+  departureDate,
+  returnDate,
+  travelType: customTravelType
+}) => {
   const base = baseSearchParamsFromRoute.value
-  if (!base.from || !base.to) return
 
-  const finalDate = normalizeDateForApi(dateStr || base.departureDate)
-  if (!finalDate) return
+  return {
+    from,
+    to,
+    departureDate: normalizeDateForApi(departureDate),
+    returnDate: returnDate ? normalizeDateForApi(returnDate) : '',
+    adults: base.adults,
+    children: base.children,
+    infants: base.infants,
+    flightType: base.flightType,
+    travelType: customTravelType || base.travelType
+  }
+}
+
+const performSearch = async (payload) => {
+  if (!payload?.from || !payload?.to || !payload?.departureDate) return
 
   searchStarted.value = false
 
   try {
-    await searchAllProviders({
-      from: base.from,
-      to: base.to,
-      departureDate: finalDate,
-      returnDate: base.returnDate,
-      adults: base.adults,
-      children: base.children,
-      infants: base.infants,
-      flightType: base.flightType,
-      travelType: base.travelType
-    })
+    await flightStore.searchFlights(payload)
   } finally {
     searchStarted.value = true
   }
@@ -477,16 +560,93 @@ const handleDateChange = async (dateObj) => {
     }
   })
 
-  await performSearch(cleanedDate)
+  await performSearch(
+    buildSearchPayload({
+      from: baseSearchParamsFromRoute.value.from,
+      to: baseSearchParamsFromRoute.value.to,
+      departureDate: cleanedDate,
+      returnDate: baseSearchParamsFromRoute.value.returnDate,
+      travelType: baseSearchParamsFromRoute.value.travelType
+    })
+  )
 }
 
-const selectFlight = async (flight) => {
+const handleSelectFlight = async (flight) => {
+  const plainFlight = JSON.parse(JSON.stringify(flight))
+
+  flightStore.cancelAllPendingRequests()
+
+  if (travelType.value === 'one-way') {
+    flightStore.selectDepartureFlight(plainFlight)
+    flightStore.setCurrentStep(1)
+    return
+  }
+
+  if (
+    plainFlight?.isRoundTrip &&
+    plainFlight?.provider !== 'NIRA'
+  ) {
+    flightStore.selectDepartureFlight(plainFlight)
+    flightStore.setCurrentStep(2)
+    return
+  }
+
+  if (flightStore.currentStep === 0) {
+    flightStore.selectDepartureFlight(plainFlight)
+    flightStore.setCurrentStep(1)
+
+    await performSearch(
+      buildSearchPayload({
+        from: baseSearchParamsFromRoute.value.to,
+        to: baseSearchParamsFromRoute.value.from,
+        departureDate: baseSearchParamsFromRoute.value.returnDate,
+        returnDate: '',
+        travelType: 'one-way'
+      })
+    )
+
+    return
+  }
+
+  flightStore.selectReturnFlight(plainFlight)
+  flightStore.setCurrentStep(2)
+}
+
+const handleEditFlight = async () => {
+  flightStore.cancelAllPendingRequests()
+  flightStore.clearSelectedFlights()
+
+  await performSearch(
+    buildSearchPayload({
+      from: baseSearchParamsFromRoute.value.from,
+      to: baseSearchParamsFromRoute.value.to,
+      departureDate: baseSearchParamsFromRoute.value.departureDate,
+      returnDate: baseSearchParamsFromRoute.value.returnDate,
+      travelType: baseSearchParamsFromRoute.value.travelType
+    })
+  )
+}
+const editFlightButtonLabel = computed(() => {
+  return selectedTicketsForView.value.length > 1
+    ? 'تغییر پروازهای انتخابی'
+    : 'تغییر پرواز انتخابی'
+})
+const isSelectedFlightCard = (flight) => {
+  const departureId = flightStore.selectedDepartureFlight?.id
+  const returnId = flightStore.selectedReturnFlight?.id
+
+  return flight?.id === departureId || flight?.id === returnId
+}
+
+const showFlightDetails = async (flight) => {
   const plainFlight = JSON.parse(JSON.stringify(flight))
   await flightStore.loadFlightDetails(plainFlight)
 }
 
 onMounted(async () => {
   const qDate = String(route.query.departDate || '')
+
+  flightStore.clearSelectedFlights()
 
   if (qDate) {
     selectedDate.value = qDate.replace(/\//g, '-').trim()
@@ -495,21 +655,59 @@ onMounted(async () => {
     await router.replace({ query: { ...route.query, departDate: selectedDate.value } })
   }
 
-  await performSearch(selectedDate.value)
+  await performSearch(
+    buildSearchPayload({
+      from: baseSearchParamsFromRoute.value.from,
+      to: baseSearchParamsFromRoute.value.to,
+      departureDate: selectedDate.value,
+      returnDate: baseSearchParamsFromRoute.value.returnDate,
+      travelType: baseSearchParamsFromRoute.value.travelType
+    })
+  )
 })
 
 watch(
   () => route.query.departDate,
   async (newQueryDate) => {
-    if (newQueryDate) {
-      const cleanDate = String(newQueryDate).replace(/\//g, '-').trim()
-      if (cleanDate !== selectedDate.value) {
-        selectedDate.value = cleanDate
-        await performSearch(cleanDate)
-      }
-    }
+    if (!newQueryDate) return
+
+    const cleanDate = String(newQueryDate).replace(/\//g, '-').trim()
+    if (cleanDate === selectedDate.value) return
+
+    selectedDate.value = cleanDate
+    flightStore.clearSelectedFlights()
+
+    await performSearch(
+      buildSearchPayload({
+        from: baseSearchParamsFromRoute.value.from,
+        to: baseSearchParamsFromRoute.value.to,
+        departureDate: cleanDate,
+        returnDate: baseSearchParamsFromRoute.value.returnDate,
+        travelType: baseSearchParamsFromRoute.value.travelType
+      })
+    )
   }
 )
+const passengerFormRef = ref(null)
+const contactFormRef = ref(null)
+function onContinueShopping() {
+  const passengerValid = passengerFormRef.value?.validateAll?.() ?? false
+  const contactValid = contactFormRef.value?.validateAll?.() ?? false
+
+  const passengerData = passengerFormRef.value?.getData?.() ?? []
+  const contactData = contactFormRef.value?.getData?.() ?? {}
+
+  const allData = {
+    passengers: passengerData,
+    contact: contactData,
+  }
+
+  console.log(allData)
+
+  if (passengerValid && contactValid) {
+    console.log('success')
+  }
+}
 </script>
 
 <style>

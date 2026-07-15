@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 
 const props = defineProps({
   modelValue: { type: [String, Number], default: '' },
@@ -14,8 +14,6 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:modelValue']);
-
-const isFocused = ref(false);
 
 const wrapperClasses = computed(() => {
   return `relative mb-6 ${props.rtl ? 'dir-rtl' : 'dir-ltr'}`;
@@ -43,17 +41,14 @@ const inputClasses = computed(() => {
   }
 
   return [
-    'peer w-full py-3 rounded-lg transition-all duration-300 outline-none',
+    'peer w-full h-[54px] py-3 rounded-[12px] transition-all duration-300 outline-none',
     basePaddingX,
     effectiveIconPadding,
     loadingPadding,
-
     'bg-[var(--color-white)] text-[var(--color-gray-800)] border',
-
     props.disabled
       ? 'bg-[var(--color-gray-100)] text-[var(--color-gray-500)] cursor-not-allowed'
       : '',
-
     props.error
       ? 'border-[var(--color-red-500)] focus:ring-[var(--color-red-300)]'
       : 'border-[var(--color-gray-300)] focus:ring-[var(--color-primary)] focus:border-[var(--color-primary-dark)]'
@@ -61,42 +56,19 @@ const inputClasses = computed(() => {
 });
 
 const labelClasses = computed(() => {
-  const base =
-    'absolute top-3 transition-all duration-300 text-[var(--color-gray-500)]';
-
-  const errorStyles =
-    '!text-[var(--color-red-500)] peer-focus:!text-[var(--color-red-500)]';
-
-  let positionClasses = '';
-
-  if (props.rtl) {
-    positionClasses =
-      props.icon && props.iconPosition === 'left' ? 'right-10' : 'right-4';
-
-    if (props.modelValue || isFocused.value) {
-      positionClasses += ' -top-3 !right-4 text-sm';
-    }
-  } else {
-    positionClasses =
-      props.icon && props.iconPosition === 'right' ? 'left-10' : 'left-4';
-
-    if (props.modelValue || isFocused.value) {
-      positionClasses += ' -top-3 !left-4 text-sm';
-    }
-  }
-
   return [
-    base,
-    positionClasses,
-    props.error ? errorStyles : '',
-    props.disabled ? 'text-[var(--color-gray-400)]' : '',
-    props.loading ? 'opacity-50' : ''
+    'absolute -top-3 z-20 bg-white px-2 text-[11px]',
+    props.rtl ? 'right-4' : 'left-4',
+    props.error
+      ? 'text-[var(--color-red-500)]'
+      : 'text-[var(--color-gray-400)]',
+    props.disabled ? 'text-[var(--color-gray-400)]' : ''
   ];
 });
 
 const iconSpanClasses = computed(() => {
   const base =
-    'absolute top-3 text-[var(--color-gray-400)] peer-focus:text-[var(--color-primary)]';
+    'absolute top-1/2 -translate-y-1/2 text-[var(--color-gray-400)] peer-focus:text-[var(--color-primary)]';
 
   let positionClass = '';
 
@@ -110,13 +82,10 @@ const iconSpanClasses = computed(() => {
 });
 
 const loadingIndicatorClasses = computed(() => {
-  let positionClass = '';
-
-  if (props.rtl) {
-    positionClass = props.iconPosition === 'left' ? 'left-0' : 'right-0';
-  } else {
-    positionClass = props.iconPosition === 'left' ? 'left-0' : 'right-0';
-  }
+  const positionClass =
+    props.rtl
+      ? props.iconPosition === 'left' ? 'left-0' : 'right-0'
+      : props.iconPosition === 'left' ? 'left-0' : 'right-0';
 
   return `absolute inset-y-0 flex items-center px-3 pointer-events-none ${positionClass}`;
 });
@@ -132,16 +101,13 @@ const getIconHtml = computed(() => {
   return '';
 });
 </script>
-
 <template>
   <div :class="wrapperClasses">
-    <label v-if="label" :class="labelClasses">
-      {{ label }}
-    </label>
-
     <div class="relative flex items-center w-full">
+      <label v-if="label" :class="labelClasses">
+        {{ label }}
+      </label>
 
-      <!-- icon -->
       <span
         v-if="icon"
         :class="iconSpanClasses"
@@ -153,12 +119,9 @@ const getIconHtml = computed(() => {
         :placeholder="placeholder"
         :disabled="disabled"
         @input="handleInput"
-        @focus="isFocused = true"
-        @blur="isFocused = false"
         :class="inputClasses"
       />
 
-      <!-- loading -->
       <div v-if="loading" :class="loadingIndicatorClasses">
         <svg
           class="animate-spin h-5 w-5 text-[var(--color-primary)]"
@@ -181,40 +144,10 @@ const getIconHtml = computed(() => {
           />
         </svg>
       </div>
-
     </div>
 
-    <!-- error -->
     <p v-if="error" class="text-[var(--color-red-500)] text-sm mt-1">
       {{ error }}
     </p>
   </div>
 </template>
-
-<style scoped>
-
-input::placeholder {
-  color: var(--color-gray-400);
-}
-
-.dir-rtl {
-  direction: rtl;
-}
-
-.dir-rtl input {
-  text-align: right;
-}
-
-.dir-rtl input::placeholder {
-  text-align: right;
-}
-
-.dir-ltr input {
-  text-align: left;
-}
-
-.dir-ltr input::placeholder {
-  text-align: left;
-}
-
-</style>
