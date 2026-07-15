@@ -16,6 +16,7 @@
 
           <template v-else>
             <UiBaseButton
+            v-if="!props.hideSelectButton"
               label="انتخاب پرواز"
               variant="filled"
               color="primary"
@@ -218,26 +219,31 @@
       </div>
     </div>
 
+        <!-- Wrapper بیرونی کرکره با انیمیشن ارتفاع -->
     <div
       class="grid transition-all duration-300 ease-in-out bg-gray-50"
       :class="activeTab ? 'grid-rows-[1fr] opacity-100 border-t-2 border-gray-200' : 'grid-rows-[0fr] opacity-0'"
     >
       <div class="overflow-hidden">
-        <div>
-          <div class="flex text-[12px] flex-col md:flex-row bg-gray-100" v-show="activeTab === 'rules'">
+        <!-- اضافه کردن Transition برای تغییر نرم محتوا -->
+        <Transition name="fade-slide" mode="out-in">
+          
+          <!-- ۱. پنل قوانین کنسلی -->
+          <div 
+            v-if="activeTab === 'rules'" 
+            key="rules-tab"
+            class="flex text-[12px] flex-col md:flex-row bg-gray-100"
+          >
             <div class="flex-1 order-2 md:order-1 border-white border-t-2 md:border-t-0 border-r-1 border-dashed relative p-3 pb-12 flex flex-col justify-center">
               <template v-if="passengerPrices.length">
                 <div class="flex py-2" v-for="(item, index) in passengerPrices" :key="`passenger-${index}`">
-  <p class="flex-1 text-start">{{ formatPrice(item.total) }}</p>
-  <p class="flex-1 flex justify-end">
-    <!-- نمایش تعداد -->
-    <span class="order-2 px-2">({{ item.count }})</span> 
-    <!-- نمایش نام -->
-    <span class="order-1 font-bold">{{ item.label }}</span>
-  </p>
-</div>
+                  <p class="flex-1 text-start">{{ formatPrice(item.total) }}</p>
+                  <p class="flex-1 flex justify-end">
+                    <span class="order-2 px-2">({{ item.count }})</span> 
+                    <span class="order-1 font-bold">{{ item.label }}</span>
+                  </p>
+                </div>
               </template>
-
               <template v-else>
                 <div class="flex py-2">
                   <p class="flex-1 text-start">{{ formatPrice(finalPrice) }}</p>
@@ -247,7 +253,6 @@
                   </p>
                 </div>
               </template>
-
               <p class="flex text-[var(--color-primary-dark)] flex-row-reverse justify-center border-t-1 font-bold pt-4 mt-4">
                 <span class="px-2">مجموع</span>
                 <span>{{ formatPrice(finalPrice) }}</span>
@@ -256,7 +261,6 @@
             </div>
 
             <div class="flex-[3] order-2 relative p-3 pb-12 flex flex-col">
-              <!-- ۱. وضعیت بارگذاری -->
               <template v-if="loadingRules">
                 <div class="flex mt-2 flex-row-reverse">
                   <p class="flex-1 text-[12px] text-gray-500 flex justify-end items-center">
@@ -264,7 +268,6 @@
                   </p>
                 </div>
               </template>
-
               <template v-else-if="refundPolicies.length > 0">
                 <div
                   v-for="(rule, index) in refundPolicies"
@@ -279,8 +282,6 @@
                   </p>
                 </div>
               </template>
-
-              <!-- ۳. وقتی بارگذاری تمام شد و دیتایی نبود -->
               <template v-else>
                 <div class="flex mt-2 flex-row-reverse">
                   <p class="flex-3 text-[12px] text-red-500 flex justify-end items-center">
@@ -291,20 +292,22 @@
             </div>
           </div>
 
-          <div class="flex text-[12px] flex-col md:flex-row bg-gray-100" v-show="activeTab === 'info'">
+          <!-- ۲. پنل اطلاعات پرواز -->
+          <div 
+            v-else-if="activeTab === 'info'" 
+            key="info-tab"
+            class="flex text-[12px] flex-col md:flex-row bg-gray-100"
+          >
             <div class="flex-1 order-2 md:order-1 border-white border-t-2 md:border-t-0 border-r-1 border-dashed relative p-3 pb-12 flex flex-col justify-center">
               <template v-if="passengerPrices.length">
                 <div class="flex py-2" v-for="(item, index) in passengerPrices" :key="`passenger-${index}`">
-  <p class="flex-1 text-start">{{ formatPrice(item.total) }}</p>
-  <p class="flex-1 flex justify-end">
-    <!-- نمایش تعداد -->
-    <span class="order-2 px-2">({{ item.count }})</span> 
-    <!-- نمایش نام -->
-    <span class="order-1 font-bold">{{ item.label }}</span>
-  </p>
-</div>
+                  <p class="flex-1 text-start">{{ formatPrice(item.total) }}</p>
+                  <p class="flex-1 flex justify-end">
+                    <span class="order-2 px-2">({{ item.count }})</span> 
+                    <span class="order-1 font-bold">{{ item.label }}</span>
+                  </p>
+                </div>
               </template>
-
               <template v-else>
                 <div class="flex py-2">
                   <p class="flex-1 text-start">{{ formatPrice(finalPrice) }}</p>
@@ -314,7 +317,6 @@
                   </p>
                 </div>
               </template>
-
               <p class="flex text-[var(--color-primary-dark)] flex-row-reverse justify-center border-t-1 font-bold pt-4 mt-4">
                 <span class="px-2">مجموع</span>
                 <span>{{ formatPrice(finalPrice) }}</span>
@@ -384,13 +386,11 @@
                       <p class="py-2">شماره پرواز</p>
                       <p class="font-bold">{{ segment.flightNumber || '-' }}</p>
                     </div>
-
                     <div class="flex flex-col text-center py-4 px-4">
                       <p class="py-2">کلاس پرواز</p>
                       <p class="font-bold">{{ segment.bookingClass || segment.rbd || '-' }}</p>
                     </div>
                   </div>
-
                   <div class="text-center flex flex-col items-center justify-center md:flex-1">
                     <p class="py-2">نوع هواپیما</p>
                     <p class="font-bold">
@@ -402,9 +402,10 @@
             </div>
           </div>
 
-        </div>
+        </Transition>
       </div>
     </div>
+
   </div>
 </template>
 
@@ -420,6 +421,10 @@ const props = defineProps({
   airlineInfo: {
     type: Object,
     default: () => ({})
+  },
+  hideSelectButton: {
+    type: Boolean,
+    default: false
   }
   // پروپس airports حذف شد؛ حالا از استور خوانده می‌شود
 })
@@ -908,3 +913,19 @@ function formatDurationFromMinutes(totalMinutes) {
   return `${formatNumber(minutes)} دقیقه`
 }
 </script>
+<style scoped>
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+</style>
