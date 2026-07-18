@@ -114,7 +114,7 @@ defineExpose({
           label="ادامه فرایند خرید"
           variant="solid"
           color="primary"
-          class="h-12 w-full px-8 text-sm font-bold !rounded-lg whitespace-nowrap lg:w-auto"
+          class="h-12 w-full px-8 text-sm font-bold !rounded-3xl whitespace-nowrap lg:w-auto"
           @click="onSubmit"
         />
       </div>
