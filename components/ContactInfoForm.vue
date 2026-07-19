@@ -11,7 +11,12 @@ const errors = ref({
   phone: '',
   email: '',
 })
-
+const props = defineProps({
+  loading: {
+    type: Boolean,
+    default: false
+  }
+})
 function toEnglishDigits(str) {
   return String(str || '')
     .replace(/۰/g, '0')
@@ -80,12 +85,12 @@ defineExpose({
 </script>
 
 <template>
-  <section dir="rtl" class="rounded-[24px] border border-gray-200 bg-white p-6 shadow-sm">
+  <section dir="rtl" class="rounded-[24px] border border-gray-100 bg-white p-6 shadow-sm">
     <div class="mb-6">
-      <h2 class="text-lg font-bold text-gray-900">اطلاعات تماس</h2>
+      <h2 class="text-lg font-bold text-gray-800">اطلاعات تماس</h2>
 
-      <div class="mt-3 flex items-start gap-2 text-sm text-gray-700">
-        <i class="bi bi-info-circle mt-0.5 text-lg text-gray-900"></i>
+      <div class="mt-3 flex items-start gap-2 text-sm text-gray-600">
+        <i class="bi bi-info-circle mt-0.5 text-lg text-gray-800"></i>
         <p>لطفا توجه داشته باشید که لینک دانلود بلیط به این اطلاعات تماس ارسال خواهد شد.</p>
       </div>
     </div>
@@ -111,12 +116,13 @@ defineExpose({
 
       <div class="w-full lg:w-auto lg:pt-[3px]">
         <UiBaseButton
-          label="ادامه فرایند خرید"
-          variant="solid"
-          color="primary"
-          class="h-12 w-full px-8 text-sm font-bold !rounded-3xl whitespace-nowrap lg:w-auto"
-          @click="onSubmit"
-        />
+  :label="props.loading ? 'در حال دریافت قیمت نهایی...' : 'ادامه فرایند خرید'"
+  variant="solid"
+  color="primary"
+  :disabled="props.loading"
+  class="h-12 w-full px-8 text-sm font-bold !rounded-3xl whitespace-nowrap lg:w-auto"
+  @click="onSubmit"
+/>
       </div>
     </div>
   </section>
