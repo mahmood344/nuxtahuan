@@ -383,7 +383,32 @@ export const useFlightStore = defineStore('flights', {
         logo: '/imgs/flight/airlines/parsair1.png'
       }
     ],
-
+airlineIdMap : {
+  I3: 489,
+  Y9: 1016,
+  QB: 761,
+  HH: 470,
+  EP: 376,
+  ZV: 1064,
+  NV: 683,
+  J1: 535,
+  VR: 8,
+  IRZ: 6,
+  FP: 410,
+  IV: 515,
+  IS: 7,
+  A1: 212,
+  RI: 802,
+  W5: 956,
+  IR: 512,
+  PA: 1072,
+  PY: 4,
+  B9: 256,
+  A7: 218,
+  YAZDAIR: 1074,
+  AVAAIR: 1076,
+  H8: 1070
+},
     flights: [],
     loading: false,
     backgroundLoading: false,
@@ -394,10 +419,19 @@ export const useFlightStore = defineStore('flights', {
     selectedReturnFlight: null,
     currentStep: 0,
     abortController: null,
-    lastSearchParams: null
+    lastSearchParams: null,
+
+    pricingRefreshLoading: false,
+    selectedFlightsFinalPricing: [],
+    finalBookingPrice: 0,
+    pricingRefreshError: ''
   }),
 
   getters: {
+    getAirlineId: (state) => (stepfindip) => {
+      const code = String(stepfindip || '').trim().toUpperCase()
+      return state.airlineIdMap[code] || 0
+    },
     pricedFlightsCount(state) {
       if (!state.flights) return 0
 
@@ -441,7 +475,13 @@ export const useFlightStore = defineStore('flights', {
 
       return items
     },
+ hasFinalPricing(state) {
+      return Array.isArray(state.selectedFlightsFinalPricing) && state.selectedFlightsFinalPricing.length > 0
+    },
 
+    finalPricingItems(state) {
+      return state.selectedFlightsFinalPricing || []
+    },
     selectedTrip(state) {
       if (
         state.selectedDepartureFlight?.isRoundTrip &&
@@ -517,6 +557,236 @@ export const useFlightStore = defineStore('flights', {
       this.selectedDepartureFlight = null
       this.selectedReturnFlight = null
       this.currentStep = 0
+      this.selectedFlightsFinalPricing = []
+      this.finalBookingPrice = 0
+      this.pricingRefreshError = ''
+    },
+    getPassengerCountByCode(code, passengerCounts) {
+      const normalized = Number(code)
+
+      if (normalized === 1) return Number(passengerCounts.adult || 0)
+      if (normalized === 2) return Number(passengerCounts.child || 0)
+      if (normalized === 3) return Number(passengerCounts.infant || 0)
+
+      return 0
+    },
+
+    getPassengerLabelByCode(code) {
+      const normalized = Number(code)
+
+      if (normalized === 1) return 'بزرگسال'
+      if (normalized === 2) return 'کودک'
+      if (normalized === 3) return 'نوزاد'
+
+      return 'مسافر'
+    },
+
+    async refreshSelectedFlightsPricing(passengerCounts) {
+      const flights = this.selectedFlights || []
+
+      if (!flights.length) {
+        throw new Error('هیچ پروازی انتخاب نشده است.')
+      }
+
+      this.pricingRefreshLoading = true
+      this.pricingRefreshError = ''
+
+      try {
+        const pricingItems = await Promise.all(
+          flights.map((flight, index) => this.buildFlightFinalPricing(flight, passengerCounts, index))
+        )
+
+        this.selectedFlightsFinalPricing = pricingItems
+        this.finalBookingPrice = pricingItems.reduce(
+          (sum, item) => sum + Number(item.totalPrice || 0),
+          0
+        )
+
+        return pricingItems
+      } catch (error) {
+        this.selectedFlightsFinalPricing = []
+        this.finalBookingPrice = 0
+        this.pricingRefreshError = error?.message || 'دریافت قیمت نهایی با خطا مواجه شد.'
+        throw error
+      } finally {
+        this.pricingRefreshLoading = false
+      }
+    },
+
+    async buildFlightFinalPricing(flight, passengerCounts, index = 0) {
+      const provider = String(flight?.provider || '').toUpperCase()
+
+      if (provider === 'NIRA') {
+        return await this.buildNiraFinalPricing(flight, passengerCounts, index)
+      }
+
+      if (provider === 'MAHAN') {
+        return this.buildMahanFinalPricing(flight, passengerCounts, index)
+      }
+
+      return this.buildDefaultFinalPricing(flight, passengerCounts, index)
+    },
+
+    async buildNiraFinalPricing(flight, passengerCounts, index = 0) {
+      const fare = await this.fetchNiraFare(flight)
+
+      const adultUnitPrice = Number(fare?.AdultTotalPrice || 0)
+      const childUnitPrice = Number(fare?.ChildTotalPrice || 0)
+      const infantUnitPrice = Number(fare?.InfantTotalPrice || 0)
+
+      const passengerPrices = [
+        {
+          type: 'ADL',
+          label: 'بزرگسال',
+          count: Number(passengerCounts.adult || 0),
+          unitPrice: adultUnitPrice,
+          total: adultUnitPrice * Number(passengerCounts.adult || 0)
+        },
+        {
+          type: 'CHD',
+          label: 'کودک',
+          count: Number(passengerCounts.child || 0),
+          unitPrice: childUnitPrice,
+          total: childUnitPrice * Number(passengerCounts.child || 0)
+        },
+        {
+          type: 'INF',
+          label: 'نوزاد',
+          count: Number(passengerCounts.infant || 0),
+          unitPrice: infantUnitPrice,
+          total: infantUnitPrice * Number(passengerCounts.infant || 0)
+        }
+      ].filter((item) => item.count > 0)
+
+      const totalPrice = passengerPrices.reduce((sum, item) => sum + Number(item.total || 0), 0)
+
+      return {
+        key: `${flight?.id || 'flight'}-${index}`,
+        flightId: flight?.id || null,
+        provider: 'NIRA',
+        airline: flight?.airline || '',
+        flightNumber: flight?.flightNumber || '',
+        route: `${flight?.origin || ''}-${flight?.destination || ''}`,
+        departure: flight?.departure || '',
+        fare,
+        passengerPrices,
+        totalPrice,
+        currency: flight?.currency || 'IRR'
+      }
+    },
+
+    buildMahanFinalPricing(flight, passengerCounts, index = 0) {
+      const list = flight?.meta?.raw?.totalFlightPrice?.flightPassengerPrices || []
+
+      const passengerPrices = Array.isArray(list)
+        ? list
+            .map((item) => {
+              const count = this.getPassengerCountByCode(item.code, passengerCounts)
+              const unitPrice = Number(item.totalFare || item.totalSale || item.sale || 0)
+
+              return {
+                type: Number(item.code) === 1 ? 'ADL' : Number(item.code) === 2 ? 'CHD' : Number(item.code) === 3 ? 'INF' : '',
+                label: this.getPassengerLabelByCode(item.code),
+                count,
+                unitPrice,
+                total: unitPrice * count,
+                raw: item
+              }
+            })
+            .filter((item) => item.count > 0)
+        : []
+
+      const totalPrice = passengerPrices.reduce((sum, item) => sum + Number(item.total || 0), 0)
+
+      return {
+        key: `${flight?.id || 'flight'}-${index}`,
+        flightId: flight?.id || null,
+        provider: 'MAHAN',
+        airline: flight?.airline || '',
+        flightNumber: flight?.flightNumber || '',
+        route: `${flight?.origin || ''}-${flight?.destination || ''}`,
+        departure: flight?.departure || '',
+        fare: null,
+        passengerPrices,
+        totalPrice,
+        currency: flight?.currency || 'IRR'
+      }
+    },
+
+    buildDefaultFinalPricing(flight, passengerCounts, index = 0) {
+      const basePrice = Number(flight?.priceFrom || 0)
+      const childPrice = Math.round(basePrice * 0.75)
+      const infantPrice = Math.round(basePrice * 0.1)
+
+      const passengerPrices = [
+        {
+          type: 'ADL',
+          label: 'بزرگسال',
+          count: Number(passengerCounts.adult || 0),
+          unitPrice: basePrice,
+          total: basePrice * Number(passengerCounts.adult || 0)
+        },
+        {
+          type: 'CHD',
+          label: 'کودک',
+          count: Number(passengerCounts.child || 0),
+          unitPrice: childPrice,
+          total: childPrice * Number(passengerCounts.child || 0)
+        },
+        {
+          type: 'INF',
+          label: 'نوزاد',
+          count: Number(passengerCounts.infant || 0),
+          unitPrice: infantPrice,
+          total: infantPrice * Number(passengerCounts.infant || 0)
+        }
+      ].filter((item) => item.count > 0)
+
+      const totalPrice = passengerPrices.reduce((sum, item) => sum + Number(item.total || 0), 0)
+
+      return {
+        key: `${flight?.id || 'flight'}-${index}`,
+        flightId: flight?.id || null,
+        provider: String(flight?.provider || '').toUpperCase() || 'DEFAULT',
+        airline: flight?.airline || '',
+        flightNumber: flight?.flightNumber || '',
+        route: `${flight?.origin || ''}-${flight?.destination || ''}`,
+        departure: flight?.departure || '',
+        fare: null,
+        passengerPrices,
+        totalPrice,
+        currency: flight?.currency || 'IRR'
+      }
+    },
+
+    async fetchNiraFare(flight) {
+      const departureDate = String(flight?.departure || '')
+        .trim()
+        .split(' ')[0]
+        .split('T')[0]
+
+      const params = new URLSearchParams({
+        AirLine: String(flight?.airline || '').trim(),
+        Route: `${String(flight?.origin || '').trim()}-${String(flight?.destination || '').trim()}`,
+        RBD: String(flight?.rbd || flight?.bookingClass || '').trim(),
+        DepartureDate: departureDate,
+        FlightNo: String(flight?.flightNumber || '').trim()
+      })
+
+      const response = await fetch(`https://api.ahuan.ir/api/Nira/Fare?${params.toString()}`, {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`NIRA Fare failed: ${response.status} - ${errorText}`)
+      }
+
+      const data = await response.json()
+      return typeof data === 'string' ? JSON.parse(data) : data
     },
 
     async searchFlights(searchParams) {

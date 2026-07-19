@@ -112,7 +112,7 @@ function isValidIranianNationalCode(code) {
 }
 
 function isValidPassport(value) {
-  return /^[A-Za-z0-9]{6,15}$/.test(String(value || '').trim())
+  return /^[A-Za-z0-9]{1,10}$/.test(String(value || '').trim())
 }
 
 function getPassengerTitle(type, index) {
@@ -349,7 +349,7 @@ function validatePassenger(passenger) {
   passenger.firstName = onlyLatin(normalizeSpaces(passenger.firstName))
   passenger.lastName = onlyLatin(normalizeSpaces(passenger.lastName))
   passenger.nationalCode = onlyNumbers(passenger.nationalCode).slice(0, 10)
-  passenger.passportNumber = normalizeSpaces(passenger.passportNumber).toUpperCase()
+  passenger.passportNumber = normalizeSpaces(passenger.passportNumber).toUpperCase().slice(0, 10)
   passenger.birthDate.day = onlyNumbers(passenger.birthDate.day).slice(0, 2)
   passenger.birthDate.month = onlyNumbers(passenger.birthDate.month).slice(0, 2)
   passenger.birthDate.year = onlyNumbers(passenger.birthDate.year).slice(0, 4)
@@ -441,7 +441,7 @@ function onNationalCodeChange(passenger, value) {
 }
 
 function onPassportChange(passenger, value) {
-  passenger.passportNumber = normalizeSpaces(extractValue(value)).toUpperCase()
+  passenger.passportNumber = normalizeSpaces(extractValue(value)).toUpperCase().slice(0, 10)
   clearFieldError(passenger, 'passportNumber')
 }
 
@@ -490,7 +490,7 @@ defineExpose({
     <div
       v-for="(passenger, index) in passengers"
       :key="`${passenger.type}-${index}`"
-      class="relative overflow-visible rounded-[24px] border border-gray-200 bg-white p-6 shadow-sm"
+      class="relative overflow-visible rounded-[24px] border border-gray-100 bg-white p-6 shadow-sm"
     >
       <div class="flex flex-col gap-6 md:flex-row">
         <div class="order-1 flex shrink-0 flex-col items-center justify-between py-1 md:w-44">
@@ -509,7 +509,7 @@ defineExpose({
           </div>
         </div>
 
-        <div class="order-2 my-2 hidden w-px self-stretch bg-gray-200 md:block"></div>
+        <div class="order-2 my-2 hidden w-px self-stretch bg-gray-100 md:block"></div>
 
         <div class="order-3 flex flex-grow flex-col justify-between">
           <div class="mb-6 flex justify-end">

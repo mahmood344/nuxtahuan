@@ -1,7 +1,7 @@
 <template>
-  <div class="min-h-screen bg-[#f4f4f4] pb-24 md:bg-white md:pb-10 mt-[60px]" dir="ltr">
+  <div class="min-h-screen bg-gray-100 pb-24 md:bg-white md:pb-10 mt-[60px]" dir="ltr">
     <!-- هدر/استپر فقط دسکتاپ -->
-    <header class="hidden md:block relative h-[97px] w-full bg-[var(--color-secondary)] -mt-10">
+    <header class="hidden md:block relative h-[97px] w-full bg-secondary -mt-10">
       <div class="absolute inset-0" style="background-image: url('/imgs/flight/header.png');"></div>
       <div class="absolute -bottom-15 left-0 right-0 z-10 mx-auto max-w-3xl px-4">
         <Stepper :steps="flightSteps" :active-step="flightStore.currentStep" active-color="#1a237e" />
@@ -36,7 +36,7 @@
               class="fixed inset-0 z-[999] flex items-center justify-center bg-slate-900/10 backdrop-blur-[3px] transition-all duration-300"
             >
               <div class="bg-white/95 p-8 rounded-3xl shadow-2xl border border-gray-100 flex flex-col items-center text-center max-w-sm mx-4">
-                <div class="animate-spin rounded-full h-14 w-14 border-4 border-blue-200 border-t-[#1a237e] mb-4"></div>
+                <div class="animate-spin rounded-full h-14 w-14 border-4 border-blue-200 bg-primary mb-4"></div>
                 <h4 class="font-bold text-gray-800 text-base">در حال جستجوی پروازها...</h4>
                 <p class="text-xs text-gray-500 mt-2 leading-relaxed">
                   نتایج به صورت تدریجی در حال اضافه شدن هستند.
@@ -56,7 +56,7 @@
             >
               <div class="bg-blue-50 border border-blue-200 text-blue-700 text-xs md:text-sm px-4 py-3 rounded-2xl shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                 <div class="flex items-center w-full justify-center gap-2">
-                  <div v-for="(n , index) in 3" :key="index" class="w-2.5 h-2.5 rounded-full bg-[#1a237e] animate-pulse"></div>
+                  <div v-for="(n , index) in 3" :key="index" class="w-2.5 h-2.5 rounded-full bg-primary animate-pulse"></div>
                   <span class="font-medium font-bold">
                     جستجو هنوز در حال انجام است
                   </span>
@@ -130,9 +130,8 @@
           <div class="hidden lg:flex mb-6 items-center gap-1 rounded-xl p-1 text-xs" v-if="showSearchResults">
             <UiBaseTabs :items="sortOptions" v-model="activeTab" />
           </div>
-            <div v-if="showSelectedSection" class="space-y-4 px-2 md:px-0">
+           <div v-if="showSelectedSection" class="space-y-4 px-2 md:px-0">
   <div class="rounded-3xl bg-white p-4 shadow-sm border border-gray-100">
-
     <div class="space-y-4">
       <FlightTicketCard
         v-for="(flight, index) in selectedTicketsForView"
@@ -147,29 +146,62 @@
         @showDetailes="showFlightDetails"
       />
     </div>
-    <div class="mt-3 ml-2 flex items-center justify-between" dir="ltr">
-      <!-- <h3 class="text-sm md:text-base font-extrabold text-gray-800">
-        بلیت انتخاب‌شده
-      </h3> -->
 
-      <button
-  type="button"
-  class="rounded-2xl bg-[#1a237e] px-4 py-2 text-xs md:text-sm font-bold text-white"
+    <div class="mt-3 ml-2 flex items-center justify-between" dir="ltr">
+      <UiBaseButton
+  :label="editFlightButtonLabel"
+  variant="filled"
+  color="primary"
+  class="!rounded-3xl !px-6 h-12 text-sm"
   @click="handleEditFlight"
->
-  {{ editFlightButtonLabel }}
-</button>
+/>
     </div>
   </div>
- <PassengerInfoForm
-    v-if="showSelectedSection && flightStore.currentStep >= 1"
+
+  <div v-if="flightStore.currentStep === formStep" class="space-y-4">
+  <PassengerInfoForm
     ref="passengerFormRef"
-  /> <ContactInfoForm
-  v-if="showSelectedSection && flightStore.currentStep >= 1"
-      ref="contactFormRef"
-      @submit="onContinueShopping"
- ></ContactInfoForm>
+  />
+
+  <ContactInfoForm
+    ref="contactFormRef"
+  :loading="flightStore.pricingRefreshLoading"
+  @submit="onContinueShopping"
+  />
 </div>
+
+<div v-else-if="flightStore.currentStep === previewStep" class="space-y-4">
+  <BookingInfoTable
+    mode="passengers"
+    :flight-type="flightType"
+    :passengers="bookingData.passengers"
+    @update:passengers="bookingData.passengers = $event"
+  />
+
+  <BookingInfoTable
+    mode="contact"
+    :contact="bookingData.contact"
+    @update:contact="bookingData.contact = $event"
+  />
+
+<PaymentSummary
+  :original-price="flightStore.finalBookingPrice"
+  :final-price="priceAfterTravelCard"
+  :loading="flightStore.pricingRefreshLoading"
+  :travel-card-credit="travelCardCredit"
+  :travel-card-loading="travelCardLoading"
+  :travel-card-applied="travelCardApplied"
+  :travel-card-owner-name="travelCardOwnerName"
+  :travel-card-error-message="travelCardError"
+  @back="flightStore.setCurrentStep(formStep)"
+  @submit="handleFinalPayment"
+  @apply-travel-card="handleApplyTravelCard"
+  @clear-travel-card-error="travelCardError = ''"
+  @reset-travel-card="handleResetTravelCard"  
+/>
+</div>
+</div>
+
           <!-- لیست پروازها -->
           <div v-if="showSearchResults && sortedFlights.length > 0" class="space-y-4 px-2 md:px-0">
             <!-- استفاده از TransitionGroup برای انیمیشن لیست -->
@@ -200,7 +232,7 @@
           <!-- عدم یافتن پرواز -->
           <div
   v-else-if="showSearchResults && searchStarted && flightStore.searchFinished && !flightStore.loading"
-  class="text-center py-20 text-gray-500 border-2 border-dashed border-gray-150 rounded-[2rem] bg-white shadow-sm mx-2 md:mx-0"
+  class="text-center py-20 text-gray-500 border-2 border-dashed border-gray-100 rounded-[2rem] bg-white shadow-sm mx-2 md:mx-0"
 >
             <p class="font-bold text-gray-700">پروازی در تاریخ انتخاب‌شده یافت نشد.</p>
             <p class="text-xs text-gray-400 mt-2">لطفاً تاریخ یا مسیر دیگری را امتحان کنید.</p>
@@ -226,12 +258,13 @@
 
           <div class="space-y-6">
             <FlightSearchPanel mode="aside" :showServices="true" />
-            <button
-              @click="isFilterModalOpen = false"
-              class="w-full rounded-2xl bg-[#1a237e] py-4 text-sm font-bold text-white shadow-lg active:scale-95 transition-all"
-            >
-              اعمال فیلترها
-            </button>
+            <UiBaseButton
+  label="اعمال فیلترها"
+  variant="filled"
+  color="primary"
+  class="w-full !rounded-2xl !py-4 shadow-lg"
+  @click="isFilterModalOpen = false"
+/>
           </div>
         </div>
       </div>
@@ -241,7 +274,7 @@
 
 <script setup>
 import moment from 'moment-jalaali'
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch , nextTick  } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useFlightStore } from '~/stores/flights'
 import { searchAllProviders } from '~/services/searchFlights'
@@ -251,6 +284,8 @@ moment.loadPersian({ usePersianDigits: false, dialect: 'persian-modern' })
 const route = useRoute()
 const router = useRouter()
 const flightStore = useFlightStore()
+
+console.log(flightStore.finalBookingPrice, 'flightStore.finalBookingPrice')
 
 const selectedDate = ref('')
 const activeTab = ref('ارزان‌ترین')
@@ -263,7 +298,15 @@ const sortOptions = ['نام ایرلاین', 'دیرترین', 'زودترین'
 const activeFilters = ref({
   departureTimeRange: [0, 2400]
 })
-
+const scrollToTop = async () => {
+  await nextTick()
+  if (typeof window !== 'undefined') {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    })
+  }
+}
 const travelType = computed(() => String(route.query.travelType || 'one-way'))
 
 const flightSteps = computed(() => {
@@ -305,9 +348,11 @@ const getStartDateForCarousel = (dateStr) => {
 
   return parsed.subtract(10, 'days').format('YYYY-MM-DD')
 }
+
 function handlePassengersSubmit(passengers) {
   console.log(passengers)
 }
+
 const normalizeDateForApi = (dateValue) => {
   if (!dateValue) return ''
 
@@ -573,6 +618,14 @@ const handleDateChange = async (dateObj) => {
   )
 }
 
+const formStep = computed(() => {
+  return travelType.value === 'round-trip' ? 2 : 1
+})
+
+const previewStep = computed(() => {
+  return travelType.value === 'round-trip' ? 3 : 2
+})
+
 const handleSelectFlight = async (flight) => {
   const plainFlight = JSON.parse(JSON.stringify(flight))
 
@@ -589,7 +642,7 @@ const handleSelectFlight = async (flight) => {
     plainFlight?.provider !== 'NIRA'
   ) {
     flightStore.selectDepartureFlight(plainFlight)
-    flightStore.setCurrentStep(2)
+    flightStore.setCurrentStep(formStep.value)
     return
   }
 
@@ -611,7 +664,7 @@ const handleSelectFlight = async (flight) => {
   }
 
   flightStore.selectReturnFlight(plainFlight)
-  flightStore.setCurrentStep(2)
+  flightStore.setCurrentStep(formStep.value)
 }
 
 const handleEditFlight = async () => {
@@ -628,11 +681,13 @@ const handleEditFlight = async () => {
     })
   )
 }
+
 const editFlightButtonLabel = computed(() => {
   return selectedTicketsForView.value.length > 1
     ? 'تغییر پروازهای انتخابی'
     : 'تغییر پرواز انتخابی'
 })
+
 const isSelectedFlightCard = (flight) => {
   const departureId = flightStore.selectedDepartureFlight?.id
   const returnId = flightStore.selectedReturnFlight?.id
@@ -690,27 +745,477 @@ watch(
     )
   }
 )
+watch(
+  () => flightStore.currentStep,
+  () => {
+    scrollToTop()
+  }
+)
 const passengerFormRef = ref(null)
 const contactFormRef = ref(null)
-function onContinueShopping() {
+
+// توابع کمکی ساخت تاریخ و زمان جاری
+function getCurrentDate() {
+  return moment().format('YYYY-MM-DD')
+}
+
+function getCurrentTime() {
+  return moment().format('HH:mm')
+}
+
+// تبدیل ارقام فارسی و عربی به انگلیسی
+function normalizeDigits(value) {
+  const faDigits = '۰۱۲۳۴۵۶۷۸۹'
+  const arDigits = '٠١٢٣٤٥٦٧٨٩'
+
+  return String(value ?? '')
+    .split('')
+    .map((character) => {
+      const faIndex = faDigits.indexOf(character)
+      if (faIndex !== -1) return String(faIndex)
+
+      const arIndex = arDigits.indexOf(character)
+      if (arIndex !== -1) return String(arIndex)
+
+      return character
+    })
+    .join('')
+}
+
+// تبدیل تاریخ تولد به فرمت استاندارد میلادی ISO
+function toIsoBirthDate(birthDate) {
+  if (!birthDate) return ''
+
+  let year
+  let month
+  let day
+
+  if (typeof birthDate === 'object') {
+    year = normalizeDigits(birthDate.year)
+    month = normalizeDigits(birthDate.month)
+    day = normalizeDigits(birthDate.day)
+  }
+
+  if (typeof birthDate === 'string') {
+    const normalizedDate = normalizeDigits(birthDate).trim().replace(/-/g, '/')
+    const dateParts = normalizedDate.split('/')
+    year = dateParts[0]
+    month = dateParts[1]
+    day = dateParts[2]
+  }
+
+  if (!year || !month || !day) return ''
+
+  const formattedBirthDate = [
+    String(year).padStart(4, '0'),
+    String(month).padStart(2, '0'),
+    String(day).padStart(2, '0')
+  ].join('/')
+
+  const isJalaliDate = Number(year) < 1700
+
+  const parsedDate = isJalaliDate
+    ? moment(formattedBirthDate, 'jYYYY/jMM/jDD', true)
+    : moment(formattedBirthDate, 'YYYY/MM/DD', true)
+
+  if (!parsedDate.isValid()) {
+    console.error('Invalid passenger birth date:', birthDate)
+    return ''
+  }
+
+  return parsedDate.startOf('day').toISOString()
+}
+
+// استخراج مالیات‌های مربوط به هر مسافر
+function getFlightPassengerTaxes(flight, passengerType) {
+  if (!flight) return []
+
+  const normalizedType = String(passengerType || 'ADL').toUpperCase()
+  const taxesByPassengerType =
+    flight?.contractPassengerTaxes ||
+    flight?.passengerTaxes ||
+    flight?.taxesByPassengerType ||
+    flight?.pricing?.taxesByPassengerType ||
+    null
+
+  if (Array.isArray(taxesByPassengerType)) {
+    return taxesByPassengerType.map((tax) => ({
+      ...tax,
+      id: Number(tax?.id || 0),
+      contractPassengerId: Number(tax?.contractPassengerId || 0)
+    }))
+  }
+
+  const typeTaxes =
+    taxesByPassengerType?.[normalizedType] ||
+    taxesByPassengerType?.[normalizedType.toLowerCase()] ||
+    []
+
+  if (Array.isArray(typeTaxes)) {
+    return typeTaxes.map((tax) => ({
+      ...tax,
+      id: Number(tax?.id || 0),
+      contractPassengerId: Number(tax?.contractPassengerId || 0)
+    }))
+  }
+
+  return []
+}
+
+// نگاشت داده‌های مسافران فرم ورودی به ساختار جدول مسافران API
+function mapPassengersToPayload(passengers, selectedFlights = []) {
+  const mainFlight = selectedFlights[0] || null
+
+  return passengers.map((p) => {
+    const passengerType = String(p?.type || 'ADL').toUpperCase()
+    const nationalCode = normalizeDigits(p.nationalCode).trim()
+    const passportNumber = normalizeDigits(p.passportNumber).trim()
+    const nationalityCode = String(p.nationality || 'IR').toUpperCase()
+
+    const isIranianPassenger =
+      nationalityCode === 'IR' ||
+      nationalityCode === 'IRAN' ||
+      nationalityCode === 'ایرانی'
+
+    return {
+      id: 0,
+      contractId: 0,
+      fName: String(p.firstName || '').trim(),
+      lName: String(p.lastName || '').trim(),
+      age: passengerType,
+      gender: p.gender === 'male' || p.gender === true,
+      birthDate: toIsoBirthDate(p.birthDate),
+      codeMelli: nationalCode,
+      passportNo: passportNumber || (isIranianPassenger ? nationalCode : ''),
+      nationality: isIranianPassenger ? 'ایرانی' : String(p.nationality || '').trim(),
+      description: '',
+      contractPassengerTaxes: getFlightPassengerTaxes(mainFlight, passengerType)
+    }
+  })
+}
+
+// فرمت تاریخ پرواز
+function formatFlightDate(dateValue) {
+  if (!dateValue) return ''
+
+  if (dateValue instanceof Date) {
+    const parsed = moment(dateValue)
+    return parsed.isValid() ? parsed.format('YYYY-MM-DD') : ''
+  }
+
+  if (typeof dateValue === 'number') {
+    const parsed = moment(dateValue)
+    return parsed.isValid() ? parsed.format('YYYY-MM-DD') : ''
+  }
+
+  const normalizedValue = normalizeDigits(String(dateValue)).trim()
+  if (!normalizedValue) return ''
+
+  let parsedDate = moment(normalizedValue)
+  if (parsedDate.isValid()) {
+    return parsedDate.format('YYYY-MM-DD')
+  }
+
+  parsedDate = moment(
+    normalizedValue,
+    [
+      'YYYY-MM-DD HH:mm:ss',
+      'YYYY/MM/DD HH:mm:ss',
+      'YYYY-MM-DD HH:mm',
+      'YYYY/MM/DD HH:mm',
+      'YYYY-MM-DD',
+      'YYYY/MM/DD'
+    ],
+    true
+  )
+
+  if (parsedDate.isValid()) {
+    return parsedDate.format('YYYY-MM-DD')
+  }
+
+  console.error('Invalid flight date:', dateValue)
+  return ''
+}
+
+// فرمت ساعت پرواز
+function formatFlightTime(dateTimeValue, fallbackTime = '') {
+  const value = dateTimeValue || fallbackTime
+  if (!value) return ''
+
+  if (value instanceof Date) {
+    const parsed = moment(value)
+    return parsed.isValid() ? parsed.format('HH:mm') : ''
+  }
+
+  if (typeof value === 'number') {
+    const parsed = moment(value)
+    return parsed.isValid() ? parsed.format('HH:mm') : ''
+  }
+
+  const normalizedValue = normalizeDigits(String(value)).trim()
+  if (!normalizedValue) return ''
+
+  const timeMatch = normalizedValue.match(/^([01]?\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/)
+  if (timeMatch) {
+    return `${String(timeMatch[1]).padStart(2, '0')}:${timeMatch[2]}`
+  }
+
+  let parsedTime = moment(normalizedValue)
+  if (parsedTime.isValid()) {
+    return parsedTime.format('HH:mm')
+  }
+
+  parsedTime = moment(
+    normalizedValue,
+    [
+      'YYYY-MM-DD HH:mm:ss',
+      'YYYY/MM/DD HH:mm:ss',
+      'YYYY-MM-DD HH:mm',
+      'YYYY/MM/DD HH:mm'
+    ],
+    true
+  )
+
+  if (parsedTime.isValid()) {
+    return parsedTime.format('HH:mm')
+  }
+
+  console.error('Invalid flight time:', value)
+  return ''
+}
+
+// دریافت شناسه ایرلاین از استور بر اساس کد ایرلاین
+function resolveAirlineId(flight) {
+  const airlineCode = String(
+    flight?.stepfindip ||
+    flight?.stepFindIp ||
+    flight?.airlineCode ||
+    flight?.airline_code ||
+    flight?.carrierCode ||
+    flight?.marketingAirline ||
+    flight?.operatingAirline ||
+    flight?.airline?.code ||
+    flight?.airline ||
+    ''
+  ).trim().toUpperCase()
+
+  let mappedAirlineId = 0
+
+  if (typeof flightStore.getAirlineId === 'function') {
+    mappedAirlineId = Number(flightStore.getAirlineId(airlineCode))
+  }
+
+  if ((!Number.isInteger(mappedAirlineId) || mappedAirlineId <= 0) && flightStore.airlineIdMap) {
+    mappedAirlineId = Number(flightStore.airlineIdMap[airlineCode] || 0)
+  }
+
+  if (Number.isInteger(mappedAirlineId) && mappedAirlineId > 0) {
+    return mappedAirlineId
+  }
+
+  const directAirlineId = Number(flight?.airlineId)
+  if (Number.isInteger(directAirlineId) && directAirlineId > 0) {
+    return directAirlineId
+  }
+
+  console.error('Airline ID not found for flight:', flight)
+  return 0
+}
+
+// نگاشت داده‌های پروازهای انتخابی استور به ساختار جدول پروازهای API
+function mapFlightsToPayload(selectedFlights) {
+  return selectedFlights.filter(Boolean).map((f) => {
+    const departureValue = f?.departure || f?.departureDateTime || f?.depDateTime || ''
+    const arrivalValue = f?.arrival || f?.arrivalDateTime || f?.arrDateTime || ''
+
+    const departureDate = f?.depDate || f?.departureDate || departureValue
+    const arrivalDate = f?.arrDate || f?.arrivalDate || arrivalValue
+    const departureTime = f?.depTime || f?.departureTime || departureValue
+    const arrivalTime = f?.arrTime || f?.arrivalTime || arrivalValue
+
+    const airlineId = resolveAirlineId(f)
+
+    return {
+      contractId: 0,
+      origin: String(f?.origin || f?.from || f?.originCode || '').trim(),
+      destination: String(f?.destination || f?.to || f?.destinationCode || '').trim(),
+      flightClass: String(f?.cabinClass || f?.flightClass || f?.class || 'X').trim(),
+      airlineId: airlineId,
+      flightNumber: String(f?.flightNumber || f?.flightNo || '').trim(),
+      depDate: formatFlightDate(departureDate),
+      depTime: formatFlightTime(departureTime, f?.depTime),
+      arrDate: formatFlightDate(arrivalDate),
+      arrTime: formatFlightTime(arrivalTime, f?.arrTime),
+      airplaneType: String(f?.aircraft || f?.airplaneType || f?.aircraftType || '').trim(),
+      charterFlight: f?.isCharter === true || f?.charterFlight === true,
+      description: ''
+    }
+  })
+}
+
+// ثبت قرارداد و ادامه خرید
+async function onContinueShopping() {
   const passengerValid = passengerFormRef.value?.validateAll?.() ?? false
   const contactValid = contactFormRef.value?.validateAll?.() ?? false
 
-  const passengerData = passengerFormRef.value?.getData?.() ?? []
-  const contactData = contactFormRef.value?.getData?.() ?? {}
+  if (!passengerValid || !contactValid) return
 
-  const allData = {
-    passengers: passengerData,
-    contact: contactData,
+  const passengers = passengerFormRef.value?.getData?.() ?? []
+  const contact = contactFormRef.value?.getData?.() ?? {}
+
+  if (!passengers.length) return
+
+  bookingData.value.passengers = passengers
+  bookingData.value.contact = contact
+
+  const passengerCounts = {
+    adult: passengers.filter((p) => p.type === 'ADL').length,
+    child: passengers.filter((p) => p.type === 'CHD').length,
+    infant: passengers.filter((p) => p.type === 'INF').length
   }
 
-  console.log(allData)
+  // ۱. به‌روزرسانی و استعلام قیمت نهایی (حیاتی)
+  try {
+    await flightStore.refreshSelectedFlightsPricing(passengerCounts)
+  } catch (error) {
+    console.error('Error on refreshing fare (crucial):', error)
+    alert('استعلام قیمت پرواز با خطا مواجه شد. لطفاً دوباره تلاش کنید.')
+    return // متوقف کردن روند رفتن به مرحله بعد به دلیل عدم دسترسی به قیمت نهایی
+  }
 
-  if (passengerValid && contactValid) {
-    console.log('success')
+  // آماده‌سازی اطلاعات برای مرحله بعد و ساختن payload
+  const selectedFlights = Array.isArray(flightStore.selectedFlights)
+    ? flightStore.selectedFlights.filter(Boolean)
+    : [flightStore.selectedDepartureFlight, flightStore.selectedReturnFlight].filter(Boolean)
+
+  const contractFlights = mapFlightsToPayload(selectedFlights)
+  const contractPassengers = mapPassengersToPayload(passengers, selectedFlights)
+
+  const payload = {
+    id: 0,
+    userName: String(contact.phone || contact.mobile || '').trim(),
+    email: String(contact.email || '').trim(),
+    IssueDate: getCurrentDate(),
+    issueTime: getCurrentTime(),
+    ipAddress: '0',
+    confirmStatus: 'temp',
+    contractType: 0,
+    contractingPartyType: 0,
+    cruise: false,
+    hotel: false,
+    insurance: false,
+    manualOrAutomatic: true,
+    other: false,
+    showDetail: false,
+    systemOrCharter: false,
+    taxType: 0,
+    ticket: true,
+    ticketStatus: 'temp-first',
+    tour: false,
+    travelVehicle: 'هواپیما',
+    visa: false,
+    contractFlights,
+    contractPassengers
+  }
+
+  console.log('Sending payload:', JSON.parse(JSON.stringify(payload)))
+
+  // ۲. ثبت اولیه قرارداد (غیر حیاتی)
+  try {
+    const response = await $fetch('https://api.ahuan.ir/api/Contract/add', {
+      method: 'POST',
+      body: payload,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+    console.log('Contract add response (success):', response)
+  } catch (error) {
+    // در صورت وجود خطا، روند متوقف نمی‌شود و کاربر را به مرحله پیش‌فاکتور می‌فرستیم
+    console.warn('Contract add failed (non-blocking), moving forward anyway:', error)
+  }
+
+  // تغییر مرحله استپر به پیش‌نمایش و پرداخت (در هر صورت بعد از موفقیت Fare)
+  flightStore.setCurrentStep(previewStep.value)
+}
+
+const flightType = computed(() => {
+  return route.query.flightType === 'international'
+    ? 'international'
+    : 'domestic'
+})
+
+const bookingData = ref({
+  contact: {
+    phone: '',
+    email: '',
+  },
+  passengers: [],
+})
+const travelCardCredit = ref(0)
+const travelCardApplied = ref(false)
+const travelCardLoading = ref(false)
+const travelCardOwnerName = ref('')
+const travelCardError = ref('') 
+const travelCardData = ref(null)
+
+const priceAfterTravelCard = computed(() => {
+  const original = Number(flightStore.finalBookingPrice || 0)
+  const credit = Number(travelCardCredit.value || 0)
+  return Math.max(original - credit, 0)
+})
+const handleResetTravelCard = () => {
+  travelCardCredit.value = 0
+  travelCardApplied.value = false
+  travelCardOwnerName.value = ''
+  travelCardError.value = ''
+  travelCardData.value = null
+  console.log('Travel card reset. Price reverted to original.')
+}
+const handleApplyTravelCard = async (cardNumber) => {
+  try {
+    travelCardLoading.value = true
+    travelCardApplied.value = false
+    travelCardCredit.value = 0
+    travelCardOwnerName.value = ''
+    travelCardError.value = ''
+    travelCardData.value = null
+
+    const response = await $fetch(`https://api.ahuan.ir/api/SafarCard/${cardNumber}`)
+    
+    if (response && response.credit !== undefined) {
+      travelCardData.value = response
+      travelCardCredit.value = Number(response.credit)
+      travelCardOwnerName.value = `${response.firstName || ''} ${response.lastName || ''}`.trim()
+      travelCardApplied.value = true
+    } else {
+      travelCardError.value = 'اطلاعات کارت معتبر نیست.'
+    }
+  } catch (error) {
+    travelCardApplied.value = false
+    travelCardCredit.value = 0
+    travelCardOwnerName.value = ''
+    
+    if (error.data && typeof error.data === 'string') {
+      travelCardError.value = error.data
+    } else if (error.data && error.data.message) {
+      travelCardError.value = error.data.message
+    } else {
+      travelCardError.value = 'چنین شماره کارتی یافت نشد.'
+    }
+    console.error('Travel card API error:', error)
+  } finally {
+    travelCardLoading.value = false
   }
 }
+
+const handleFinalPayment = () => {
+  console.log('Proceed to final payment with price:', priceAfterTravelCard.value)
+}
 </script>
+
+
+
 
 <style>
 .list-enter-active,

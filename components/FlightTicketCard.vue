@@ -16,7 +16,7 @@
 
           <template v-else>
             <UiBaseButton
-            v-if="!props.hideSelectButton"
+              v-if="!props.hideSelectButton"
               label="انتخاب پرواز"
               variant="filled"
               color="primary"
@@ -28,7 +28,7 @@
 
             <div class="flex-[3] order-2 text-right md:order-1">
               <p class="font-bold text-[22px] text-[var(--color-primary-dark)]">
-                {{ formatPrice(finalPrice) }}
+                {{ formatPrice(cardPrice) }}
               </p>
               <p class="text-sm text-left font-normal">ریال</p>
             </div>
@@ -89,7 +89,6 @@
 
         <div class="flex gap-5 mt-2">
           <div class="flex-[3]">
-            <!-- رفت -->
             <div class="mt-4 flex items-center gap-3 text-gray-400 text-sm">
               <div class="flex items-center gap-1">
                 <span class="text-[12px]">مقصد</span>
@@ -132,7 +131,6 @@
               <span dir="rtl" class="text-[12px]">{{ departureDateLabel }}</span>
             </div>
 
-            <!-- برگشت -->
             <template v-if="isRoundTripView">
               <div class="mt-5 flex items-center gap-3 text-gray-400 text-sm">
                 <div class="flex items-center gap-1">
@@ -141,20 +139,20 @@
                 </div>
 
                 <div class="flex-1 relative flex justify-center items-center">
-                <svg
-                  class="w-full h-7"
-                  viewBox="0 0 346 27"
-                  fill="none"
-                  preserveAspectRatio="none"
-                >
-                  <path
-                    d="M1 26C1 26 119.005 0.5 173.5 0.5C227.995 0.5 345 26 345 26"
-                    stroke="#B3B3B3"
-                    stroke-dasharray="4 4"
-                  />
-                </svg>
-                <i class="bi bi-airplane-fill absolute -top-2 w-5 h-5 rotate-[90deg] text-gray-400 bg-white text-xl"></i>
-              </div>
+                  <svg
+                    class="w-full h-7"
+                    viewBox="0 0 346 27"
+                    fill="none"
+                    preserveAspectRatio="none"
+                  >
+                    <path
+                      d="M1 26C1 26 119.005 0.5 173.5 0.5C227.995 0.5 345 26 345 26"
+                      stroke="#B3B3B3"
+                      stroke-dasharray="4 4"
+                    />
+                  </svg>
+                  <i class="bi bi-airplane-fill absolute -top-2 w-5 h-5 rotate-[90deg] text-gray-400 bg-white text-xl"></i>
+                </div>
 
                 <div class="flex flex-row-reverse items-center gap-1">
                   <span class="text-[12px]">مبدا</span>
@@ -171,9 +169,10 @@
                 <span class="text-[12px]">{{ returnArrivalTime }}</span>
                 <span class="text-[12px]">{{ returnDepartureTime }}</span>
               </div>
+
               <div class="mt-1 flex justify-center text-sm text-gray-500">
-              <span dir="rtl" class="text-[12px]">{{ formatFlightDateShort(flight.returnDeparture) }}</span>
-            </div>
+                <span dir="rtl" class="text-[12px]">{{ formatFlightDateShort(flight.returnDeparture) }}</span>
+              </div>
             </template>
           </div>
 
@@ -219,55 +218,58 @@
       </div>
     </div>
 
-        <!-- Wrapper بیرونی کرکره با انیمیشن ارتفاع -->
     <div
       class="grid transition-all duration-300 ease-in-out bg-gray-50"
       :class="activeTab ? 'grid-rows-[1fr] opacity-100 border-t-2 border-gray-200' : 'grid-rows-[0fr] opacity-0'"
     >
       <div class="overflow-hidden">
-        <!-- اضافه کردن Transition برای تغییر نرم محتوا -->
         <Transition name="fade-slide" mode="out-in">
-          
-          <!-- ۱. پنل قوانین کنسلی -->
           <div 
             v-if="activeTab === 'rules'" 
             key="rules-tab"
             class="flex text-[12px] flex-col md:flex-row bg-gray-100"
           >
             <div class="flex-1 order-2 md:order-1 border-white border-t-2 md:border-t-0 border-r-1 border-dashed relative p-3 pb-12 flex flex-col justify-center">
-              <template v-if="passengerPrices.length">
-                <div class="flex py-2" v-for="(item, index) in passengerPrices" :key="`passenger-${index}`">
+              <template v-if="panelPassengerPrices.length">
+                <div
+                  v-for="(item, index) in panelPassengerPrices"
+                  :key="`passenger-${index}`"
+                  class="flex py-2"
+                >
                   <p class="flex-1 text-start">{{ formatPrice(item.total) }}</p>
                   <p class="flex-1 flex justify-end">
-                    <span class="order-2 px-2">({{ item.count }})</span> 
+                    <span class="order-2 px-2">({{ item.count }})</span>
                     <span class="order-1 font-bold">{{ item.label }}</span>
                   </p>
                 </div>
               </template>
+
               <template v-else>
                 <div class="flex py-2">
-                  <p class="flex-1 text-start">{{ formatPrice(finalPrice) }}</p>
+                  <p class="flex-1 text-start">{{ formatPrice(cardPrice) }}</p>
                   <p class="flex-1 flex justify-end">
                     <span class="order-2 px-2">1</span>
                     <span class="order-1">بزرگسال</span>
                   </p>
                 </div>
               </template>
+
               <p class="flex text-[var(--color-primary-dark)] flex-row-reverse justify-center border-t-1 font-bold pt-4 mt-4">
                 <span class="px-2">مجموع</span>
-                <span>{{ formatPrice(finalPrice) }}</span>
+                <span>{{ formatPrice(panelTotalPrice) }}</span>
                 <span class="px-2">ریال</span>
               </p>
             </div>
 
             <div class="flex-[3] order-2 relative p-3 pb-12 flex flex-col">
-              <template v-if="loadingRules">
+              <template v-if="loadingFare">
                 <div class="flex mt-2 flex-row-reverse">
                   <p class="flex-1 text-[12px] text-gray-500 flex justify-end items-center">
-                    در حال دریافت قوانین کنسلی...
+                    در حال دریافت اطلاعات نرخ و قوانین...
                   </p>
                 </div>
               </template>
+
               <template v-else-if="refundPolicies.length > 0">
                 <div
                   v-for="(rule, index) in refundPolicies"
@@ -282,6 +284,7 @@
                   </p>
                 </div>
               </template>
+
               <template v-else>
                 <div class="flex mt-2 flex-row-reverse">
                   <p class="flex-3 text-[12px] text-red-500 flex justify-end items-center">
@@ -292,120 +295,133 @@
             </div>
           </div>
 
-          <!-- ۲. پنل اطلاعات پرواز -->
           <div 
             v-else-if="activeTab === 'info'" 
             key="info-tab"
             class="flex text-[12px] flex-col md:flex-row bg-gray-100"
           >
             <div class="flex-1 order-2 md:order-1 border-white border-t-2 md:border-t-0 border-r-1 border-dashed relative p-3 pb-12 flex flex-col justify-center">
-              <template v-if="passengerPrices.length">
-                <div class="flex py-2" v-for="(item, index) in passengerPrices" :key="`passenger-${index}`">
+              <template v-if="panelPassengerPrices.length">
+                <div
+                  v-for="(item, index) in panelPassengerPrices"
+                  :key="`info-passenger-${index}`"
+                  class="flex py-2"
+                >
                   <p class="flex-1 text-start">{{ formatPrice(item.total) }}</p>
                   <p class="flex-1 flex justify-end">
-                    <span class="order-2 px-2">({{ item.count }})</span> 
+                    <span class="order-2 px-2">({{ item.count }})</span>
                     <span class="order-1 font-bold">{{ item.label }}</span>
                   </p>
                 </div>
               </template>
+
               <template v-else>
                 <div class="flex py-2">
-                  <p class="flex-1 text-start">{{ formatPrice(finalPrice) }}</p>
+                  <p class="flex-1 text-start">{{ formatPrice(cardPrice) }}</p>
                   <p class="flex-1 flex justify-end">
                     <span class="order-2 px-2">1</span>
                     <span class="order-1">بزرگسال</span>
                   </p>
                 </div>
               </template>
+
               <p class="flex text-[var(--color-primary-dark)] flex-row-reverse justify-center border-t-1 font-bold pt-4 mt-4">
                 <span class="px-2">مجموع</span>
-                <span>{{ formatPrice(finalPrice) }}</span>
+                <span>{{ formatPrice(panelTotalPrice) }}</span>
                 <span class="px-2">ریال</span>
               </p>
             </div>
 
             <div class="flex-[3] order-1 md:order-2 relative p-3 pb-12 mt-4">
-              <div
-                v-for="(segment, index) in segments"
-                :key="`segment-${index}`"
-                class="mb-6 last:mb-0"
-              >
-                <div v-if="segmentTitle(index)" class="flex flex-col md:flex-row mb-2">
-                  <p class="text-center md:flex-1 font-bold">
-                    {{ segmentTitle(index) }}
-                  </p>
-                  <p class="text-center md:flex-1"></p>
-                </div>
-
-                <div class="flex flex-col md:flex-row">
-                  <p class="text-center md:flex-1 font-bold">
-                    {{ formatFlightDate(segment.departure) }}
-                  </p>
-                  <p class="text-center md:flex-1">
-                    {{ formatTime(segment.departure) }}
+              <template v-if="loadingFare">
+                <div class="flex mt-2 flex-row-reverse">
+                  <p class="flex-1 text-[12px] text-gray-500 flex justify-end items-center">
+                    در حال دریافت اطلاعات نرخ...
                   </p>
                 </div>
+              </template>
 
-                <div class="flex flex-col md:flex-row">
-                  <p class="text-center md:flex-1 font-bold">
-                    {{ getCityLabel(segment.origin) }}
-                  </p>
-                  <p class="text-center md:flex-1">
-                    {{ getAirportLabel(segment.origin) }}
-                  </p>
-                </div>
-
-                <div class="flex flex-col md:flex-row mt-3">
-                  <p class="text-center md:flex-1 font-bold">
-                    {{ formatFlightDate(segment.arrival) }}
-                  </p>
-                  <p class="text-center md:flex-1">
-                    {{ formatTime(segment.arrival) }}
-                  </p>
-                </div>
-
-                <div class="flex flex-col md:flex-row">
-                  <p class="text-center md:flex-1 font-bold">
-                    {{ getCityLabel(segment.destination) }}
-                  </p>
-                  <p class="text-center md:flex-1">
-                    {{ getAirportLabel(segment.destination) }}
-                  </p>
-                </div>
-
-                <div class="flex flex-col md:flex-row my-3">
-                  <p class="text-center md:flex-1 text-[var(--color-primary-dark)] font-bold">
-                    {{ getFlightDurationLabel(segment) }}
-                  </p>
-                  <p class="text-center md:flex-1"></p>
-                </div>
-
-                <div class="flex flex-col md:flex-row mt-4">
-                  <div class="text-center flex justify-center py-1 md:flex-1">
-                    <div class="border-r-1 border-[var(--color-gray-300)] flex flex-col text-center py-4 px-4">
-                      <p class="py-2">شماره پرواز</p>
-                      <p class="font-bold">{{ segment.flightNumber || '-' }}</p>
-                    </div>
-                    <div class="flex flex-col text-center py-4 px-4">
-                      <p class="py-2">کلاس پرواز</p>
-                      <p class="font-bold">{{ segment.bookingClass || segment.rbd || '-' }}</p>
-                    </div>
+              <template v-else>
+                <div
+                  v-for="(segment, index) in segments"
+                  :key="`segment-${index}`"
+                  class="mb-6 last:mb-0"
+                >
+                  <div v-if="segmentTitle(index)" class="flex flex-col md:flex-row mb-2">
+                    <p class="text-center md:flex-1 font-bold">
+                      {{ segmentTitle(index) }}
+                    </p>
+                    <p class="text-center md:flex-1"></p>
                   </div>
-                  <div class="text-center flex flex-col items-center justify-center md:flex-1">
-                    <p class="py-2">نوع هواپیما</p>
-                    <p class="font-bold">
-                      {{ segment.aircraftTypeName || segment.aircraftTypeCode || '-' }}
+
+                  <div class="flex flex-col md:flex-row">
+                    <p class="text-center md:flex-1 font-bold">
+                      {{ formatFlightDate(segment.departure) }}
+                    </p>
+                    <p class="text-center md:flex-1">
+                      {{ formatTime(segment.departure) }}
                     </p>
                   </div>
+
+                  <div class="flex flex-col md:flex-row">
+                    <p class="text-center md:flex-1 font-bold">
+                      {{ getCityLabel(segment.origin) }}
+                    </p>
+                    <p class="text-center md:flex-1">
+                      {{ getAirportLabel(segment.origin) }}
+                    </p>
+                  </div>
+
+                  <div class="flex flex-col md:flex-row mt-3">
+                    <p class="text-center md:flex-1 font-bold">
+                      {{ formatFlightDate(segment.arrival) }}
+                    </p>
+                    <p class="text-center md:flex-1">
+                      {{ formatTime(segment.arrival) }}
+                    </p>
+                  </div>
+
+                  <div class="flex flex-col md:flex-row">
+                    <p class="text-center md:flex-1 font-bold">
+                      {{ getCityLabel(segment.destination) }}
+                    </p>
+                    <p class="text-center md:flex-1">
+                      {{ getAirportLabel(segment.destination) }}
+                    </p>
+                  </div>
+
+                  <div class="flex flex-col md:flex-row my-3">
+                    <p class="text-center md:flex-1 text-[var(--color-primary-dark)] font-bold">
+                      {{ getFlightDurationLabel(segment) }}
+                    </p>
+                    <p class="text-center md:flex-1"></p>
+                  </div>
+
+                  <div class="flex flex-col md:flex-row mt-4">
+                    <div class="text-center flex justify-center py-1 md:flex-1">
+                      <div class="border-r-1 border-[var(--color-gray-300)] flex flex-col text-center py-4 px-4">
+                        <p class="py-2">شماره پرواز</p>
+                        <p class="font-bold">{{ segment.flightNumber || '-' }}</p>
+                      </div>
+                      <div class="flex flex-col text-center py-4 px-4">
+                        <p class="py-2">کلاس پرواز</p>
+                        <p class="font-bold">{{ segment.bookingClass || segment.rbd || '-' }}</p>
+                      </div>
+                    </div>
+                    <div class="text-center flex flex-col items-center justify-center md:flex-1">
+                      <p class="py-2">نوع هواپیما</p>
+                      <p class="font-bold">
+                        {{ segment.aircraftTypeName || segment.aircraftTypeCode || '-' }}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              </template>
             </div>
           </div>
-
         </Transition>
       </div>
     </div>
-
   </div>
 </template>
 
@@ -426,23 +442,28 @@ const props = defineProps({
     type: Boolean,
     default: false
   }
-  // پروپس airports حذف شد؛ حالا از استور خوانده می‌شود
 })
 
 const emit = defineEmits(['select'])
 
-// ───────────────── استور ─────────────────
 const flightStore = useFlightStore()
 const route = useRoute()
 const activeTab = ref(null)
 const logoFailed = ref(false)
-const loadingRules = ref(false)
-const niraRules = ref(null)
+const loadingFare = ref(false)
+const niraFare = ref(null)
 
 const isNira = computed(() => String(props.flight.provider || '').toUpperCase() === 'NIRA')
-const isMahan = computed(() => String(props.flight.provider || '').toUpperCase() === 'MAHAN') // اضافه کردن computed property برای ماهان
+const isMahan = computed(() => String(props.flight.provider || '').toUpperCase() === 'MAHAN')
 
-// ───────────────── پیدا کردن ایرلاین از استور ─────────────────
+const passengerCounts = computed(() => {
+  return {
+    adult: Number(route.query.adl || 1),
+    child: Number(route.query.chd || 0),
+    infant: Number(route.query.inf || 0)
+  }
+})
+
 const airlineFromStore = computed(() => {
   if (!props.flight.airline) return null
   return flightStore.airlines.find((a) => a.code === props.flight.airline) || null
@@ -458,10 +479,10 @@ const airlineName = computed(() => {
 })
 
 const airlineLogo = computed(() => {
-  if (logoFailed.value) return '' // اگر بارگذاری لوگو با خطا مواجه شد، مسیر خالی برگردان
+  if (logoFailed.value) return ''
 
   if (isMahan.value) {
-    return '/imgs/flight/airlines/mahan.png' // مسیر لوگو ماهان
+    return '/imgs/flight/airlines/mahan.png'
   }
 
   return (
@@ -472,7 +493,6 @@ const airlineLogo = computed(() => {
   )
 })
 
-// ───────────────── فرودگاه‌ها از استور ─────────────────
 const airports = computed(() => flightStore.iranAirports || [])
 
 function findAirport(code) {
@@ -480,7 +500,6 @@ function findAirport(code) {
   return airports.value.find((item) => item.iataCode === code || item.cityCode === code) || null
 }
 
-// ───────────────── تب‌ها و قوانین ─────────────────
 const toggleTab = async (tabName) => {
   if (activeTab.value === tabName) {
     activeTab.value = null
@@ -490,17 +509,18 @@ const toggleTab = async (tabName) => {
   activeTab.value = tabName
 
   if (
-    tabName === 'rules' &&
     isNira.value &&
     props.flight.needsFare === true &&
-    !niraRules.value
+    !niraFare.value &&
+    !loadingFare.value &&
+    (tabName === 'rules' || tabName === 'info')
   ) {
-    await fetchNiraRules()
+    await fetchNiraFare()
   }
 }
 
-const fetchNiraRules = async () => {
-  loadingRules.value = true
+const fetchNiraFare = async () => {
+  loadingFare.value = true
 
   try {
     const departureDate = String(props.flight.departure || '')
@@ -531,59 +551,147 @@ const fetchNiraRules = async () => {
     }
 
     const data = await response.json()
-
-    // بعضی وقت‌ها API یک JSON string برمی‌گرداند
-    niraRules.value = typeof data === 'string' ? JSON.parse(data) : data
-  } catch (e) {
-    console.error('Error fetching Nira rules:', e)
-    niraRules.value = null
+    niraFare.value = typeof data === 'string' ? JSON.parse(data) : data
+  } catch (error) {
+    console.error('Error fetching NIRA fare:', error)
+    niraFare.value = null
   } finally {
-    loadingRules.value = false
+    loadingFare.value = false
   }
 }
 
-// ───────────────── قیمت ─────────────────
-const passengerCounts = computed(() => {
-  return {
-    adult: Number(route.query.adl || 1),
-    child: Number(route.query.chd || 0),
-    infant: Number(route.query.inf || 0)
-  }
+function mapMahanPassengerLabel(code) {
+  const normalized = Number(code)
+
+  if (normalized === 1) return 'بزرگسال'
+  if (normalized === 2) return 'کودک'
+  if (normalized === 3) return 'نوزاد'
+
+  return 'مسافر'
+}
+
+function getMahanPassengerCount(code) {
+  const normalized = Number(code)
+
+  if (normalized === 1) return passengerCounts.value.adult
+  if (normalized === 2) return passengerCounts.value.child
+  if (normalized === 3) return passengerCounts.value.infant
+
+  return 0
+}
+
+const mahanPassengerPrices = computed(() => {
+  const list = props.flight.meta?.raw?.totalFlightPrice?.flightPassengerPrices || []
+
+  if (!Array.isArray(list) || !list.length) return []
+
+  return list
+    .map((item) => {
+      const count = getMahanPassengerCount(item.code)
+      const unitPrice = Number(item.totalFare || item.totalSale || item.sale || 0)
+
+      return {
+        label: mapMahanPassengerLabel(item.code),
+        count,
+        unitPrice,
+        total: unitPrice * count
+      }
+    })
+    .filter((item) => item.count > 0)
 })
 
-const finalPrice = computed(() => {
-  // ۱. اگر نیرا بود، از همان قوانین نیرا استفاده کن (درست است)
-  if (isNira.value && niraRules.value) {
-    return (
-      (Number(niraRules.value.AdultTotalPrice || 0) * passengerCounts.value.adult) +
-      (Number(niraRules.value.ChildTotalPrice || 0) * passengerCounts.value.child) +
-      (Number(niraRules.value.InfantTotalPrice || 0) * passengerCounts.value.infant)
-    );
+const niraPassengerPrices = computed(() => {
+  if (!niraFare.value) return []
+
+  const items = []
+
+  if (passengerCounts.value.adult > 0) {
+    items.push({
+      label: 'بزرگسال',
+      count: passengerCounts.value.adult,
+      unitPrice: Number(niraFare.value.AdultTotalPrice || 0),
+      total: Number(niraFare.value.AdultTotalPrice || 0) * passengerCounts.value.adult
+    })
   }
 
-  // ۲. برای ماهان و بقیه، دقیقاً از منطق جمعِ passengerPrices استفاده کن
-  // با این کار، هر چقدر در passengerPrices محاسبه کردیم، اینجا هم مجموعش نمایش داده می‌شود
-  return passengerPrices.value.reduce((sum, item) => sum + item.total, 0);
-});
+  if (passengerCounts.value.child > 0) {
+    items.push({
+      label: 'کودک',
+      count: passengerCounts.value.child,
+      unitPrice: Number(niraFare.value.ChildTotalPrice || 0),
+      total: Number(niraFare.value.ChildTotalPrice || 0) * passengerCounts.value.child
+    })
+  }
 
+  if (passengerCounts.value.infant > 0) {
+    items.push({
+      label: 'نوزاد',
+      count: passengerCounts.value.infant,
+      unitPrice: Number(niraFare.value.InfantTotalPrice || 0),
+      total: Number(niraFare.value.InfantTotalPrice || 0) * passengerCounts.value.infant
+    })
+  }
 
-// ───────────────── قوانین کنسلی ─────────────────
+  return items
+})
+
+const panelPassengerPrices = computed(() => {
+  if (isNira.value) return niraPassengerPrices.value
+  if (isMahan.value) return mahanPassengerPrices.value
+
+  const basePrice = Number(props.flight.priceFrom || 0)
+
+  return [
+    {
+      label: 'بزرگسال',
+      count: passengerCounts.value.adult,
+      unitPrice: basePrice,
+      total: basePrice * passengerCounts.value.adult
+    },
+    {
+      label: 'کودک',
+      count: passengerCounts.value.child,
+      unitPrice: Math.round(basePrice * 0.75),
+      total: Math.round(basePrice * 0.75) * passengerCounts.value.child
+    },
+    {
+      label: 'نوزاد',
+      count: passengerCounts.value.infant,
+      unitPrice: Math.round(basePrice * 0.1),
+      total: Math.round(basePrice * 0.1) * passengerCounts.value.infant
+    }
+  ].filter((item) => item.count > 0)
+})
+
+const cardPrice = computed(() => {
+  if (isNira.value) {
+    return Number(props.flight.priceFrom || 0)
+  }
+
+  if (isMahan.value) {
+    const adultPrice = mahanPassengerPrices.value.find((item) => item.label === 'بزرگسال')?.unitPrice
+    return Number(adultPrice || props.flight.priceFrom || 0)
+  }
+
+  return Number(props.flight.priceFrom || 0)
+})
+
+const panelTotalPrice = computed(() => {
+  return panelPassengerPrices.value.reduce((sum, item) => sum + Number(item.total || 0), 0)
+})
+
 const refundPolicies = computed(() => {
-  if (isNira.value && niraRules.value?.CRCNRules) {
-    return String(niraRules.value.CRCNRules)
+  if (isNira.value && niraFare.value?.CRCNRules) {
+    return String(niraFare.value.CRCNRules)
       .split('/')
       .map((item) => item.trim())
       .filter(Boolean)
       .map((item) => {
         const parts = item.split(',')
-        const title = String(parts[0] || '').trim()
-        const penalty = String(parts[1] || '').trim()
-        const type = String(parts[2] || '').trim()
-
         return {
-          title,
-          penalty,
-          type
+          title: String(parts[0] || '').trim(),
+          penalty: String(parts[1] || '').trim(),
+          type: String(parts[2] || '').trim()
         }
       })
       .filter((item) => item.title)
@@ -597,7 +705,6 @@ const refundPolicies = computed(() => {
   return Array.isArray(items) ? items : []
 })
 
-// ───────────────── رفت و برگشت ─────────────────
 const isRoundTripView = computed(() => {
   if (isNira.value) return false
 
@@ -644,7 +751,6 @@ const segments = computed(() => {
   return [outbound, inbound]
 })
 
-// ───────────────── لیبل‌های شهر و زمان ─────────────────
 const originCity = computed(() => getCityLabel(props.flight.origin))
 const destinationCity = computed(() => getCityLabel(props.flight.destination))
 const departureTime = computed(() => formatTime(props.flight.departure))
@@ -656,7 +762,6 @@ const returnDestinationCity = computed(() => getCityLabel(props.flight.returnDes
 const returnDepartureTime = computed(() => formatTime(props.flight.returnDeparture))
 const returnArrivalTime = computed(() => formatTime(props.flight.returnArrival))
 
-// ───────────────── وضعیت کارت ─────────────────
 const isCanceled = computed(() => {
   const status = String(
     props.flight.status ||
@@ -704,7 +809,6 @@ const statusMessage = computed(() => {
   return cardDisabled.value ? 'غیرقابل خرید' : 'قابل خرید'
 })
 
-// ───────────────── لیبل کلاس و نوع پرواز ─────────────────
 const cabinLabel = computed(() => {
   const map = {
     1: 'فرست کلاس',
@@ -723,43 +827,12 @@ const flightTypeLabel = computed(() => {
   return 'سیستمی'
 })
 
-// ───────────────── قیمت مسافران ─────────────────
-
-const passengerPrices = computed(() => {
-  const counts = passengerCounts.value;
-  const basePrice = Number(props.flight.priceFrom || 0);
-
-  // ۱. منطق اختصاصی نیرا (چون نیرا دیتای قیمت دارد)
-  if (props.flight.provider === 'NIRA' && niraRules.value) {
-    const prices = [];
-    if (counts.adult > 0) prices.push({ label: 'بزرگسال', count: counts.adult, total: Number(niraRules.value.AdultTotalPrice || basePrice) * counts.adult });
-    if (counts.child > 0) prices.push({ label: 'کودک', count: counts.child, total: Number(niraRules.value.ChildTotalPrice || Math.round(basePrice * 0.75)) * counts.child });
-    if (counts.infant > 0) prices.push({ label: 'نوزاد', count: counts.infant, total: Number(niraRules.value.InfantTotalPrice || Math.round(basePrice * 0.1)) * counts.infant });
-    return prices;
-  }
-
-  // ۲. منطق محاسباتی برای ماهان (و بقیه) - استفاده از قیمت پایه
-  // فقط کافیست یکبار basePrice را ضرب در تعداد و ضرایب کنیم
-  return [
-    { label: 'بزرگسال', count: counts.adult, total: basePrice * counts.adult },
-    { label: 'کودک', count: counts.child, total: Math.round(basePrice * 0.75) * counts.child },
-    { label: 'نوزاد', count: counts.infant, total: Math.round(basePrice * 0.1) * counts.infant }
-  ].filter(p => p.count > 0);
-});
-
-
-
-
-
-
-// ───────────────── ظرفیت ─────────────────
 const capacityText = computed(() => {
   if (cardDisabled.value) return ''
   if (minCapacity.value == null) return ''
   return `${formatNumber(minCapacity.value)} صندلی مانده`
 })
 
-// ───────────────── اکشن‌ها ─────────────────
 const selectFlight = () => {
   if (cardDisabled.value) return
   emit('select', props.flight)
@@ -774,7 +847,6 @@ const segmentTitle = (index) => {
   return index === 0 ? 'پرواز رفت' : 'پرواز برگشت'
 }
 
-// ───────────────── توابع کمکی ─────────────────
 function parseDate(value) {
   if (!value) return null
   const normalized = String(value).includes('T') ? String(value) : String(value).replace(' ', 'T')
@@ -842,16 +914,6 @@ function getAirportLabel(code) {
   return `${airport.nicName || '-'} (${airport.name || code})`
 }
 
-function getPassengerLabel(type) {
-  const labels = {
-    'ADT': 'بزرگسال', 'ADULT': 'بزرگسال', 'A': 'بزرگسال',
-    'CHD': 'کودک', 'CHILD': 'کودک', 'C': 'کودک',
-    'INF': 'نوزاد', 'INFANT': 'نوزاد', 'I': 'نوزاد'
-  };
-  const normalizedType = String(type || '').toUpperCase().trim();
-  return labels[normalizedType] || 'مسافر';
-}
-
 function getRuleDescription(rule) {
   if (isNira.value) {
     return rule.title || 'شرایط جریمه'
@@ -913,6 +975,7 @@ function formatDurationFromMinutes(totalMinutes) {
   return `${formatNumber(minutes)} دقیقه`
 }
 </script>
+
 <style scoped>
 .fade-slide-enter-active,
 .fade-slide-leave-active {
