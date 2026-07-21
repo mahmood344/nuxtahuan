@@ -1,3 +1,4 @@
+<!-- components/ui/UiBaseInput.vue -->
 <script setup>
 import { computed } from 'vue';
 
@@ -10,10 +11,11 @@ const props = defineProps({
   loading: { type: Boolean, default: false },
   disabled: { type: Boolean, default: false },
   error: { type: String, default: '' },
-  rtl: { type: Boolean, default: true }
+  rtl: { type: Boolean, default: true },
+  inputClass: { type: String, default: '' } // اضافه شدن پروپ کلاس سفارشی
 });
 
-const emit = defineEmits(['update:modelValue']);
+const emit = defineEmits(['update:modelValue', 'input', 'keyup', 'keydown']);
 
 const wrapperClasses = computed(() => {
   return `relative mb-6 ${props.rtl ? 'dir-rtl' : 'dir-ltr'}`;
@@ -41,7 +43,7 @@ const inputClasses = computed(() => {
   }
 
   return [
-    'peer w-full h-[54px] py-3 rounded-[12px] transition-all duration-300 outline-none',
+    'peer w-full h-[54px] py-3 rounded-[12px] transition-all duration-300 outline-none text-center',
     basePaddingX,
     effectiveIconPadding,
     loadingPadding,
@@ -51,7 +53,8 @@ const inputClasses = computed(() => {
       : '',
     props.error
       ? 'border-[var(--color-red-500)] focus:ring-[var(--color-red-300)]'
-      : 'border-[var(--color-gray-300)] focus:ring-[var(--color-primary)] focus:border-[var(--color-primary-dark)]'
+      : 'border-[var(--color-gray-300)] focus:ring-[var(--color-primary)] focus:border-[var(--color-primary-dark)]',
+    props.inputClass // اعمال کلاس‌های دلخواه ارسالی از بیرون
   ];
 });
 
@@ -92,6 +95,15 @@ const loadingIndicatorClasses = computed(() => {
 
 const handleInput = (event) => {
   emit('update:modelValue', event.target.value);
+  emit('input', event);
+};
+
+const handleKeyUp = (event) => {
+  emit('keyup', event);
+};
+
+const handleKeyDown = (event) => {
+  emit('keydown', event);
 };
 
 const getIconHtml = computed(() => {
@@ -101,6 +113,7 @@ const getIconHtml = computed(() => {
   return '';
 });
 </script>
+
 <template>
   <div :class="wrapperClasses">
     <div class="relative flex items-center w-full">
@@ -114,11 +127,15 @@ const getIconHtml = computed(() => {
         v-html="getIconHtml"
       />
 
+      <!-- v-bind="$attrs" باعث می‌شود تمام ویژگی‌های دیگر (مانند maxlength یا autocapitalize) مستقیما روی input بنشینند -->
       <input
+        v-bind="$attrs"
         :value="modelValue"
         :placeholder="placeholder"
         :disabled="disabled"
         @input="handleInput"
+        @keyup="handleKeyUp"
+        @keydown="handleKeyDown"
         :class="inputClasses"
       />
 

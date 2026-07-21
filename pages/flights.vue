@@ -1052,13 +1052,41 @@ function mapFlightsToPayload(selectedFlights) {
     }
   })
 }
+async function addContract(payload) {
+  try {
+    const response = await $fetch('https://api.ahuan.ir/api/Contract/add', {
+      method: 'POST',
+      body: payload,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+
+    return response
+  } catch (error) {
+    console.warn('Contract add failed (non-blocking):', error)
+    return null
+  }
+}
 
 // ثبت قرارداد و ادامه خرید
+// ثبت قرارداد و ادامه خرید
 async function onContinueShopping() {
+  // ۱. ابتدا اعتبارسنجی فرم اطلاعات مسافران و تماس
   const passengerValid = passengerFormRef.value?.validateAll?.() ?? false
   const contactValid = contactFormRef.value?.validateAll?.() ?? false
 
   if (!passengerValid || !contactValid) return
+
+  // ۲. بررسی وضعیت لاگین کاربر
+  if (!flightStore.isLoggedIn) {
+    // باز کردن مودال احراز هویت
+    flightStore.openModal()
+    
+    // ذخیره این متد برای اجرای خودکار پس از لاگین موفق کاربر
+    flightStore.pendingAction = () => onContinueShopping()
+    return
+  }
 
   const passengers = passengerFormRef.value?.getData?.() ?? []
   const contact = contactFormRef.value?.getData?.() ?? {}
@@ -1074,16 +1102,16 @@ async function onContinueShopping() {
     infant: passengers.filter((p) => p.type === 'INF').length
   }
 
-  // ۱. به‌روزرسانی و استعلام قیمت نهایی (حیاتی)
+  // ۳. استعلام قیمت نهایی
   try {
     await flightStore.refreshSelectedFlightsPricing(passengerCounts)
   } catch (error) {
     console.error('Error on refreshing fare (crucial):', error)
     alert('استعلام قیمت پرواز با خطا مواجه شد. لطفاً دوباره تلاش کنید.')
-    return // متوقف کردن روند رفتن به مرحله بعد به دلیل عدم دسترسی به قیمت نهایی
+    return
   }
 
-  // آماده‌سازی اطلاعات برای مرحله بعد و ساختن payload
+  // ۴. آماده‌سازی payload
   const selectedFlights = Array.isArray(flightStore.selectedFlights)
     ? flightStore.selectedFlights.filter(Boolean)
     : [flightStore.selectedDepartureFlight, flightStore.selectedReturnFlight].filter(Boolean)
@@ -1120,24 +1148,13 @@ async function onContinueShopping() {
 
   console.log('Sending payload:', JSON.parse(JSON.stringify(payload)))
 
-  // ۲. ثبت اولیه قرارداد (غیر حیاتی)
-  try {
-    const response = await $fetch('https://api.ahuan.ir/api/Contract/add', {
-      method: 'POST',
-      body: payload,
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    })
-    console.log('Contract add response (success):', response)
-  } catch (error) {
-    // در صورت وجود خطا، روند متوقف نمی‌شود و کاربر را به مرحله پیش‌فاکتور می‌فرستیم
-    console.warn('Contract add failed (non-blocking), moving forward anyway:', error)
-  }
+  // ۵. ثبت قرارداد در بک‌اند
+  await addContract(payload)
 
-  // تغییر مرحله استپر به پیش‌نمایش و پرداخت (در هر صورت بعد از موفقیت Fare)
+  // ۶. انتقال کاربر به مرحله پیش‌نمایش و پرداخت
   flightStore.setCurrentStep(previewStep.value)
 }
+
 
 const flightType = computed(() => {
   return route.query.flightType === 'international'
@@ -1211,6 +1228,7 @@ const handleApplyTravelCard = async (cardNumber) => {
 
 const handleFinalPayment = () => {
   console.log('Proceed to final payment with price:', priceAfterTravelCard.value)
+  console.log(bookingData.value.passengers , 'bookingData.passengers');
 }
 </script>
 

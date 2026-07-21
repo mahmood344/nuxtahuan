@@ -411,6 +411,7 @@ airlineIdMap : {
 },
     flights: [],
     loading: false,
+    authLoading: false,
     backgroundLoading: false,
     searchFinished: false,
 
@@ -424,10 +425,26 @@ airlineIdMap : {
     pricingRefreshLoading: false,
     selectedFlightsFinalPricing: [],
     finalBookingPrice: 0,
-    pricingRefreshError: ''
+    pricingRefreshError: '',
+    isUserLoggedIn: false, 
+   isAuthModalOpen: false,
+    authStep: 'mobile', // 'mobile' | 'register' | 'otp'
+    authLoading: false, // لودینگ اختصاصی برای بخش لاگین
+    mobile: '',
+    userData: null,
+    error: '',
+    successMessage: '',
+    pendingAction: null,
   }),
 
   getters: {
+     isLoggedIn: (state) => {
+      // اگر از قبل در استیت به عنوان لاگین‌شده علامت‌گذاری شده یا کوکی وجود دارد
+      if (state.isUserLoggedIn) return true
+      const token = useCookie('token')
+      return !!token.value
+    },
+    userName: (state) => state.userData ? `${state.userData.firstName} ${state.userData.lastName}` : 'پنل کاربری',
     getAirlineId: (state) => (stepfindip) => {
       const code = String(stepfindip || '').trim().toUpperCase()
       return state.airlineIdMap[code] || 0
@@ -508,6 +525,225 @@ airlineIdMap : {
   },
 
   actions: {
+     openModal(action = null) {
+      this.isAuthModalOpen = true
+      this.authStep = 'mobile'
+      this.pendingAction = action
+      this.error = ''
+      this.successMessage = ''
+    },
+    closeModal() {
+      this.isAuthModalOpen = false
+      this.authStep = 'mobile' // بازنشانی مرحله مودال به اولین وضعیت
+      this.error = ''
+      this.successMessage = ''
+    },
+   async checkMobile(mobile) {
+      this.authLoading = true
+      this.error = ''
+      this.successMessage = ''
+      this.mobile = mobile
+
+      try {
+        const res = await $fetch(`https://api.ahuan.ir/api/Auth/sendsms/${mobile}`)
+
+        const val = typeof res === 'object' ? (res.data ?? res.result ?? res.value) : res
+        
+        if (Number(val) === 0) {
+          this.authStep = 'register'
+        } else {
+          this.authStep = 'otp'
+          this.successMessage = 'کد تأیید ارسال شد.'
+        }
+      } catch (err) {
+        this.error = err.data?.message || 'خطا در برقراری ارتباط با سرور'
+      } finally {
+        this.authLoading = false
+      }
+    }
+,
+    async register(payload) {
+      this.authLoading = true
+      this.error = ''
+      this.successMessage = ''
+
+      try {
+        // ۱. ثبت نام
+        await $fetch('https://api.ahuan.ir/api/Auth/register-minimal', {
+          method: 'POST',
+          body: {
+            phoneNumber: this.mobile,
+            fName: payload.firstName,
+            lName: payload.lastName,
+          }
+        })
+
+        // ۲. ارسال پیامک بعد از ثبت نام موفق
+        await $fetch(`https://api.ahuan.ir/api/Auth/sendsms/${this.mobile}`)
+
+        this.authStep = 'otp'
+        this.successMessage = 'ثبت‌نام انجام شد. کد تایید ارسال گردید.'
+      } catch (err) {
+        this.error = err.data?.message || 'خطا در فرآیند ثبت‌نام'
+      } finally {
+        this.authLoading = false
+      }
+    },
+    async verifyOtp(code) {
+  this.authLoading = true
+  this.error = ''
+
+  try {
+    const res = await $fetch(`https://api.ahuan.ir/api/Auth/Checksms/${this.mobile}/${code}`)
+
+    if (res && res.token && res.successful) {
+      const token = useCookie('token', {
+        maxAge: 60 * 60 * 24 * 30,
+        path: '/'
+      })
+
+      token.value = res.token
+      this.isUserLoggedIn = true
+
+      const userObj = {
+        firstName: res.fName || '',
+        lastName: res.lName || '',
+        mobile: res.mobile || '',
+        companyId: res.companyId || null,
+        companyName: res.companyName || '',
+        credit: res.credit || 0,
+        hasCredit: res.hasCredit ?? false
+      }
+
+      const userCookie = useCookie('user_data', {
+        maxAge: 60 * 60 * 24 * 30,
+        path: '/'
+      })
+
+      userCookie.value = userObj
+      this.userData = userObj
+
+      return {
+        success: true,
+        user: userObj
+      }
+    }
+
+    this.error = res?.error || 'کد تایید نامعتبر است.'
+
+    return {
+      success: false
+    }
+  } catch (err) {
+    this.error = err.data?.message || 'کد وارد شده اشتباه است یا منقضی شده'
+
+    return {
+      success: false
+    }
+  } finally {
+    this.authLoading = false
+  }
+},
+
+    async fetchMe() {
+      const token = useCookie('token')
+      const userCookie = useCookie('user_data')
+      // اگر توکن نبود، کوکی اطلاعات کاربر را هم پاک کن
+      if (!token.value) {
+        this.userData = null
+        userCookie.value = null
+        return
+      }
+
+      // اولویت اول: خواندن مستقیم از کوکی ذخیره شده (بدون نیاز به ریکوئست اضافی در SSR)
+      if (userCookie.value) {
+        this.userData = userCookie.value
+        return
+      }
+
+      try {
+        // اولویت دوم: در صورتی که کوکی پریده بود ولی توکن بود، از API استعلام بگیر
+        const res = await $fetch('https://api.ahuan.ir/api/Auth/me', {
+          headers: {
+            Authorization: `Bearer ${token.value}`
+          }
+        })
+        
+        if (res) {
+          const userObj = {
+            firstName: res.fName || res.firstName || '',
+            lastName: res.lName || res.lastName || '',
+            mobile: res.mobile || '',
+            companyId: res.companyId || null,
+            companyName: res.companyName || '',
+            credit: res.credit || 0,
+            hasCredit: res.hasCredit ?? false
+          }
+          userCookie.value = userObj
+          this.userData = userObj
+        }
+      } catch (e) {
+        token.value = null
+        userCookie.value = null
+        this.userData = null
+      }
+    },
+      async fetchMe() {
+      const token = useCookie('token')
+      const userCookie = useCookie('user_data')
+      
+      // اگر توکن نبود، کوکی اطلاعات کاربر را هم پاک کن
+      if (!token.value) {
+        this.userData = null
+        userCookie.value = null
+        return
+      }
+
+      // اولویت اول: خواندن مستقیم از کوکی ذخیره شده (بدون نیاز به ریکوئست اضافی در SSR)
+      if (userCookie.value) {
+        this.userData = userCookie.value
+        return
+      }
+
+      try {
+        // اولویت دوم: در صورتی که کوکی پریده بود ولی توکن بود، از API استعلام بگیر
+        const res = await $fetch('https://api.ahuan.ir/api/Auth/me', {
+          headers: {
+            Authorization: `Bearer ${token.value}`
+          }
+        })
+        
+        if (res) {
+          const userObj = {
+            firstName: res.fName || res.firstName || '',
+            lastName: res.lName || res.lastName || '',
+            mobile: res.mobile || '',
+            companyId: res.companyId || null,
+            companyName: res.companyName || '',
+            credit: res.credit || 0,
+            hasCredit: res.hasCredit ?? false
+          }
+          userCookie.value = userObj
+          this.userData = userObj
+        }
+      } catch (e) {
+        token.value = null
+        userCookie.value = null
+        this.userData = null
+      }
+    },
+
+   logout() {
+      // پاک کردن تمامی کوکی‌ها در هنگام خروج
+      const token = useCookie('token', { path: '/' })
+      const userCookie = useCookie('user_data', { path: '/' })
+      
+      token.value = null
+      userCookie.value = null
+      this.userData = null
+       this.isUserLoggedIn = false
+      window.location.reload()
+    },
     setFlights(flightsList) {
       this.flights = Array.isArray(flightsList) ? flightsList : []
     },
