@@ -20,7 +20,7 @@
           class="flex shadow-lg min-w-[128px] h-[125px] flex-col items-center justify-center rounded-[24px] py-4 transition-all duration-300"
           :class="[
             item.isPast
-              ? 'cursor-not-allowed bg-slate-100 text-slate-300 opacity-70'
+              ? 'cursor-not-allowed bg-white-100 text-slate-300 opacity-70'
               : 'cursor-pointer',
             index === activeIndex && !item.isPast
               ? 'bg-[#1a237e] text-white shadow-xl scale-105'

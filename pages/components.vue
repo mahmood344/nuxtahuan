@@ -1,6 +1,26 @@
 <template>
 
   <div class="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div class="border border-primary rounded-xl p-4 space-y-3">
+      <h2 class="font-semibold">OtpInput </h2>
+        <div class="flex flex-row justify-center items-center gap-3 ltr" dir="ltr">
+    <div v-for="(digit, index) in length" :key="index" class="w-14">
+      <UiBaseInput
+        :ref="(el) => { if (el) inputRefs[index] = el }"
+        v-model="digits[index]"
+        type="text"
+        inputmode="numeric"
+        maxlength="1"
+        placeholder="-"
+        class="!mb-0"
+        inputClass="!h-14 !w-14 !p-0 text-center text-xl font-bold rounded-xl border border-gray-300 bg-white text-primary-dark focus:border-primary focus:ring-2 focus:ring-primary-light transition-all duration-200"
+        @input="handleInput($event, index)"
+        @keydown="handleKeyDown($event, index)"
+        @paste="handlePaste"
+      />
+    </div>
+  </div>
+  </div>
 <div class="border border-primary rounded-xl p-4 space-y-3">
       <h2 class="font-semibold">range slider</h2>
       <UiBaseRangeSlider
@@ -67,6 +87,7 @@
           label="نام"
           placeholder="نام خود را وارد کنید"
           v-model="name"
+           
         />
 
         <!-- Input with Icon -->
@@ -311,6 +332,7 @@ style="background:var(--color-red-500)">
   </div>
 </template>
 <script setup>
+import { ref, watch, nextTick, onMounted } from 'vue'
 import { useFlightStore } from '~/stores/flights'
 const allFlights  = useFlightStore()
 const handleDateChange = (dateObj) => {
@@ -372,4 +394,70 @@ const fetchAndFilterFlights = () => {
     return isInTimeRange /* && سایر شرط‌ها */;
   });
 };
+const props = defineProps({
+  modelValue: { type: String, default: '' },
+  length: { type: Number, default: 4 }
+})
+
+const emit = defineEmits(['update:modelValue'])
+
+const digits = ref(Array(props.length).fill(''))
+const inputRefs = ref([])
+
+watch(
+  () => props.modelValue,
+  (val) => {
+    const code = String(val || '').slice(0, props.length)
+    digits.value = Array(props.length).fill('').map((_, i) => code[i] || '')
+  },
+  { immediate: true }
+)
+
+const focusInput = async (index) => {
+  await nextTick()
+  const el = inputRefs.value[index]?.$el?.querySelector('input')
+  el?.focus()
+  el?.select()
+}
+
+const updateModel = () => {
+  emit('update:modelValue', digits.value.join(''))
+}
+
+const handleInput = (event, index) => {
+  const value = event.target.value.replace(/[^0-9]/g, '')
+  digits.value[index] = value.slice(-1)
+  updateModel()
+
+  if (value && index < props.length - 1) {
+    focusInput(index + 1)
+  }
+}
+
+const handleKeyDown = (event, index) => {
+  if (event.key === 'Backspace') {
+    if (!digits.value[index] && index > 0) {
+      digits.value[index - 1] = ''
+      updateModel()
+      focusInput(index - 1)
+    } else {
+      digits.value[index] = ''
+      updateModel()
+    }
+    event.preventDefault()
+  }
+}
+
+const handlePaste = (event) => {
+  event.preventDefault()
+  const pasted = event.clipboardData.getData('text').replace(/\D/g, '').slice(0, props.length)
+
+  digits.value = Array(props.length).fill('').map((_, i) => pasted[i] || '')
+  updateModel()
+  focusInput(Math.min(pasted.length, props.length - 1))
+}
+
+onMounted(() => {
+  focusInput(0)
+})
 </script>
