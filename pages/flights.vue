@@ -274,6 +274,7 @@
 
 <script setup>
 import moment from 'moment-jalaali'
+import { toGregorian } from 'jalaali-js'
 import { ref, computed, onMounted, watch , nextTick  } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useFlightStore } from '~/stores/flights'
@@ -1048,7 +1049,8 @@ function mapFlightsToPayload(selectedFlights) {
       arrTime: formatFlightTime(arrivalTime, f?.arrTime),
       airplaneType: String(f?.aircraft || f?.airplaneType || f?.aircraftType || '').trim(),
       charterFlight: f?.isCharter === true || f?.charterFlight === true,
-      description: ''
+      description: '',
+      flightSupplier: String(f?.provider || f?.flightSupplier || '').trim(),
     }
   })
 }
@@ -1072,18 +1074,13 @@ async function addContract(payload) {
 // ثبت قرارداد و ادامه خرید
 // ثبت قرارداد و ادامه خرید
 async function onContinueShopping() {
-  // ۱. ابتدا اعتبارسنجی فرم اطلاعات مسافران و تماس
   const passengerValid = passengerFormRef.value?.validateAll?.() ?? false
   const contactValid = contactFormRef.value?.validateAll?.() ?? false
 
   if (!passengerValid || !contactValid) return
 
-  // ۲. بررسی وضعیت لاگین کاربر
   if (!flightStore.isLoggedIn) {
-    // باز کردن مودال احراز هویت
     flightStore.openModal()
-    
-    // ذخیره این متد برای اجرای خودکار پس از لاگین موفق کاربر
     flightStore.pendingAction = () => onContinueShopping()
     return
   }
@@ -1102,16 +1099,14 @@ async function onContinueShopping() {
     infant: passengers.filter((p) => p.type === 'INF').length
   }
 
-  // ۳. استعلام قیمت نهایی
   try {
     await flightStore.refreshSelectedFlightsPricing(passengerCounts)
   } catch (error) {
-    console.error('Error on refreshing fare (crucial):', error)
+    console.error('Error on refreshing fare:', error)
     alert('استعلام قیمت پرواز با خطا مواجه شد. لطفاً دوباره تلاش کنید.')
     return
   }
 
-  // ۴. آماده‌سازی payload
   const selectedFlights = Array.isArray(flightStore.selectedFlights)
     ? flightStore.selectedFlights.filter(Boolean)
     : [flightStore.selectedDepartureFlight, flightStore.selectedReturnFlight].filter(Boolean)
@@ -1123,7 +1118,7 @@ async function onContinueShopping() {
     id: 0,
     userName: String(contact.phone || contact.mobile || '').trim(),
     email: String(contact.email || '').trim(),
-    IssueDate: getCurrentDate(),
+    issueDate: getCurrentDate(),
     issueTime: getCurrentTime(),
     ipAddress: '0',
     confirmStatus: 'temp',
@@ -1146,14 +1141,16 @@ async function onContinueShopping() {
     contractPassengers
   }
 
-  console.log('Sending payload:', JSON.parse(JSON.stringify(payload)))
+  const contractResponse = await addContract(payload)
 
-  // ۵. ثبت قرارداد در بک‌اند
-  await addContract(payload)
+  currentContractData.value = {
+    addPayload: payload,
+    addResponse: contractResponse
+  }
 
-  // ۶. انتقال کاربر به مرحله پیش‌نمایش و پرداخت
   flightStore.setCurrentStep(previewStep.value)
 }
+
 
 
 const flightType = computed(() => {
@@ -1226,9 +1223,484 @@ const handleApplyTravelCard = async (cardNumber) => {
   }
 }
 
-const handleFinalPayment = () => {
-  console.log('Proceed to final payment with price:', priceAfterTravelCard.value)
-  console.log(bookingData.value.passengers , 'bookingData.passengers');
+async function handleFinalPayment() {
+  try {
+    paymentLoading.value = true
+
+    const passengers = bookingData.value.passengers || []
+    const contact = bookingData.value.contact || {}
+
+    const selectedFlights = Array.isArray(flightStore.selectedFlights)
+      ? flightStore.selectedFlights.filter(Boolean)
+      : [
+          flightStore.selectedDepartureFlight,
+          flightStore.selectedReturnFlight
+        ].filter(Boolean)
+
+    if (!selectedFlights.length) {
+      throw new Error('هیچ پروازی انتخاب نشده است')
+    }
+
+    if (!passengers.length) {
+      throw new Error('اطلاعات مسافران خالی است')
+    }
+
+    if (!currentContractData.value?.addResponse) {
+      throw new Error('ابتدا باید قرارداد اولیه ثبت شود')
+    }
+    const { credit } = await checkNiraCredit()
+const requiredAmount = Number(flightStore.finalBookingPrice || 0)
+
+if (credit < requiredAmount) {
+  throw new Error('موجودی اعتباری ایرلاین برای رزرو کافی نیست')
+}
+    const reserveResults = await reserveNiraFlights(
+      selectedFlights,
+      passengers,
+      contact
+    )
+
+    // توقف قطعی فلو اگر نتیجه رزرو معتبر نباشد
+    if (!Array.isArray(reserveResults)) {
+      throw new Error('پاسخ رزرو پرواز معتبر نیست')
+    }
+
+    // باید برای تمام پروازهای انتخاب‌شده نتیجه رزرو وجود داشته باشد
+    if (reserveResults.length !== selectedFlights.length) {
+      throw new Error('رزرو تمام پروازها انجام نشد؛ قرارداد ذخیره نشد')
+    }
+
+    // اگر حتی یک پرواز PNR نداشته باشد، مرحله بعد اجرا نمی‌شود
+    const hasMissingPnr = reserveResults.some(
+      (item) => !String(item?.pnr || '').trim()
+    )
+
+    if (hasMissingPnr) {
+      throw new Error('PNR پرواز دریافت نشد؛ قرارداد ذخیره نشد')
+    }
+
+    const updatePayload = buildUpdateContractPayload(
+      currentContractData.value.addResponse,
+      selectedFlights,
+      passengers,
+      contact,
+      reserveResults
+    )
+
+    // این خط فقط زمانی اجرا می‌شود که همه PNRها معتبر باشند
+    const updateResponse = await saveOrUpdateContract(updatePayload)
+    const routeType = handlePaymentRoute()
+    currentContractData.value = {
+      ...currentContractData.value,
+      reserveResults,
+      updatePayload,
+      updateResponse
+    }
+
+    console.log('reserveResults:', reserveResults)
+    console.log('updateResponse:', updateResponse)
+
+    return {
+      success: true,
+      pnr: reserveResults
+        .map((item) => String(item.pnr).trim())
+        .join('/'),
+      reserveResults,
+      updateResponse
+    }
+  } catch (error) {
+    console.error('handleFinalPayment error:', error)
+
+    alert(
+      error?.message ||
+      'خطا در رزرو و ثبت نهایی قرارداد'
+    )
+
+    // باعث می‌شود caller هم نتواند فلو پرداخت را ادامه دهد
+    throw error
+  } finally {
+    paymentLoading.value = false
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const currentContractData = ref(null)
+const paymentLoading = ref(false)
+function isNiraFlight(flight) {
+  return String(flight?.provider || '').toUpperCase() === 'NIRA'
+}
+function getNiraAirlineCode(flight) {
+  return String(
+    flight?.airlineCode ||
+    flight?.carrierCode ||
+    flight?.airline?.code ||
+    flight?.airline ||
+    ''
+  ).trim().toUpperCase()
+}
+function getJalaliDayMonth(dateValue) {
+  const formatted = formatFlightDate(dateValue)
+  if (!formatted) {
+    return { day: '', month: '' }
+  }
+
+  const jDate = moment(formatted, 'YYYY-MM-DD').format('jDD/jMM')
+  const [day, month] = jDate.split('/')
+
+  return {
+    day: day || '',
+    month: month || ''
+  }
+}
+
+function getPassengerGenderTitle(passenger) {
+  const isMale = passenger?.gender === 'male' || passenger?.gender === true
+  return isMale ? 'MR' : 'MISS'
+}
+function getPassengerGenderCode(passenger) {
+  const isMale = passenger?.gender === 'male' || passenger?.gender === true
+  return isMale ? 'M' : 'F'
+}
+function getPassengerAgeForNira(passenger, referenceDate = null) {
+  const birth = parsePassengerBirthDate(passenger?.birthDate)
+  if (!birth) return ''
+
+  const ref = referenceDate ? moment(referenceDate) : moment.utc()
+  if (!ref.isValid()) return ''
+
+  const ageInYears = ref.diff(birth, 'years')
+  return String(Math.max(0, ageInYears))
+}
+function formatBirthDateForNira(birthDate) {
+  return formatNiraDate(birthDate)
+}
+function buildNiraEdtId(passenger, flightType) {
+  const nationality = String(passenger?.nationality || 'IR').toUpperCase()
+  const isIranian =
+    nationality === 'IR' || nationality === 'IRAN' || nationality === 'ایرانی'
+
+  const isDomestic = flightType === 'domestic'
+  const gender = getPassengerGenderCode(passenger)
+  const birthDate = formatBirthDateForNira(passenger?.birthDate)
+
+  const nationalId = normalizeDigits(passenger?.nationalCode || '').trim()
+  const passportNo = normalizeDigits(passenger?.passportNumber || '').trim()
+
+  const firstName = String(passenger?.firstName || '').trim().toUpperCase()
+  const lastName = String(passenger?.lastName || '').trim().toUpperCase()
+
+  if (isIranian && isDomestic) {
+    return [
+      'I',
+      '',
+      nationalId,
+      '',
+      birthDate,
+      gender,
+      '',
+      '',
+      ''
+    ].join('_')
+  }
+
+  return [
+    'P',
+    isIranian ? 'IRN' : nationality || '',
+    passportNo,
+    isIranian ? 'IRN' : nationality || '',
+    birthDate,
+    gender,
+    '',
+    lastName,
+    firstName
+  ].join('_')
+}
+function buildNiraContact(contact) {
+  const mobile = normalizeDigits(contact?.phone || contact?.mobile || '').replace(/\D/g, '')
+  const email = String(contact?.email || '').trim()
+
+  return [mobile, '', email].filter((item, index) => item || index !== 1).join('|')
+}
+async function reserveNiraFlight(flight, passengers, contact) {
+  const params = new URLSearchParams()
+console.log(flight , 'sdsdsdsd');
+  params.set('AirLine', getNiraAirlineCode(flight))
+  params.set('cbSource', String(flight?.origin || '').trim())
+  params.set('cbTarget', String(flight?.destination || '').trim())
+  params.set('FlightClass', String(flight?.cabinClass || 'E').trim())
+  params.set('FlightNo', String(flight?.flightNumber || '').trim())
+  params.set('Day', getJalaliDayMonth(flight?.departure).day)
+  params.set('Month', getJalaliDayMonth(flight?.departure).month)
+  params.set('DepartureDate', formatFlightDate(flight?.departure))
+  params.set('No', String(passengers.length))
+  params.set('edtContact', buildNiraContact(contact))
+
+  const passengersInfo = passengers
+    .map((passenger, index) => {
+      const n = index + 1
+      return [
+        `edtName${n}=${encodeURIComponent(
+          `${String(passenger?.firstName || '').trim()}${getPassengerGenderTitle(passenger)}`
+        )}`,
+        `edtLast${n}=${encodeURIComponent(
+          String(passenger?.lastName || '').trim()
+        )}`,
+        `edtAge${n}=${encodeURIComponent(
+          getPassengerAgeForNira(passenger)
+        )}`,
+        `edtID${n}=${encodeURIComponent(
+          buildNiraEdtId(passenger, flightType.value)
+        )}`
+      ].join('&')
+    })
+    .join('&')
+
+  params.set('PassengersInfo', passengersInfo)
+  // console.log(passenger , 'passengersInfo');
+  const url = `https://api.ahuan.ir/api/Nira/GetReserve?${params.toString()}`
+  const response = await $fetch(url, { method: 'GET' })
+let parsedResponse = response
+
+if (typeof parsedResponse === 'string') {
+  try {
+    parsedResponse = JSON.parse(parsedResponse)
+  } catch (e) {
+    throw new Error('پاسخ رزرو نیرا قابل پردازش نیست')
+  }
+}
+
+const result = parsedResponse?.AirReserve?.[0]
+
+if (!result) {
+  throw new Error('پاسخ رزرو نیرا معتبر نیست')
+}
+
+const errorText = String(result?.Error || '').trim()
+const pnr = String(result?.PNR || '').trim()
+
+if (errorText && errorText !== 'Success' && errorText !== 'No Err') {
+  throw new Error(errorText || 'رزرو نیرا انجام نشد')
+}
+
+if (!pnr) {
+  throw new Error('PNR از نیرا دریافت نشد')
+}
+
+return {
+  pnr,
+  raw: parsedResponse
+}
+
+
+}
+
+async function reserveNiraFlights(selectedFlights, passengers, contact) {
+  const results = []
+
+  for (const flight of selectedFlights) {
+    if (!isNiraFlight(flight)) {
+      throw new Error('فعلاً فقط رزرو پروازهای NIRA در این متد پیاده‌سازی شده است')
+    }
+
+    const reserveResult = await reserveNiraFlight(flight, passengers, contact)
+    results.push({
+      flightId: flight?.id || null,
+      airline: getNiraAirlineCode(flight),
+      pnr: reserveResult.pnr,
+      reserveResponse: reserveResult.raw
+    })
+  }
+
+  return results
+}
+function buildUpdateContractPayload(contractResponse, selectedFlights, passengers, contact, reserveResults) {
+  const baseContract =
+    contractResponse?.data ||
+    contractResponse ||
+    {}
+
+  const contractId = Number(baseContract?.id || 0)
+  const combinedPnr = reserveResults.map((item) => item.pnr).filter(Boolean).join('/')
+
+  const mappedFlights = mapFlightsToPayload(selectedFlights).map((flightItem, index) => {
+    const existingFlight = baseContract?.contractFlights?.[index] || {}
+
+    return {
+      ...existingFlight,
+      ...flightItem,
+      id: Number(existingFlight?.id || 0),
+      contractId,
+      pnr: reserveResults[index]?.pnr || existingFlight?.pnr || null
+    }
+  })
+
+  const mappedPassengers = mapPassengersToPayload(passengers, selectedFlights).map((passengerItem, index) => {
+    const existingPassenger = baseContract?.contractPassengers?.[index] || {}
+
+    return {
+      ...existingPassenger,
+      ...passengerItem,
+      id: Number(existingPassenger?.id || 0),
+      contractId
+    }
+  })
+
+  return {
+    ...baseContract,
+    id: contractId,
+    userName: String(contact?.phone || contact?.mobile || '').trim(),
+    email: String(contact?.email || '').trim(),
+    issueDate: baseContract?.issueDate || getCurrentDate(),
+    issueTime: baseContract?.issueTime || getCurrentTime(),
+    travelVehicle: 'هواپیما',
+    ticket: true,
+    ticketStatus: 'temp-first',
+    confirmStatus: baseContract?.confirmStatus || 'temp',
+    contractFlights: mappedFlights,
+    contractPassengers: mappedPassengers,
+    pnr: combinedPnr
+  }
+}
+async function saveOrUpdateContract(payload) {
+  return await $fetch('https://api.ahuan.ir/api/Contract/update', {
+    method: 'PUT',
+    body: payload,
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+}
+
+
+
+
+function formatNiraDate(dateInput) {
+  const m = parsePassengerBirthDate(dateInput)
+  if (!m) return ''
+
+  const monthNames = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+  ]
+
+  const day = String(m.date()).padStart(2, '0')
+  const month = monthNames[m.month()]
+  const year = String(m.year()).slice(-2)
+
+  return `${day}${month}${year}`
+}
+
+
+
+
+async function checkNiraCredit() {
+  const response = await $fetch(
+    'https://api.ahuan.ir/api/Nira/Command?AirLine=PA&Command=CRD',
+    { method: 'GET' }
+  )
+
+  let responseText = ''
+
+  if (typeof response === 'string') {
+    responseText = response
+  } else {
+    responseText = String(response?.AirNRSCommand?.Response || '')
+  }
+
+  const creditMatch = responseText.match(
+    /CREDIT\s*:\s*([\d,]+)\s*IRR/i
+  )
+
+  if (!creditMatch) {
+    throw new Error('مبلغ اعتبار ایرلاین از پاسخ نیرا دریافت نشد')
+  }
+
+  const credit = Number(creditMatch[1].replace(/,/g, ''))
+
+  if (!Number.isFinite(credit)) {
+    throw new Error('مبلغ اعتبار دریافتی از نیرا معتبر نیست')
+  }
+
+  return {
+    credit,
+    raw: response
+  }
+}
+function handlePaymentRoute() {
+  const creditCookie = useCookie('user_data')
+  console.log(creditCookie.value);
+  const payableAmount = Number(priceAfterTravelCard.value || 0)
+
+  let creditValue = creditCookie.value
+
+  if (typeof creditValue === 'string') {
+    try {
+      creditValue = JSON.parse(creditValue)
+    } catch (error) {
+      creditValue = null
+    }
+  }
+
+  if (creditValue?.noLimit === true) {
+    console.log('کاربر آژانس')
+    return 'agent'
+  }
+
+  if (payableAmount === 0) {
+    console.log('صفر استفاده از سفرکارت')
+    return 'travelcard'
+  }
+
+  console.log('مبلغ نهایی قابل پرداخت:', payableAmount)
+  return 'gateway'
+}
+function parsePassengerBirthDate(birthDate) {
+  if (!birthDate) return null
+
+  if (
+    typeof birthDate === 'object' &&
+    birthDate.calendar === 'jalali' &&
+    birthDate.year &&
+    birthDate.month &&
+    birthDate.day
+  ) {
+    const jy = Number(birthDate.year)
+    const jm = Number(birthDate.month)
+    const jd = Number(birthDate.day)
+
+    const g = toGregorian(jy, jm, jd)
+    const parsed = moment.utc(`${g.gy}-${g.gm}-${g.gd}`, 'YYYY-M-D', true)
+    return parsed.isValid() ? parsed : null
+  }
+
+  if (typeof birthDate === 'string') {
+    const parsed = moment.utc(birthDate)
+    return parsed.isValid() ? parsed : null
+  }
+
+  return null
 }
 </script>
 
@@ -1315,4 +1787,4 @@ const handleFinalPayment = () => {
   }
 }
 
-</style>
+</style> 
