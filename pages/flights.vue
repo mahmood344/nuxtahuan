@@ -1223,105 +1223,7 @@ const handleApplyTravelCard = async (cardNumber) => {
   }
 }
 
-async function handleFinalPayment() {
-  try {
-    paymentLoading.value = true
 
-    const passengers = bookingData.value.passengers || []
-    const contact = bookingData.value.contact || {}
-
-    const selectedFlights = Array.isArray(flightStore.selectedFlights)
-      ? flightStore.selectedFlights.filter(Boolean)
-      : [
-          flightStore.selectedDepartureFlight,
-          flightStore.selectedReturnFlight
-        ].filter(Boolean)
-
-    if (!selectedFlights.length) {
-      throw new Error('هیچ پروازی انتخاب نشده است')
-    }
-
-    if (!passengers.length) {
-      throw new Error('اطلاعات مسافران خالی است')
-    }
-
-    if (!currentContractData.value?.addResponse) {
-      throw new Error('ابتدا باید قرارداد اولیه ثبت شود')
-    }
-    const { credit } = await checkNiraCredit()
-const requiredAmount = Number(flightStore.finalBookingPrice || 0)
-
-if (credit < requiredAmount) {
-  throw new Error('موجودی اعتباری ایرلاین برای رزرو کافی نیست')
-}
-    const reserveResults = await reserveNiraFlights(
-      selectedFlights,
-      passengers,
-      contact
-    )
-
-    // توقف قطعی فلو اگر نتیجه رزرو معتبر نباشد
-    if (!Array.isArray(reserveResults)) {
-      throw new Error('پاسخ رزرو پرواز معتبر نیست')
-    }
-
-    // باید برای تمام پروازهای انتخاب‌شده نتیجه رزرو وجود داشته باشد
-    if (reserveResults.length !== selectedFlights.length) {
-      throw new Error('رزرو تمام پروازها انجام نشد؛ قرارداد ذخیره نشد')
-    }
-
-    // اگر حتی یک پرواز PNR نداشته باشد، مرحله بعد اجرا نمی‌شود
-    const hasMissingPnr = reserveResults.some(
-      (item) => !String(item?.pnr || '').trim()
-    )
-
-    if (hasMissingPnr) {
-      throw new Error('PNR پرواز دریافت نشد؛ قرارداد ذخیره نشد')
-    }
-
-    const updatePayload = buildUpdateContractPayload(
-      currentContractData.value.addResponse,
-      selectedFlights,
-      passengers,
-      contact,
-      reserveResults
-    )
-
-    // این خط فقط زمانی اجرا می‌شود که همه PNRها معتبر باشند
-    const updateResponse = await saveOrUpdateContract(updatePayload)
-    const routeType = handlePaymentRoute()
-    currentContractData.value = {
-      ...currentContractData.value,
-      reserveResults,
-      updatePayload,
-      updateResponse
-    }
-
-    console.log('reserveResults:', reserveResults)
-    console.log('updateResponse:', updateResponse)
-
-    return {
-      success: true,
-      pnr: reserveResults
-        .map((item) => String(item.pnr).trim())
-        .join('/'),
-      reserveResults,
-      updateResponse
-    }
-  } catch (error) {
-    console.error('handleFinalPayment error:', error)
-
-    alert(
-      error?.message ||
-      'خطا در رزرو و ثبت نهایی قرارداد'
-    )
-
-    // باعث می‌شود caller هم نتواند فلو پرداخت را ادامه دهد
-    throw error
-  } finally {
-    paymentLoading.value = false
-  }
-}
 
 
 
@@ -1348,9 +1250,7 @@ if (credit < requiredAmount) {
 
 const currentContractData = ref(null)
 const paymentLoading = ref(false)
-function isNiraFlight(flight) {
-  return String(flight?.provider || '').toUpperCase() === 'NIRA'
-}
+
 function getNiraAirlineCode(flight) {
   return String(
     flight?.airlineCode ||
@@ -1535,54 +1435,7 @@ async function reserveNiraFlights(selectedFlights, passengers, contact) {
 
   return results
 }
-function buildUpdateContractPayload(contractResponse, selectedFlights, passengers, contact, reserveResults) {
-  const baseContract =
-    contractResponse?.data ||
-    contractResponse ||
-    {}
 
-  const contractId = Number(baseContract?.id || 0)
-  const combinedPnr = reserveResults.map((item) => item.pnr).filter(Boolean).join('/')
-
-  const mappedFlights = mapFlightsToPayload(selectedFlights).map((flightItem, index) => {
-    const existingFlight = baseContract?.contractFlights?.[index] || {}
-
-    return {
-      ...existingFlight,
-      ...flightItem,
-      id: Number(existingFlight?.id || 0),
-      contractId,
-      pnr: reserveResults[index]?.pnr || existingFlight?.pnr || null
-    }
-  })
-
-  const mappedPassengers = mapPassengersToPayload(passengers, selectedFlights).map((passengerItem, index) => {
-    const existingPassenger = baseContract?.contractPassengers?.[index] || {}
-
-    return {
-      ...existingPassenger,
-      ...passengerItem,
-      id: Number(existingPassenger?.id || 0),
-      contractId
-    }
-  })
-
-  return {
-    ...baseContract,
-    id: contractId,
-    userName: String(contact?.phone || contact?.mobile || '').trim(),
-    email: String(contact?.email || '').trim(),
-    issueDate: baseContract?.issueDate || getCurrentDate(),
-    issueTime: baseContract?.issueTime || getCurrentTime(),
-    travelVehicle: 'هواپیما',
-    ticket: true,
-    ticketStatus: 'temp-first',
-    confirmStatus: baseContract?.confirmStatus || 'temp',
-    contractFlights: mappedFlights,
-    contractPassengers: mappedPassengers,
-    pnr: combinedPnr
-  }
-}
 async function saveOrUpdateContract(payload) {
   return await $fetch('https://api.ahuan.ir/api/Contract/update', {
     method: 'PUT',
@@ -1701,6 +1554,418 @@ function parsePassengerBirthDate(birthDate) {
   }
 
   return null
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function getFlightSupplier(flight) {
+  return String(
+    flight?.provider ||
+    flight?.flightSupplier ||
+    ''
+  ).trim().toUpperCase()
+}
+function isNiraFlight(flight) {
+  return getFlightSupplier(flight) === 'NIRA'
+}
+
+function isMahanFlight(flight) {
+  return getFlightSupplier(flight) === 'MAHAN'
+}
+function getMahanRawFlight(flight) {
+  return flight?.meta?.raw || {}
+}
+
+function getMahanItineraries(flight) {
+  const raw = getMahanRawFlight(flight)
+  return Array.isArray(raw?.flightItinerary) ? raw.flightItinerary : []
+}
+
+function isMahanRoundTrip(flight) {
+  return Boolean(
+    flight?.isRoundTrip ||
+    getMahanItineraries(flight).length > 1
+  )
+}
+function getMahanPassengerType(passenger) {
+  const type = String(
+    passenger?.type ||
+    passenger?.passengerType ||
+    passenger?.PassengerType ||
+    ''
+  ).trim().toLowerCase()
+
+  if (type === 'infant' || type === 'inf' || type === '3') return 3
+  if (type === 'child' || type === 'chd' || type === '2') return 2
+  return 1
+}
+
+function getMahanGender(gender) {
+  const value = String(gender || '').trim().toLowerCase()
+
+  if (
+    value === 'female' ||
+    value === 'f' ||
+    value === '2' ||
+    value === 'زن'
+  ) {
+    return 2
+  }
+
+  return 1
+}
+
+function getMahanDocType(passenger) {
+  if (passenger?.passportNumber) return 2
+  return 1
+}
+
+function toMahanIsoDate(value) {
+  const isoDate = toIsoBirthDate(value)
+  return isoDate || null
+}
+
+function mapPassengerToMahan(passenger, contactInfo = {}) {
+  return {
+    firstName: passenger?.firstNameEn || passenger?.englishName || passenger?.firstName || '',
+    persianFirstName: passenger?.firstNameFa || passenger?.persianName || '',
+    lastName: passenger?.lastNameEn || passenger?.englishFamily || passenger?.lastName || '',
+    persianLastName: passenger?.lastNameFa || passenger?.persianFamily || '',
+    docId: passenger?.passportNumber || passenger?.nationalCode || '',
+    docType: getMahanDocType(passenger),
+    birthDate: toMahanIsoDate(
+      passenger?.birthDateGregorian ||
+      passenger?.birthDateIso ||
+      passenger?.birthDate
+    ),
+    passengerType: getMahanPassengerType(passenger),
+    passportExpireDate: toMahanIsoDate(
+      passenger?.passportExpireDateGregorian ||
+      passenger?.passportExpireDateIso ||
+      passenger?.passportExpireDate
+    ),
+    phoneNumber: contactInfo?.mobile || passenger?.mobile || '',
+    email: contactInfo?.email || passenger?.email || '',
+    gender: getMahanGender(passenger?.gender),
+    passportIssueCountry: passenger?.passportIssueCountry || 'IR',
+    issueCountry: passenger?.issueCountry || 'IR'
+  }
+}
+function buildMahanReservePayload({
+  flight,
+  passengers,
+  contactInfo,
+  credentials
+}) {
+  const raw = getMahanRawFlight(flight)
+
+  const searchToken =
+    raw?.searchToken ||
+    flight?.searchToken ||
+    ''
+
+  const threshold =
+    raw?.threshold ||
+    flight?.threshold ||
+    ''
+
+  const officialFactorId =
+    raw?.officialFactorId ||
+    flight?.officialFactorId ||
+    ''
+
+  const flightId =
+    flight?.id ||
+    raw?.id ||
+    ''
+
+  if (!flightId) {
+    throw new Error('شناسه پرواز ماهان برای رزرو موجود نیست')
+  }
+
+  return {
+    //  request:{
+    searchToken,
+    reserveRequest: {
+      searchToken,
+      flightId,
+      threshold,
+      officialFactorId,
+      passengers: (passengers || []).map((passenger) =>
+        mapPassengerToMahan(passenger, contactInfo)
+      )
+    },
+    handlerParameterRequest: {
+      providerName: raw?.providerName || 'Mahan',
+      userName: credentials?.userName || '',
+      password: credentials?.password || '',
+      baseUrl: credentials?.baseUrl || '',
+      agancyName: raw?.agancyName || credentials?.agancyName || 'Ahuan'
+    }
+    //  }
+    
+  }
+}
+async function reserveMahanFlight(flight, passengers, contactInfo) {
+  if (!flight || !isMahanFlight(flight)) {
+    throw new Error('پرواز ماهان برای رزرو معتبر نیست')
+  }
+
+  const payload = buildMahanReservePayload({
+    flight,
+    passengers,
+    contactInfo,
+    credentials: {
+       userName: 'APIAHOVAN',
+        password: 'AHVN@3298',
+        baseUrl:
+          'https://reservations.mahanair.co.ir/webservices/services/AAResWebServices',
+        agancyName: 'Ahuan'
+    }
+  })
+
+  const response = await $fetch('https://api.ahuan.ir/api/Mahan/Reserve', {
+    method: 'POST',
+    body: payload,
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+
+  const reserveInfo = Array.isArray(response?.reserveInfos)
+    ? response.reserveInfos[0]
+    : null
+
+  if (!reserveInfo) {
+    throw new Error('پاسخ رزرو ماهان خالی است')
+  }
+
+  if (reserveInfo?.error?.code && reserveInfo.error.code !== 0) {
+    throw new Error(
+      reserveInfo?.error?.message ||
+      'رزرو ماهان با خطا مواجه شد'
+    )
+  }
+
+  const pnr =
+    reserveInfo?.airlinePnr ||
+    reserveInfo?.providerPnr ||
+    reserveInfo?.pnr ||
+    ''
+
+  if (!pnr) {
+    throw new Error('PNR رزرو ماهان دریافت نشد')
+  }
+
+  return {
+    pnr,
+    reserveResponse: response
+  }
+}
+async function reserveFlightByProvider(flight, passengers, contactInfo) {
+  const supplier = getFlightSupplier(flight)
+
+  if (supplier === 'NIRA') {
+    const result = await reserveNiraFlight(flight, passengers, contactInfo)
+
+    return {
+      flightId: flight?.id || null,
+      supplier: 'NIRA',
+      airline: flight?.airline || '',
+      pnr: result?.pnr || '',
+      reserveResponse: result?.reserveResponse || result?.raw || result
+    }
+  }
+
+  if (supplier === 'MAHAN') {
+    const result = await reserveMahanFlight(flight, passengers, contactInfo)
+
+    return {
+      flightId: flight?.id || null,
+      supplier: 'MAHAN',
+      airline: flight?.airline || 'W5',
+      pnr: result?.pnr || '',
+      reserveResponse: result?.reserveResponse || result?.raw || result
+    }
+  }
+
+  throw new Error(`تامین‌کننده پشتیبانی نمی‌شود: ${supplier || 'UNKNOWN'}`)
+}
+async function reserveFlights(flights, passengers, contactInfo) {
+  const safeFlights = Array.isArray(flights) ? flights.filter(Boolean) : []
+
+  const results = []
+
+  for (const flight of safeFlights) {
+    const result = await reserveFlightByProvider(
+      flight,
+      passengers,
+      contactInfo
+    )
+
+    results.push(result)
+  }
+
+  return results
+}
+const paymentError = ref('')
+async function handleFinalPayment() {
+  try {
+    paymentLoading.value = true
+
+    const selectedFlights = Array.isArray(flightStore.selectedFlights)
+      ? flightStore.selectedFlights.filter(Boolean)
+      : [
+          flightStore.selectedDepartureFlight,
+          flightStore.selectedReturnFlight
+        ].filter(Boolean)
+
+    if (!selectedFlights.length) {
+      throw new Error('هیچ پروازی برای رزرو انتخاب نشده است')
+    }
+
+    if (hasNiraFlights(selectedFlights)) {
+      await checkNiraCredit()
+    }
+
+    const passengers = Array.isArray(bookingData.value?.passengers)
+  ? bookingData.value.passengers
+  : []
+
+const contactInfo = {
+  mobile:
+    bookingData.value?.contact?.mobile ||
+    bookingData.value?.contact?.phone ||
+    '',
+  email:
+    bookingData.value?.contact?.email ||
+    ''
+}
+
+    const reserveResults = await reserveFlights(
+      selectedFlights,
+      passengers,
+      contactInfo
+    )
+
+    const updateContractPayload = buildUpdateContractPayload({
+      contractId: currentContractData.value?.id,
+      selectedFlights,
+      reserveResults
+    })
+
+    await saveOrUpdateContract(updateContractPayload)
+  } catch (error) {
+    console.error('handleFinalPayment error:', error)
+
+    alert(
+      error?.message ||
+      'خطا در رزرو و ثبت نهایی قرارداد'
+    )
+
+    throw error
+  } finally {
+    paymentLoading.value = false
+  }
+}
+
+function buildUpdateContractPayload({
+  currentContractData,
+  selectedFlights,
+  reserveResults,
+  paymentMeta,
+  isAgencyUser
+}) {
+  const addPayload = currentContractData?.addPayload || {}
+  const addResponse = currentContractData?.addResponse || {}
+
+  const contractId =
+    addResponse?.data?.id ||
+    addResponse?.id ||
+    addPayload?.id ||
+    0
+
+  const contractFlights = (selectedFlights || []).map((flight) => {
+    const reserve = (reserveResults || []).find(
+      (item) => item?.flightId === flight?.id
+    )
+
+    return {
+      contractId,
+      origin: flight?.origin || flight?.from || flight?.originCode || '',
+      destination: flight?.destination || flight?.to || flight?.destinationCode || '',
+      flightClass:
+        flight?.cabinClass ||
+        flight?.flightClass ||
+        flight?.class ||
+        flight?.bookingClass ||
+        'X',
+      airlineId: resolveAirlineId(flight),
+      flightNumber: flight?.flightNumber || flight?.flightNo || '',
+      depDate: formatFlightDate(
+        flight?.departure || flight?.departureDateTime || flight?.depDate || ''
+      ),
+      depTime: formatFlightTime(
+        flight?.departure || flight?.departureDateTime || flight?.depTime || ''
+      ),
+      arrDate: formatFlightDate(
+        flight?.arrival || flight?.arrivalDateTime || flight?.arrDate || ''
+      ),
+      arrTime: formatFlightTime(
+        flight?.arrival || flight?.arrivalDateTime || flight?.arrTime || ''
+      ),
+      airplaneType:
+        flight?.aircraft ||
+        flight?.airplaneType ||
+        flight?.aircraftType ||
+        flight?.aircraftTypeCode ||
+        '',
+      charterFlight:
+        flight?.isCharter === true ||
+        flight?.charterFlight === true,
+      description: '',
+      destination: flight?.destination || flight?.to || flight?.destinationCode || '',
+      flightSupplier: flight?.provider || flight?.flightSupplier || '',
+      pnr: reserve?.pnr || '',
+      reserveResponse: reserve?.reserveResponse || null
+    }
+  })
+
+  const contractPassengers = (addPayload?.contractPassengers || []).map((passenger) => ({
+    ...passenger,
+    contractId
+  }))
+
+  return {
+    ...addPayload,
+    id: contractId,
+    contractingPartyType: isAgencyUser ? 1 : addPayload?.contractingPartyType || 0,
+    contractDesc: paymentMeta
+      ? JSON.stringify(paymentMeta)
+      : addPayload?.contractDesc || '',
+    contractFlights,
+    contractPassengers
+  }
+}
+
+
+function hasNiraFlights(flights) {
+  return (flights || []).some(isNiraFlight)
 }
 </script>
 
