@@ -612,7 +612,8 @@ airlineIdMap : {
         companyId: res.companyId || null,
         companyName: res.companyName || '',
         credit: res.credit || 0,
-        hasCredit: res.hasCredit ?? false
+        hasCredit: res.hasCredit ?? false,
+        noLimit: res.noLimit || false
       }
 
       const userCookie = useCookie('user_data', {
