@@ -1142,12 +1142,12 @@ async function onContinueShopping() {
   }
 
   const contractResponse = await addContract(payload)
-
+  
   currentContractData.value = {
     addPayload: payload,
     addResponse: contractResponse
   }
-
+console.log(currentContractData.value.addResponse , 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
   flightStore.setCurrentStep(previewStep.value)
 }
 
@@ -1437,6 +1437,7 @@ async function reserveNiraFlights(selectedFlights, passengers, contact) {
 }
 
 async function saveOrUpdateContract(payload) {
+  console.log(payload , 'aasdasdasdasdasdasdasdasd');
   return await $fetch('https://api.ahuan.ir/api/Contract/update', {
     method: 'PUT',
     body: payload,
@@ -1864,9 +1865,12 @@ const contactInfo = {
     )
 
     const updateContractPayload = buildUpdateContractPayload({
-      contractId: currentContractData.value?.id,
-      selectedFlights,
-      reserveResults
+       currentContractData: currentContractData.value,
+  selectedFlights,
+  reserveResults,
+  passengers,
+  contactInfo
+
     })
 
     await saveOrUpdateContract(updateContractPayload)
@@ -1888,6 +1892,8 @@ function buildUpdateContractPayload({
   currentContractData,
   selectedFlights,
   reserveResults,
+  passengers,
+  contactInfo,
   paymentMeta,
   isAgencyUser
 }) {
@@ -1946,20 +1952,40 @@ function buildUpdateContractPayload({
     }
   })
 
-  const contractPassengers = (addPayload?.contractPassengers || []).map((passenger) => ({
-    ...passenger,
-    contractId
-  }))
+ const contractPassengers = mapPassengersToPayload(
+  passengers || [],
+  selectedFlights || []
+).map((passenger) => ({
+  ...passenger,
+  contractId
+}))
 
   return {
     ...addPayload,
-    id: contractId,
-    contractingPartyType: isAgencyUser ? 1 : addPayload?.contractingPartyType || 0,
-    contractDesc: paymentMeta
-      ? JSON.stringify(paymentMeta)
-      : addPayload?.contractDesc || '',
-    contractFlights,
-    contractPassengers
+
+  id: contractId,
+
+  userName: String(
+    contactInfo?.mobile ||
+    contactInfo?.phone ||
+    ''
+  ).trim(),
+
+  email: String(
+    contactInfo?.email || ''
+  ).trim(),
+
+  contractingPartyType:
+    isAgencyUser
+      ? 1
+      : addPayload?.contractingPartyType || 0,
+
+  contractDesc: paymentMeta
+    ? JSON.stringify(paymentMeta)
+    : addPayload?.contractDesc || '',
+
+  contractFlights,
+  contractPassengers
   }
 }
 
