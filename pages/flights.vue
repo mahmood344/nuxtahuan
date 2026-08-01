@@ -618,15 +618,39 @@ const handleDateChange = async (dateObj) => {
   const newDate = dateObj?.fullDate
   if (!newDate) return
 
-  const cleanedDate = String(newDate).replace(/\//g, '-').trim()
+  const cleanedDate = String(newDate)
+    .replace(/\//g, '-')
+    .trim()
+
   selectedDate.value = cleanedDate
+
+  const isSelectingReturnFlight =
+    travelType.value === 'round-trip' &&
+    flightStore.currentStep === 1 &&
+    !!flightStore.selectedDepartureFlight
 
   await router.replace({
     query: {
       ...route.query,
-      departDate: cleanedDate
+      ...(isSelectingReturnFlight
+        ? { returnDate: cleanedDate }
+        : { departDate: cleanedDate })
     }
   })
+
+  if (isSelectingReturnFlight) {
+    await performSearch(
+      buildSearchPayload({
+        from: baseSearchParamsFromRoute.value.to,
+        to: baseSearchParamsFromRoute.value.from,
+        departureDate: cleanedDate,
+        returnDate: '',
+        travelType: 'one-way'
+      })
+    )
+
+    return
+  }
 
   await performSearch(
     buildSearchPayload({
@@ -668,21 +692,33 @@ const handleSelectFlight = async (flight) => {
   }
 
   if (flightStore.currentStep === 0) {
-    flightStore.selectDepartureFlight(plainFlight)
-    flightStore.setCurrentStep(1)
+  flightStore.selectDepartureFlight(plainFlight)
+  flightStore.setCurrentStep(1)
 
-    await performSearch(
-      buildSearchPayload({
-        from: baseSearchParamsFromRoute.value.to,
-        to: baseSearchParamsFromRoute.value.from,
-        departureDate: baseSearchParamsFromRoute.value.returnDate,
-        returnDate: '',
-        travelType: 'one-way'
-      })
-    )
+  const returnFlightDate = String(
+    baseSearchParamsFromRoute.value.returnDate || ''
+  )
+    .replace(/\//g, '-')
+    .trim()
 
-    return
+  if (!returnFlightDate) {
+    throw new Error('تاریخ پرواز برگشت مشخص نیست')
   }
+
+  selectedDate.value = returnFlightDate
+
+  await performSearch(
+    buildSearchPayload({
+      from: baseSearchParamsFromRoute.value.to,
+      to: baseSearchParamsFromRoute.value.from,
+      departureDate: returnFlightDate,
+      returnDate: '',
+      travelType: 'one-way'
+    })
+  )
+
+  return
+}
 
   flightStore.selectReturnFlight(plainFlight)
   flightStore.setCurrentStep(formStep.value)
@@ -691,16 +727,27 @@ const handleSelectFlight = async (flight) => {
 const handleEditFlight = async () => {
   flightStore.cancelAllPendingRequests()
   flightStore.clearSelectedFlights()
+  flightStore.setCurrentStep(0)
+
+  const departureDate = String(
+    baseSearchParamsFromRoute.value.departureDate || ''
+  )
+    .replace(/\//g, '-')
+    .trim()
+
+  selectedDate.value = departureDate
 
   await performSearch(
     buildSearchPayload({
       from: baseSearchParamsFromRoute.value.from,
       to: baseSearchParamsFromRoute.value.to,
-      departureDate: baseSearchParamsFromRoute.value.departureDate,
+      departureDate,
       returnDate: baseSearchParamsFromRoute.value.returnDate,
       travelType: baseSearchParamsFromRoute.value.travelType
     })
   )
+
+  await scrollToTop()
 }
 
 const editFlightButtonLabel = computed(() => {
@@ -745,23 +792,68 @@ onMounted(async () => {
 })
 
 watch(
-  () => route.query.departDate,
-  async (newQueryDate) => {
-    if (!newQueryDate) return
+  () => [
+    route.query.origin,
+    route.query.destination,
+    route.query.departDate,
+    route.query.returnDate,
+    route.query.adl,
+    route.query.chd,
+    route.query.inf,
+    route.query.flightType,
+    route.query.travelType
+  ],
+  async () => {
+    const searchParams =
+      baseSearchParamsFromRoute.value
 
-    const cleanDate = String(newQueryDate).replace(/\//g, '-').trim()
-    if (cleanDate === selectedDate.value) return
+    if (
+      !searchParams.from ||
+      !searchParams.to ||
+      !searchParams.departureDate
+    ) {
+      return
+    }
 
-    selectedDate.value = cleanDate
+    const isSelectingReturnFlight =
+      searchParams.travelType === 'round-trip' &&
+      flightStore.currentStep === 1 &&
+      !!flightStore.selectedDepartureFlight
+
+    const activeDate = isSelectingReturnFlight
+      ? searchParams.returnDate
+      : searchParams.departureDate
+
+    selectedDate.value = String(activeDate || '')
+      .replace(/\//g, '-')
+      .trim()
+
+    flightStore.cancelAllPendingRequests()
+
+    if (isSelectingReturnFlight) {
+      await performSearch(
+        buildSearchPayload({
+          from: searchParams.to,
+          to: searchParams.from,
+          departureDate: searchParams.returnDate,
+          returnDate: '',
+          travelType: 'one-way'
+        })
+      )
+
+      return
+    }
+
     flightStore.clearSelectedFlights()
+    flightStore.setCurrentStep(0)
 
     await performSearch(
       buildSearchPayload({
-        from: baseSearchParamsFromRoute.value.from,
-        to: baseSearchParamsFromRoute.value.to,
-        departureDate: cleanDate,
-        returnDate: baseSearchParamsFromRoute.value.returnDate,
-        travelType: baseSearchParamsFromRoute.value.travelType
+        from: searchParams.from,
+        to: searchParams.to,
+        departureDate: searchParams.departureDate,
+        returnDate: searchParams.returnDate,
+        travelType: searchParams.travelType
       })
     )
   }
