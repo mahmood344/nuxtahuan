@@ -808,9 +808,60 @@ const statusMessage = computed(() => {
   if (props.flight.statusMessage) return props.flight.statusMessage
   return cardDisabled.value ? 'غیرقابل خرید' : 'قابل خرید'
 })
+const flightClasses = {
+  IV: {
+    business: ['C', 'CR', 'CM']
+  }, // کاسپین
 
-const cabinLabel = computed(() => {
-  const map = {
+  VR: {
+    business: ['WB']
+  }, // وارش
+
+  Y9: {
+    business: ['CPA', 'C']
+  }, // کیش‌ایر
+
+  J1: {
+    business: ['Z']
+  } // معراج
+}
+function normalizeFlightCode(value) {
+  return String(value || '')
+    .trim()
+    .toUpperCase()
+}
+
+function getCabinClassLabel({
+  airlineCode,
+  bookingClass,
+  cabinType
+}) {
+  const airline =
+    normalizeFlightCode(airlineCode)
+
+  const booking =
+    normalizeFlightCode(bookingClass)
+
+  const airlineConfig =
+    flightClasses[airline]
+
+  /*
+   * اگر کلاس رزرو در لیست بیزینس
+   * همان ایرلاین باشد.
+   */
+  if (
+    airlineConfig?.business?.includes(
+      booking
+    )
+  ) {
+    return 'بیزینس'
+  }
+
+  /*
+   * در صورت مشخص‌بودن cabinType،
+   * از مقدار خود Provider استفاده می‌کنیم.
+   */
+  const cabinTypeMap = {
     1: 'فرست کلاس',
     2: 'بیزینس',
     3: 'اکونومی',
@@ -818,7 +869,38 @@ const cabinLabel = computed(() => {
     5: 'بیزینس',
     6: 'اکونومی'
   }
-  return map[Number(props.flight.cabinType)] || 'اکونومی'
+
+  const cabinTypeLabel =
+    cabinTypeMap[
+      Number(cabinType)
+    ]
+
+  if (cabinTypeLabel) {
+    return cabinTypeLabel
+  }
+
+  /*
+   * برای سایر ایرلاین‌ها و کلاس‌ها
+   * اکونومی در نظر گرفته می‌شود.
+   */
+  return 'اکونومی'
+}
+const cabinLabel = computed(() => {
+  return getCabinClassLabel({
+    airlineCode:
+      props.flight.airline ||
+      props.flight.airlineCode ||
+      props.flight.carrierCode,
+
+    bookingClass:
+      props.flight.bookingClass ||
+      props.flight.rbd ||
+      props.flight.cabinClass ||
+      props.flight.flightClass,
+
+    cabinType:
+      props.flight.cabinType
+  })
 })
 
 const flightTypeLabel = computed(() => {
