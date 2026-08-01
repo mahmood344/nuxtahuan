@@ -19,7 +19,7 @@
     <FlightSearchPanel mode="aside" :showServices="true" />
 <!-- showSearchResults -->
     <FilterFlight
-      v-if="false"
+      v-if="showSearchResults"
       v-model:filters="activeFilters"
       :allFlightsData="flights"
     />
@@ -317,7 +317,10 @@ const isSortDropdownOpen = ref(false)
 const sortOptions = ['نام ایرلاین', 'دیرترین', 'زودترین', 'ارزان‌ترین', 'گران‌ترین']
 
 const activeFilters = ref({
-  departureTimeRange: [0, 2400]
+  departureTimeRange: null,
+  economy:true,
+  business:true,
+  airlines: []
 })
 const scrollToTop = async () => {
   await nextTick()
@@ -484,80 +487,315 @@ function isFlightUnavailable(flight) {
   return isCanceled || isSoldOut || invalidPrice
 }
 
-const getFlightTimeAsNumber = (departureStr) => {
-  if (!departureStr) return null
+const getFlightTimeAsNumber = (departureValue) => {
+  if (!departureValue) return null
 
-  const timePart = departureStr.includes(' ')
-    ? departureStr.split(' ')[1]
-    : departureStr.includes('T')
-      ? departureStr.split('T')[1]
-      : null
+  const normalized = String(departureValue).trim()
+  const timePart = normalized.includes('T')
+    ? normalized.split('T')[1]
+    : normalized.includes(' ')
+      ? normalized.split(' ')[1]
+      : normalized
 
-  if (!timePart) return null
+  const match = String(timePart || '').match(
+    /^([01]?\d|2[0-3]):([0-5]\d)/
+  )
 
-  const [hours, minutes] = timePart.split(':')
-  const h = parseInt(hours, 10)
-  const m = parseInt(minutes, 10)
+  if (!match) return null
 
-  if (isNaN(h) || isNaN(m)) return null
-  return h * 100 + m
+  return Number(match[1]) * 60 + Number(match[2])
+}
+const flightClasses = {
+  IV: { business: ['C', 'CR', 'CM'] },
+  VR: { business: ['WB'] },
+  Y9: { business: ['CPA', 'C'] },
+  J1: { business: ['Z'] }
+}
+function normalizeCabinCode(value) {
+  return String(value ?? '')
+    .trim()
+    .toUpperCase()
+}
+function getFlightAirlineCode(flight) {
+  return normalizeCabinCode(
+    flight?.airline ||
+    flight?.airlineCode ||
+    flight?.carrierCode ||
+    flight?.stepfindip ||
+    flight?.stepFindIp ||
+    flight?.marketingAirline ||
+    flight?.operatingAirline ||
+    flight?.meta?.raw?.Airline ||
+    flight?.meta?.raw?.airline ||
+    flight?.meta?.raw?.airlineCode ||
+    flight?.meta?.raw?.OperatingAirline ||
+    ''
+  )
+}
+function getFlightBookingClass(flight) {
+  return normalizeCabinCode(
+    flight?.bookingClass ||
+    flight?.rbd ||
+    flight?.cabinClass ||
+    flight?.flightClass ||
+    flight?.classCode ||
+    flight?.meta?.rbd ||
+    flight?.meta?.bookingClass ||
+    flight?.meta?.raw?.RBD ||
+    flight?.meta?.raw?.rbd ||
+    flight?.meta?.raw?.BookingClass ||
+    flight?.meta?.raw?.bookingClass ||
+    flight?.meta?.raw?.ClassCode ||
+    flight?.meta?.raw?.classCode ||
+    ''
+  )
+}
+function getFlightCabinType(flight) {
+  const airlineCode = getFlightAirlineCode(flight)
+  const bookingClass = getFlightBookingClass(flight)
+
+  if (
+    flightClasses[airlineCode]
+      ?.business
+      ?.includes(bookingClass)
+  ) {
+    return 'business'
+  }
+   const cabinName = normalizeCabinCode(
+    flight?.cabinName ||
+    flight?.cabin ||
+    flight?.cabinTitle ||
+    flight?.meta?.raw?.CabinName ||
+    flight?.meta?.raw?.cabinName ||
+    flight?.meta?.raw?.Cabin ||
+    flight?.meta?.raw?.cabin ||
+    ''
+  )
+
+  if (
+    cabinName.includes('BUSINESS') ||
+    cabinName.includes('بیزینس')
+  ) {
+    return 'business'
+  }
+
+  const cabinType = Number(
+    flight?.cabinType ??
+    flight?.meta?.raw?.CabinType ??
+    flight?.meta?.raw?.cabinType
+  )
+
+  if (cabinType === 2 || cabinType === 5) {
+    return 'business'
+  }
+
+  return 'economy'
+}
+function getFlightAirlineFilterCode(flight) {
+  return normalizeCabinCode(
+    flight?.airline ||
+    flight?.airlineCode ||
+    flight?.carrierCode ||
+    flight?.stepfindip ||
+    flight?.stepFindIp ||
+    flight?.marketingAirline ||
+    flight?.operatingAirline ||
+    flight?.meta?.raw?.Airline ||
+    flight?.meta?.raw?.airline ||
+    flight?.meta?.raw?.airlineCode ||
+    flight?.meta?.raw?.OperatingAirline ||
+    ''
+  )
 }
 
 const sortedFlights = computed(() => {
-  if (!flights.value) return []
+  if (!Array.isArray(flights.value)) return []
 
-  const filteredList = flights.value.filter((flight) => {
-    if (!activeFilters.value.departureTimeRange) return true
+  const range =
+    activeFilters.value?.departureTimeRange
 
-    const [minTime, maxTime] = activeFilters.value.departureTimeRange
+  const economySelected =
+    activeFilters.value?.economy !== false
 
-    if (minTime === 0 && maxTime === 2400) return true
+  const businessSelected =
+    activeFilters.value?.business !== false
 
-    const flightTime = getFlightTimeAsNumber(flight.departure)
-    if (flightTime === null) return true
+  const selectedAirlines =
+    Array.isArray(
+      activeFilters.value?.airlines
+    )
+      ? activeFilters.value.airlines
+          .map(normalizeCabinCode)
+          .filter(Boolean)
+      : []
 
-    return flightTime >= minTime && flightTime <= maxTime
-  })
+  const filteredList =
+    flights.value.filter((flight) => {
+      /*
+       * فیلتر ساعت حرکت
+       */
+      if (
+        Array.isArray(range) &&
+        range.length === 2
+      ) {
+        const flightTime =
+          getFlightTimeAsNumber(
+            flight?.departure
+          )
 
-  const list = [...filteredList]
+        if (flightTime === null) {
+          return false
+        }
 
-  const getOutboundDepartureTime = (flight) => {
-    const depTime = flight.departure
-    if (!depTime) return 0
+        const minTime =
+          Number(range[0])
 
-    const parsed = new Date(depTime).getTime()
-    return Number.isNaN(parsed) ? 0 : parsed
+        const maxTime =
+          Number(range[1])
+
+        if (
+          Number.isFinite(minTime) &&
+          Number.isFinite(maxTime) &&
+          (
+            flightTime < minTime ||
+            flightTime > maxTime
+          )
+        ) {
+          return false
+        }
+      }
+
+      /*
+       * فیلتر اکونومی و بیزینس
+       */
+      const cabinType =
+        getFlightCabinType(flight)
+
+      if (
+        cabinType === 'economy' &&
+        !economySelected
+      ) {
+        return false
+      }
+
+      if (
+        cabinType === 'business' &&
+        !businessSelected
+      ) {
+        return false
+      }
+
+      /*
+       * فیلتر ایرلاین
+       */
+      if (selectedAirlines.length) {
+        const airlineCode =
+          getFlightAirlineFilterCode(
+            flight
+          )
+
+        if (
+          !selectedAirlines.includes(
+            airlineCode
+          )
+        ) {
+          return false
+        }
+      }
+
+      return true
+    })
+
+  const list = [
+    ...filteredList
+  ]
+
+  const getOutboundDepartureTime = (
+    flight
+  ) => {
+    const departure =
+      flight?.departure
+
+    if (!departure) return 0
+
+    const normalized =
+      String(departure).includes('T')
+        ? String(departure)
+        : String(departure).replace(
+            ' ',
+            'T'
+          )
+
+    const parsed =
+      new Date(normalized).getTime()
+
+    return Number.isNaN(parsed)
+      ? 0
+      : parsed
   }
 
   switch (activeTab.value) {
     case 'ارزان‌ترین':
-      list.sort((a, b) => Number(a.priceFrom || 0) - Number(b.priceFrom || 0))
+      list.sort(
+        (a,b) =>
+          Number(a?.priceFrom || 0) -
+          Number(b?.priceFrom || 0)
+      )
       break
+
     case 'گران‌ترین':
-      list.sort((a, b) => Number(b.priceFrom || 0) - Number(a.priceFrom || 0))
+      list.sort(
+        (a,b) =>
+          Number(b?.priceFrom || 0) -
+          Number(a?.priceFrom || 0)
+      )
       break
+
     case 'نام ایرلاین':
-      list.sort((a, b) =>
-        String(a.airlineName || a.airline || '').localeCompare(
-          String(b.airlineName || b.airline || ''),
+      list.sort((a,b) =>
+        String(
+          a?.airlineName ||
+          a?.airline ||
+          ''
+        ).localeCompare(
+          String(
+            b?.airlineName ||
+            b?.airline ||
+            ''
+          ),
           'fa'
         )
       )
       break
+
     case 'زودترین':
-      list.sort((a, b) => getOutboundDepartureTime(a) - getOutboundDepartureTime(b))
+      list.sort(
+        (a,b) =>
+          getOutboundDepartureTime(a) -
+          getOutboundDepartureTime(b)
+      )
       break
+
     case 'دیرترین':
-      list.sort((a, b) => getOutboundDepartureTime(b) - getOutboundDepartureTime(a))
+      list.sort(
+        (a,b) =>
+          getOutboundDepartureTime(b) -
+          getOutboundDepartureTime(a)
+      )
       break
   }
 
   return [
-    ...list.filter((f) => !isFlightUnavailable(f)),
-    ...list.filter((f) => isFlightUnavailable(f))
+    ...list.filter(
+      (flight) =>
+        !isFlightUnavailable(flight)
+    ),
+    ...list.filter(
+      (flight) =>
+        isFlightUnavailable(flight)
+    )
   ]
 })
-
 const selectedTicketsForView = computed(() => {
   if (
     flightStore.selectedDepartureFlight?.isRoundTrip &&

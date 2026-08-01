@@ -1,9 +1,8 @@
 <template>
-  <div class="relative w-full" ref="sliderContainer">
+  <div class="relative w-full px-4" ref="sliderContainer">
     <!-- نمایشگر مقادیر فعلی -->
     <div class="flex justify-between text-sm text-gray-500 mb-3 px-1">
-      <span>{{ formatValue(modelValue[0]) }}</span>
-      <span>{{ formatValue(modelValue[1]) }}</span>
+     
     </div>
 
     <!-- مسیر اسلایدر -->
