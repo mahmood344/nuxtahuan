@@ -449,6 +449,10 @@ airlineIdMap : {
       const code = String(stepfindip || '').trim().toUpperCase()
       return state.airlineIdMap[code] || 0
     },
+    getAirlineCode: (state) => (id) => {
+    const entry = Object.entries(state.airlineIdMap).find(([_, value]) => value === id)
+    return entry ? entry[0] : ''
+  },
     pricedFlightsCount(state) {
       if (!state.flights) return 0
 

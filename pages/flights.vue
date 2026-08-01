@@ -8,7 +8,7 @@
 
       </div>
     </header>
-    <!-- {{ flightStore.flights }} -->
+    <!-- {{ flightStore.selectedFlights  }} -->
     <main class="mx-auto mt-0 md:mt-[100px] max-w-7xl px-0 md:px-4">
       <div class="grid grid-cols-1 gap-8 lg:grid-cols-12">
 
@@ -187,7 +187,7 @@
 <PaymentSummary
   :original-price="flightStore.finalBookingPrice"
   :final-price="priceAfterTravelCard"
-  :loading="flightStore.pricingRefreshLoading"
+  :loading="paymentLoading"
   :travel-card-credit="travelCardCredit"
   :travel-card-loading="travelCardLoading"
   :travel-card-applied="travelCardApplied"
@@ -269,13 +269,33 @@
         </div>
       </div>
     </transition>
+    <form
+  ref="formshaparakRef"
+  name="PostForm"
+  method="POST"
+  action="https://ikc.shaparak.ir/iuiv3/IPG/Index"
+  class="hidden"
+>
+  <input
+    name="tokenIdentity"
+    type="hidden"
+    :value="formshaparak.bankToken"
+  />
+</form>
   </div>
 </template>
 
 <script setup>
 import moment from 'moment-jalaali'
 import { toGregorian } from 'jalaali-js'
-import { ref, computed, onMounted, watch , nextTick  } from 'vue'
+import {
+  ref,
+  reactive,
+  computed,
+  onMounted,
+  watch,
+  nextTick
+} from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useFlightStore } from '~/stores/flights'
 import { searchAllProviders } from '~/services/searchFlights'
@@ -1172,7 +1192,7 @@ const travelCardLoading = ref(false)
 const travelCardOwnerName = ref('')
 const travelCardError = ref('') 
 const travelCardData = ref(null)
-
+const appliedTravelCardNumber = ref('')
 const priceAfterTravelCard = computed(() => {
   const original = Number(flightStore.finalBookingPrice || 0)
   const credit = Number(travelCardCredit.value || 0)
@@ -1184,6 +1204,7 @@ const handleResetTravelCard = () => {
   travelCardOwnerName.value = ''
   travelCardError.value = ''
   travelCardData.value = null
+  appliedTravelCardNumber.value = ''
   console.log('Travel card reset. Price reverted to original.')
 }
 const handleApplyTravelCard = async (cardNumber) => {
@@ -1194,30 +1215,62 @@ const handleApplyTravelCard = async (cardNumber) => {
     travelCardOwnerName.value = ''
     travelCardError.value = ''
     travelCardData.value = null
+    appliedTravelCardNumber.value = ''
 
-    const response = await $fetch(`https://api.ahuan.ir/api/SafarCard/${cardNumber}`)
-    
-    if (response && response.credit !== undefined) {
+    const normalizedCardNumber =
+      String(cardNumber || '').trim()
+
+    const response = await $fetch(
+      `https://api.ahuan.ir/api/SafarCard/${encodeURIComponent(normalizedCardNumber)}`
+    )
+
+    if (
+      response &&
+      response.credit !== undefined
+    ) {
       travelCardData.value = response
-      travelCardCredit.value = Number(response.credit)
-      travelCardOwnerName.value = `${response.firstName || ''} ${response.lastName || ''}`.trim()
+      travelCardCredit.value =
+        Number(response.credit)
+
+      travelCardOwnerName.value =
+        `${response.firstName || ''} ${response.lastName || ''}`.trim()
+
+      /*
+       * شماره‌ای که کاربر وارد کرده و API
+       * آن را تأیید کرده است.
+       */
+      appliedTravelCardNumber.value =
+        normalizedCardNumber
+
       travelCardApplied.value = true
     } else {
-      travelCardError.value = 'اطلاعات کارت معتبر نیست.'
+      travelCardError.value =
+        'اطلاعات کارت معتبر نیست.'
     }
   } catch (error) {
     travelCardApplied.value = false
     travelCardCredit.value = 0
     travelCardOwnerName.value = ''
-    
-    if (error.data && typeof error.data === 'string') {
+    travelCardData.value = null
+    appliedTravelCardNumber.value = ''
+
+    if (
+      error.data &&
+      typeof error.data === 'string'
+    ) {
       travelCardError.value = error.data
-    } else if (error.data && error.data.message) {
-      travelCardError.value = error.data.message
+    } else if (error.data?.message) {
+      travelCardError.value =
+        error.data.message
     } else {
-      travelCardError.value = 'چنین شماره کارتی یافت نشد.'
+      travelCardError.value =
+        'چنین شماره کارتی یافت نشد.'
     }
-    console.error('Travel card API error:', error)
+
+    console.error(
+      'Travel card API error:',
+      error
+    )
   } finally {
     travelCardLoading.value = false
   }
@@ -1469,67 +1522,227 @@ function formatNiraDate(dateInput) {
 
 
 
-async function checkNiraCredit() {
-  const response = await $fetch(
-    'https://api.ahuan.ir/api/Nira/Command?AirLine=PA&Command=CRD',
-    { method: 'GET' }
+async function checkNiraCredit(selectedFlights) {
+  const flights = Array.isArray(selectedFlights)
+    ? selectedFlights.filter(Boolean)
+    : []
+
+  const finalPricingItems = Array.isArray(
+    flightStore.selectedFlightsFinalPricing
+  )
+    ? flightStore.selectedFlightsFinalPricing
+    : []
+
+  const niraFlights = flights.filter(
+    (flight) =>
+      String(flight?.provider || '')
+        .trim()
+        .toUpperCase() === 'NIRA'
   )
 
-  let responseText = ''
-
-  if (typeof response === 'string') {
-    responseText = response
-  } else {
-    responseText = String(response?.AirNRSCommand?.Response || '')
+  if (!niraFlights.length) {
+    return []
   }
 
-  const creditMatch = responseText.match(
-    /CREDIT\s*:\s*([\d,]+)\s*IRR/i
-  )
-
-  if (!creditMatch) {
-    throw new Error('مبلغ اعتبار ایرلاین از پاسخ نیرا دریافت نشد')
+  if (!finalPricingItems.length) {
+    throw new Error(
+      'قیمت نهایی پروازها هنوز دریافت نشده است'
+    )
   }
 
-  const credit = Number(creditMatch[1].replace(/,/g, ''))
+  /*
+   * گروه‌بندی بر اساس airline
+   *
+   * HH + HH => یک درخواست اعتبار
+   * HH + PA => دو درخواست اعتبار
+   */
+  const airlineGroups = new Map()
 
-  if (!Number.isFinite(credit)) {
-    throw new Error('مبلغ اعتبار دریافتی از نیرا معتبر نیست')
-  }
+  for (const flight of niraFlights) {
+    const airlineCode = String(
+      flight?.airline || ''
+    )
+      .trim()
+      .toUpperCase()
 
-  return {
-    credit,
-    raw: response
-  }
-}
-function handlePaymentRoute() {
-  const creditCookie = useCookie('user_data')
-  console.log(creditCookie.value);
-  const payableAmount = Number(priceAfterTravelCard.value || 0)
-
-  let creditValue = creditCookie.value
-
-  if (typeof creditValue === 'string') {
-    try {
-      creditValue = JSON.parse(creditValue)
-    } catch (error) {
-      creditValue = null
+    if (!airlineCode) {
+      throw new Error(
+        `کد ایرلاین پرواز ${
+          flight?.flightNumber || ''
+        } مشخص نیست`
+      )
     }
+
+    /*
+     * قیمت نهایی همین پرواز را از
+     * selectedFlightsFinalPricing پیدا می‌کنیم.
+     */
+    const pricingItem =
+      finalPricingItems.find(
+        (item) =>
+          item?.flightId === flight?.id
+      )
+
+    if (!pricingItem) {
+      console.error(
+        'Final pricing item not found:',
+        {
+          flight,
+          finalPricingItems
+        }
+      )
+
+      throw new Error(
+        `قیمت نهایی پرواز ${
+          flight?.flightNumber || ''
+        } پیدا نشد`
+      )
+    }
+
+    const flightPrice = Number(
+      pricingItem?.totalPrice || 0
+    )
+
+    if (
+      !Number.isFinite(flightPrice) ||
+      flightPrice <= 0
+    ) {
+      throw new Error(
+        `قیمت نهایی پرواز ${
+          flight?.flightNumber || ''
+        } معتبر نیست`
+      )
+    }
+
+    if (!airlineGroups.has(airlineCode)) {
+      airlineGroups.set(
+        airlineCode,
+        {
+          airlineCode,
+          requiredAmount: 0,
+          flights: []
+        }
+      )
+    }
+
+    const group =
+      airlineGroups.get(airlineCode)
+
+    group.requiredAmount += flightPrice
+
+    group.flights.push({
+      flightId:
+        flight?.id || null,
+
+      flightNumber:
+        flight?.flightNumber || '',
+
+      origin:
+        flight?.origin || '',
+
+      destination:
+        flight?.destination || '',
+
+      price:
+        flightPrice
+    })
   }
 
-  if (creditValue?.noLimit === true) {
-    console.log('کاربر آژانس')
-    return 'agent'
+  const results = []
+
+  /*
+   * برای هر ایرلاین فقط یک درخواست CRD
+   */
+  for (const group of airlineGroups.values()) {
+    const response = await $fetch(
+      'https://api.ahuan.ir/api/Nira/Command',
+      {
+        method: 'GET',
+
+        query: {
+          AirLine:
+            group.airlineCode,
+
+          Command:
+            'CRD'
+        }
+      }
+    )
+
+    const responseText =
+      typeof response === 'string'
+        ? response
+        : String(
+            response?.AirNRSCommand
+              ?.Response || ''
+          )
+
+    const creditMatch =
+      responseText.match(
+        /CREDIT\s*:\s*([\d,]+)\s*IRR/i
+      )
+
+    if (!creditMatch) {
+      console.error(
+        'Invalid Nira credit response:',
+        {
+          airlineCode:
+            group.airlineCode,
+          response
+        }
+      )
+
+      throw new Error(
+        `مبلغ اعتبار ایرلاین ${group.airlineCode} دریافت نشد`
+      )
+    }
+
+    const credit = Number(
+      creditMatch[1].replace(/,/g, '')
+    )
+
+    if (!Number.isFinite(credit)) {
+      throw new Error(
+        `مبلغ اعتبار ایرلاین ${group.airlineCode} معتبر نیست`
+      )
+    }
+
+    /*
+     * اعتبار کمتر از مجموع قیمت پروازهای
+     * همان ایرلاین باشد، ادامه متوقف می‌شود.
+     */
+    if (credit < group.requiredAmount) {
+      throw new Error(
+        `اعتبار ایرلاین ${group.airlineCode} کافی نیست. ` +
+        `اعتبار موجود: ${credit.toLocaleString('en-US')} ریال، ` +
+        `مبلغ موردنیاز: ${group.requiredAmount.toLocaleString('en-US')} ریال`
+      )
+    }
+
+    results.push({
+      airlineCode:
+        group.airlineCode,
+
+      credit,
+
+      requiredAmount:
+        group.requiredAmount,
+
+      remainingCredit:
+        credit -
+        group.requiredAmount,
+
+      flights:
+        group.flights,
+
+      raw:
+        response
+    })
   }
 
-  if (payableAmount === 0) {
-    console.log('صفر استفاده از سفرکارت')
-    return 'travelcard'
-  }
-
-  console.log('مبلغ نهایی قابل پرداخت:', payableAmount)
-  return 'gateway'
+  return results
 }
+
 function parsePassengerBirthDate(birthDate) {
   if (!birthDate) return null
 
@@ -1826,63 +2039,135 @@ async function reserveFlights(flights, passengers, contactInfo) {
 }
 const paymentError = ref('')
 async function handleFinalPayment() {
+  if (paymentLoading.value) {
+    return
+  }
+
   try {
     paymentLoading.value = true
+    paymentError.value = ''
 
-    const selectedFlights = Array.isArray(flightStore.selectedFlights)
-      ? flightStore.selectedFlights.filter(Boolean)
-      : [
-          flightStore.selectedDepartureFlight,
-          flightStore.selectedReturnFlight
-        ].filter(Boolean)
+    const selectedFlights =
+      Array.isArray(
+        flightStore.selectedFlights
+      )
+        ? flightStore.selectedFlights.filter(
+            Boolean
+          )
+        : [
+            flightStore.selectedDepartureFlight,
+            flightStore.selectedReturnFlight
+          ].filter(Boolean)
 
     if (!selectedFlights.length) {
-      throw new Error('هیچ پروازی برای رزرو انتخاب نشده است')
+      throw new Error(
+        'هیچ پروازی برای رزرو انتخاب نشده است'
+      )
     }
 
     if (hasNiraFlights(selectedFlights)) {
-      await checkNiraCredit()
+      await checkNiraCredit(selectedFlights)
     }
 
-    const passengers = Array.isArray(bookingData.value?.passengers)
-  ? bookingData.value.passengers
-  : []
+    const passengers =
+      Array.isArray(
+        bookingData.value?.passengers
+      )
+        ? bookingData.value.passengers
+        : []
 
-const contactInfo = {
-  mobile:
-    bookingData.value?.contact?.mobile ||
-    bookingData.value?.contact?.phone ||
-    '',
-  email:
-    bookingData.value?.contact?.email ||
-    ''
-}
+    if (!passengers.length) {
+      throw new Error(
+        'اطلاعات مسافران موجود نیست'
+      )
+    }
 
-    const reserveResults = await reserveFlights(
-      selectedFlights,
-      passengers,
-      contactInfo
+    const contactInfo = {
+      mobile:
+        bookingData.value?.contact?.mobile ||
+        bookingData.value?.contact?.phone ||
+        '',
+
+      email:
+        bookingData.value?.contact?.email ||
+        ''
+    }
+
+    /*
+     * ۱. رزرو پرواز
+     */
+    const reserveResults =
+      await reserveFlights(
+        selectedFlights,
+        passengers,
+        contactInfo
+      )
+
+    /*
+     * ۲. ساخت Payload آپدیت قرارداد
+     */
+    const updateContractPayload =
+      buildUpdateContractPayload({
+        currentContractData:
+          currentContractData.value,
+
+        selectedFlights,
+        reserveResults,
+        passengers,
+        contactInfo
+      })
+
+    /*
+     * ۳. ابتدا Contract/update
+     */
+    const updateResponse =
+      await saveOrUpdateContract(
+        updateContractPayload
+      )
+
+    /*
+     * ۴. دریافت contractId
+     */
+    const contractId =
+      extractContractIdFromUpdate(
+        updateResponse
+      )
+
+    /*
+     * ۵. بعد از Update،
+     * اطلاعات پرداخت ساخته می‌شود.
+     */
+    const paymentData =
+      createPaymentData()
+
+    /*
+     * ۶. ذخیره در sessionStorage
+     */
+    const paymentSession =
+      savePaymentSession({
+        contractId,
+        paymentData
+      })
+
+    /*
+     * ۷. ادامه مراحل براساس نوع پرداخت
+     */
+    await continuePaymentAfterUpdate(
+      paymentSession
     )
-
-    const updateContractPayload = buildUpdateContractPayload({
-       currentContractData: currentContractData.value,
-  selectedFlights,
-  reserveResults,
-  passengers,
-  contactInfo
-
-    })
-
-    await saveOrUpdateContract(updateContractPayload)
   } catch (error) {
-    console.error('handleFinalPayment error:', error)
-
-    alert(
-      error?.message ||
-      'خطا در رزرو و ثبت نهایی قرارداد'
+    console.error(
+      'handleFinalPayment error:',
+      error
     )
 
-    throw error
+    paymentError.value =
+      error?.response?.data?.message ||
+      error?.data?.message ||
+      error?.message ||
+      'خطا در رزرو و پرداخت'
+
+    alert(paymentError.value)
   } finally {
     paymentLoading.value = false
   }
@@ -1894,8 +2179,7 @@ function buildUpdateContractPayload({
   reserveResults,
   passengers,
   contactInfo,
-  paymentMeta,
-  isAgencyUser
+  
 }) {
   const addPayload = currentContractData?.addPayload || {}
   const addResponse = currentContractData?.addResponse || {}
@@ -1975,14 +2259,8 @@ function buildUpdateContractPayload({
     contactInfo?.email || ''
   ).trim(),
 
-  contractingPartyType:
-    isAgencyUser
-      ? 1
-      : addPayload?.contractingPartyType || 0,
-
-  contractDesc: paymentMeta
-    ? JSON.stringify(paymentMeta)
-    : addPayload?.contractDesc || '',
+contractDesc:
+  addPayload?.contractDesc || '',
 
   contractFlights,
   contractPassengers
@@ -1993,6 +2271,402 @@ function buildUpdateContractPayload({
 function hasNiraFlights(flights) {
   return (flights || []).some(isNiraFlight)
 }
+
+
+
+
+
+
+
+
+const PAYMENT_SESSION_KEY = 'flight_payment_session'
+
+const formshaparakRef = ref(null)
+
+const formshaparak = reactive({
+  bankToken: ''
+})
+function getUserData() {
+  const userCookie = useCookie('user_data')
+
+  let userData = userCookie.value
+
+  if (typeof userData === 'string') {
+    try {
+      userData = JSON.parse(userData)
+    } catch {
+      userData = null
+    }
+  }
+
+  return userData
+}
+
+function createPaymentData() {
+  const totalPrice = Number(
+    flightStore.finalBookingPrice || 0
+  )
+
+  if (
+    !Number.isFinite(totalPrice) ||
+    totalPrice <= 0
+  ) {
+    throw new Error('مبلغ کل قرارداد معتبر نیست')
+  }
+const email = String(
+    bookingData.value?.contact?.email || ''
+  ).trim()
+
+  const mobile = String(
+    bookingData.value?.contact?.mobile ||
+    bookingData.value?.contact?.phone ||
+    ''
+  ).trim()
+  const userData = getUserData()
+
+  const isAgency =
+    userData?.noLimit === true
+
+  const travelCardUsed =
+    travelCardApplied.value === true
+
+const travelCardNumber =
+  travelCardUsed
+    ? String(
+        appliedTravelCardNumber.value || ''
+      ).trim()
+    : ''
+
+  const availableTravelCardCredit = Math.max(
+    Number(travelCardCredit.value || 0),
+    0
+  )
+
+  const travelCardAmount =
+    travelCardUsed
+      ? Math.min(
+          availableTravelCardCredit,
+          totalPrice
+        )
+      : 0
+
+  const gatewayAmount = Math.max(
+    totalPrice - travelCardAmount,
+    0
+  )
+
+  /*
+   * آژانس:
+   * مبلغ قرارداد در هر دو فیلد ذخیره می‌شود،
+   * ولی به درگاه بانکی نمی‌رود.
+   */
+  if (isAgency) {
+    return {
+      type: 'agency',
+      totalPrice,
+      payableAmount: totalPrice,
+      travelCardUsed: false,
+      travelCardAmount: 0,
+      travelCardNumber:'',
+        email, // اضافه شد
+        mobile 
+    }
+  }
+
+  /*
+   * کل مبلغ با سفرکارت پرداخت شده است.
+   *
+   * payableAmount همچنان مبلغ کل قرارداد است؛
+   * تصمیم عدم انتقال به بانک براساس type است.
+   */
+  if (
+    travelCardUsed &&
+    travelCardAmount >= totalPrice
+  ) {
+    return {
+      type: 'travelcard',
+      totalPrice,
+      payableAmount: totalPrice,
+      travelCardUsed: true,
+      travelCardAmount: totalPrice,
+      travelCardNumber,
+        email, // اضافه شد
+        mobile 
+    }
+  }
+
+  /*
+   * بخشی با سفرکارت و باقی‌مانده با درگاه.
+   */
+  if (
+    travelCardUsed &&
+    travelCardAmount > 0 &&
+    gatewayAmount > 0
+  ) {
+    return {
+      type: 'travelcard-gateway',
+      totalPrice,
+      payableAmount: gatewayAmount,
+      travelCardUsed: true,
+      travelCardAmount,
+      travelCardNumber,
+        email, // اضافه شد
+        mobile 
+    }
+  }
+
+  /*
+   * کل مبلغ با درگاه پرداخت می‌شود.
+   */
+  return {
+    type: 'gateway',
+    totalPrice,
+    payableAmount: totalPrice,
+    travelCardUsed: false,
+    travelCardAmount: 0,
+    travelCardNumber:'',
+      email, // اضافه شد
+      mobile 
+  }
+}
+function savePaymentSession({
+  contractId,
+  paymentData
+}) {
+  if (typeof window === 'undefined') {
+    throw new Error(
+      'sessionStorage در دسترس نیست'
+    )
+  }
+
+  const normalizedContractId =
+    Number(contractId)
+
+  if (
+    !Number.isInteger(normalizedContractId) ||
+    normalizedContractId <= 0
+  ) {
+    throw new Error(
+      'شناسه قرارداد معتبر نیست'
+    )
+  }
+
+  const paymentSession = {
+    contractId: normalizedContractId,
+    type: paymentData.type,
+    totalPrice: Number(
+      paymentData.totalPrice
+    ),
+    payableAmount: Number(
+      paymentData.payableAmount
+    ),
+    travelCardUsed:
+      paymentData.travelCardUsed === true,
+    travelCardAmount: Number(
+      paymentData.travelCardAmount || 0
+    ),
+     travelCardNumber: String(
+    paymentData.travelCardNumber || ''
+  ).trim(),
+   email: String(
+    paymentData.email || ''
+  ).trim(),
+
+  mobile: String(
+    paymentData.mobile || ''
+  ).trim()
+  }
+
+  sessionStorage.setItem(
+    PAYMENT_SESSION_KEY,
+    JSON.stringify(paymentSession)
+  )
+
+  return paymentSession
+}
+function extractContractIdFromUpdate(
+  updateResponse
+) {
+  const contractId = Number(
+    updateResponse?.data?.id ||
+    updateResponse?.data?.contractId ||
+    updateResponse?.id ||
+    updateResponse?.contractId ||
+    0
+  )
+
+  if (
+    !Number.isInteger(contractId) ||
+    contractId <= 0
+  ) {
+    console.error(
+      'Invalid Contract/update response:',
+      updateResponse
+    )
+
+    throw new Error(
+      'شناسه قرارداد از پاسخ Update دریافت نشد'
+    )
+  }
+
+  return contractId
+}
+
+async function requestBankToken({
+  amount,
+  contractId
+}) {
+  const bankAmount = Number(amount)
+
+  if (
+    !Number.isFinite(bankAmount) ||
+    bankAmount <= 0
+  ) {
+    throw new Error(
+      'مبلغ ارسالی به درگاه معتبر نیست'
+    )
+  }
+
+  const revertUrl =
+    `${window.location.origin}/verify` +
+    `?responseData=${encodeURIComponent(contractId)}&`
+
+  const response = await $fetch(
+    'https://test.ahuan.ir/api/Tejarat/BankToken',
+    {
+      method: 'POST',
+
+      body: {
+        amount: bankAmount,
+        revertUrl
+      }
+    }
+  )
+
+  const bankToken =
+    typeof response === 'string'
+      ? response
+      : response?.data?.tokenIdentity ||
+        response?.data?.bankToken ||
+        response?.data?.token ||
+        response?.tokenIdentity ||
+        response?.bankToken ||
+        response?.token ||
+        response?.data ||
+        ''
+
+  if (!bankToken) {
+    console.error(
+      'Invalid BankToken response:',
+      response
+    )
+
+    throw new Error(
+      'توکن درگاه بانکی دریافت نشد'
+    )
+  }
+
+  return String(bankToken)
+}
+async function submitShaparakForm(
+  bankToken
+) {
+  formshaparak.bankToken = bankToken
+
+  await nextTick()
+
+  const form = formshaparakRef.value
+
+  if (!form) {
+    throw new Error(
+      'فرم شاپرک پیدا نشد'
+    )
+  }
+
+  HTMLFormElement.prototype.submit.call(
+    form
+  )
+}
+async function continuePaymentAfterUpdate(
+  paymentSession
+) {
+  switch (paymentSession.type) {
+    /*
+     * آژانس به درگاه بانکی نمی‌رود.
+     */
+    case 'agency':
+      await router.push({
+        path: '/verify',
+        query: {
+          responseData:
+            paymentSession.contractId
+        }
+      })
+
+      return
+
+    /*
+     * پرداخت کامل سفرکارت هم
+     * به درگاه بانکی نمی‌رود.
+     */
+    case 'travelcard':
+      await router.push({
+        path: '/verify',
+        query: {
+          responseData:
+            paymentSession.contractId
+        }
+      })
+
+      return
+
+    /*
+     * فقط مبلغ باقی‌مانده به بانک می‌رود.
+     */
+    case 'travelcard-gateway': {
+      const bankToken =
+        await requestBankToken({
+          amount:
+            paymentSession.payableAmount,
+
+          contractId:
+            paymentSession.contractId
+        })
+
+      await submitShaparakForm(
+        bankToken
+      )
+
+      return
+    }
+
+    /*
+     * کل مبلغ قرارداد به بانک می‌رود.
+     */
+    case 'gateway': {
+      const bankToken =
+        await requestBankToken({
+          amount:
+            paymentSession.payableAmount,
+
+          contractId:
+            paymentSession.contractId
+        })
+
+      await submitShaparakForm(
+        bankToken
+      )
+
+      return
+    }
+
+    default:
+      throw new Error(
+        `نوع پرداخت نامعتبر است: ${paymentSession.type}`
+      )
+  }
+}
+
 </script>
 
 
