@@ -1,7 +1,12 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { useRoute } from '#app'
+import moment from 'moment-jalaali'
 
+moment.loadPersian({
+  usePersianDigits: false,
+  dialect: 'persian-modern'
+})
 function handleDebugPassengers() {
   const isValid = validateAll()
   const data = getData()
@@ -66,7 +71,317 @@ const isDomesticFlight = computed(() => flightType.value === 'domestic')
 const isInternationalFlight = computed(() => flightType.value === 'international')
 
 const passengers = ref([])
+const previousPassengersModal = ref(false)
+const previousPassengersLoading = ref(false)
+const previousPassengersError = ref('')
+const previousPassengers = ref([])
+const selectedPassengerFormIndex = ref(null)
 
+function getLoggedInUser() {
+  const userCookie = useCookie('user_data')
+  let user = userCookie.value
+
+  if (typeof user === 'string') {
+    try {
+      user = JSON.parse(user)
+    } catch {
+      user = null
+    }
+  }
+
+  return user && typeof user === 'object'
+    ? user
+    : null
+}
+
+function getLoggedInMobile() {
+  const user = getLoggedInUser()
+
+  return onlyNumbers(
+    user?.mobile ||
+    user?.phone ||
+    ''
+  )
+}
+
+function unwrapApiResponse(response) {
+  if (
+    response &&
+    typeof response === 'object' &&
+    'data' in response
+  ) {
+    return response.data
+  }
+
+  return response
+}
+
+function normalizePassengerNationality(value) {
+  const nationality = String(value || '')
+    .trim()
+    .toUpperCase()
+
+  if (
+    nationality === 'IR' ||
+    nationality === 'IRAN' ||
+    nationality === 'IRN' ||
+    nationality === 'ایرانی'
+  ) {
+    return 'IR'
+  }
+
+  return 'FOREIGN'
+}
+
+function normalizePreviousPassengerGender(value) {
+  if (
+    value === true ||
+    value === 1 ||
+    value === '1' ||
+    String(value).toLowerCase() === 'true' ||
+    String(value).toLowerCase() === 'male'
+  ) {
+    return 'male'
+  }
+
+  if (
+    value === false ||
+    value === 0 ||
+    value === '0' ||
+    String(value).toLowerCase() === 'false' ||
+    String(value).toLowerCase() === 'female'
+  ) {
+    return 'female'
+  }
+
+  return ''
+}
+
+function parsePreviousPassengerBirthDate(
+  value,
+  nationality
+) {
+  if (!value) {
+    return {
+      day: '',
+      month: '',
+      year: ''
+    }
+  }
+
+  const date = moment(value)
+
+  if (!date.isValid()) {
+    return {
+      day: '',
+      month: '',
+      year: ''
+    }
+  }
+
+  if (nationality === 'IR') {
+    return {
+      day: date.format('jD'),
+      month: date.format('jM'),
+      year: date.format('jYYYY')
+    }
+  }
+
+  return {
+    day: date.format('D'),
+    month: date.format('M'),
+    year: date.format('YYYY')
+  }
+}
+
+function formatPreviousPassengerBirthDate(
+  value,
+  nationality
+) {
+  if (!value) return '-'
+
+  const date = moment(value)
+  if (!date.isValid()) return '-'
+
+  return nationality === 'IR'
+    ? date.format('jYYYY/jMM/jDD')
+    : date.format('YYYY/MM/DD')
+}
+
+function getPreviousPassengerGenderTitle(value) {
+  const gender =
+    normalizePreviousPassengerGender(value)
+
+  if (gender === 'male') return 'آقا'
+  if (gender === 'female') return 'خانم'
+
+  return '-'
+}
+
+function getPreviousPassengerNationalityTitle(value) {
+  return normalizePassengerNationality(value) === 'IR'
+    ? 'ایرانی'
+    : 'غیر ایرانی'
+}
+
+async function openPreviousPassengers(index) {
+  selectedPassengerFormIndex.value = index
+  previousPassengersModal.value = true
+  previousPassengersLoading.value = true
+  previousPassengersError.value = ''
+  previousPassengers.value = []
+
+  try {
+    const mobile = getLoggedInMobile()
+
+    if (!mobile) {
+      throw new Error(
+        'شماره موبایل کاربر در اطلاعات ورود یافت نشد.'
+      )
+    }
+
+    const customerResponse = await $fetch(
+      `https://api.ahuan.ir/api/Customer/mobile/${encodeURIComponent(mobile)}`,
+      {
+        method: 'GET'
+      }
+    )
+
+    const customer =
+      unwrapApiResponse(customerResponse)
+
+    const customerId = Number(
+      customer?.id ||
+      customer?.customerId ||
+      0
+    )
+
+    if (
+      !Number.isInteger(customerId) ||
+      customerId <= 0
+    ) {
+      throw new Error(
+        'شناسه مشتری از سرویس دریافت نشد.'
+      )
+    }
+
+    const passengersResponse = await $fetch(
+      'https://api.ahuan.ir/api/Customer/passengers',
+      {
+        method: 'GET',
+        query: {
+          customerId
+        }
+      }
+    )
+
+    const result =
+      unwrapApiResponse(passengersResponse)
+
+    const list = Array.isArray(result)
+      ? result
+      : Array.isArray(result?.items)
+        ? result.items
+        : Array.isArray(result?.customerPassengers)
+          ? result.customerPassengers
+          : []
+
+    previousPassengers.value = list
+  } catch (error) {
+    console.error(
+      'Previous passengers error:',
+      error
+    )
+
+    previousPassengersError.value =
+      error?.data?.message ||
+      error?.response?.data?.message ||
+      error?.message ||
+      'دریافت لیست مسافران سابق با خطا مواجه شد.'
+  } finally {
+    previousPassengersLoading.value = false
+  }
+}
+
+function closePreviousPassengersModal() {
+  previousPassengersModal.value = false
+  selectedPassengerFormIndex.value = null
+  previousPassengersError.value = ''
+}
+
+function selectPreviousPassenger(item) {
+  const index =
+    selectedPassengerFormIndex.value
+
+  if (
+    !Number.isInteger(index) ||
+    !passengers.value[index]
+  ) {
+    return
+  }
+
+  const target =
+    passengers.value[index]
+
+  const nationality =
+    normalizePassengerNationality(
+      item?.nationality
+    )
+
+  const birthDate =
+    parsePreviousPassengerBirthDate(
+      item?.birthDate,
+      nationality
+    )
+
+  target.firstName = onlyLatin(
+    normalizeSpaces(
+      item?.fName ||
+      item?.firstName ||
+      ''
+    )
+  )
+
+  target.lastName = onlyLatin(
+    normalizeSpaces(
+      item?.lName ||
+      item?.lastName ||
+      ''
+    )
+  )
+
+  target.nationality = nationality
+
+  target.nationalCode = onlyNumbers(
+    item?.codeMelli ||
+    item?.nationalCode ||
+    ''
+  ).slice(0, 10)
+
+  target.passportNumber =
+    normalizeSpaces(
+      item?.passportNo ||
+      item?.passportNumber ||
+      ''
+    )
+      .toUpperCase()
+      .slice(0, 10)
+
+  target.gender =
+    normalizePreviousPassengerGender(
+      item?.gender
+    )
+
+  target.birthDate = {
+    day: birthDate.day,
+    month: birthDate.month,
+    year: birthDate.year
+  }
+
+  target.errors = {}
+
+  closePreviousPassengersModal()
+}
 function extractValue(payload) {
   if (payload == null) return ''
 
@@ -514,11 +829,12 @@ defineExpose({
         <div class="order-3 flex flex-grow flex-col justify-between">
           <div class="mb-6 flex justify-end">
             <UiBaseButton
-              label="انتخاب از مسافران سابق"
-              variant="outline"
-              color="primary"
-              class="!rounded-full border-primary px-5 py-2 text-xs text-primary transition-colors hover:bg-primary/5"
-            />
+  label="انتخاب از مسافران سابق"
+  variant="outline"
+  color="primary"
+  class="!rounded-full border-primary px-5 py-2 text-xs text-primary transition-colors hover:bg-primary/5"
+  @click="openPreviousPassengers(index)"
+/>
           </div>
 
           <div class="grid grid-cols-1 gap-5 md:grid-cols-3">
@@ -636,6 +952,298 @@ defineExpose({
         </div>
       </div>
     </div>
- 
+ <Teleport to="body">
+  <Transition name="passenger-modal">
+    <div
+      v-if="previousPassengersModal"
+      class="fixed inset-0 z-[1000] flex items-center justify-center bg-black/35 p-4 backdrop-blur-[1px]"
+      dir="rtl"
+      @click.self="closePreviousPassengersModal"
+    >
+      <div
+        class="flex max-h-[85vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+      >
+        <!-- هدر مودال -->
+        <div
+          class="flex items-center justify-between border-b border-gray-200 px-5 py-4"
+        >
+          <h2 class="text-base font-black text-blue-900 md:text-lg">
+            افزودن از لیست مسافران سابق
+          </h2>
+
+          <button
+            type="button"
+            class="flex h-9 w-9 items-center justify-center rounded-full text-3xl leading-none text-blue-800 transition hover:bg-blue-50"
+            @click="closePreviousPassengersModal"
+          >
+            ×
+          </button>
+        </div>
+
+        <!-- Loading -->
+        <div
+          v-if="previousPassengersLoading"
+          class="flex min-h-[260px] flex-col items-center justify-center"
+        >
+          <div
+            class="mb-4 h-11 w-11 animate-spin rounded-full border-4 border-gray-200 border-t-blue-700"
+          ></div>
+
+          <p class="text-sm text-gray-600">
+            در حال دریافت مسافران سابق...
+          </p>
+        </div>
+
+        <!-- Error -->
+        <div
+          v-else-if="previousPassengersError"
+          class="m-5 rounded-xl border border-red-200 bg-red-50 p-5 text-center"
+        >
+          <p class="font-bold text-red-700">
+            {{ previousPassengersError }}
+          </p>
+
+          <button
+            type="button"
+            class="mt-4 rounded-xl bg-blue-700 px-5 py-2 text-sm font-bold text-white"
+            @click="openPreviousPassengers(selectedPassengerFormIndex)"
+          >
+            تلاش مجدد
+          </button>
+        </div>
+
+        <!-- جدول دسکتاپ -->
+        <div
+          v-else-if="previousPassengers.length"
+          class="overflow-auto p-4"
+        >
+          <table
+            class="hidden w-full border-collapse text-center text-sm md:table"
+          >
+            <thead>
+              <tr class="border-b border-gray-200 text-gray-700">
+                <th class="px-3 py-4 font-bold">
+                  نام
+                </th>
+
+                <th class="px-3 py-4 font-bold">
+                  نام خانوادگی
+                </th>
+
+                <th class="px-3 py-4 font-bold">
+                  ملیت
+                </th>
+
+                <th class="px-3 py-4 font-bold">
+                  کد ملی
+                </th>
+
+                <th class="px-3 py-4 font-bold">
+                  جنسیت
+                </th>
+
+                <th class="px-3 py-4 font-bold">
+                  تاریخ تولد
+                </th>
+
+                <th class="px-3 py-4 font-bold">
+                  عملیات
+                </th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <tr
+                v-for="item in previousPassengers"
+                :key="item.id"
+                class="border-b border-gray-200 transition odd:bg-white even:bg-gray-50 hover:bg-blue-50"
+              >
+                <td
+                  dir="ltr"
+                  class="px-3 py-3"
+                >
+                  {{ item.fName || item.firstName || '-' }}
+                </td>
+
+                <td
+                  dir="ltr"
+                  class="px-3 py-3"
+                >
+                  {{ item.lName || item.lastName || '-' }}
+                </td>
+
+                <td class="px-3 py-3">
+                  {{ getPreviousPassengerNationalityTitle(item.nationality) }}
+                </td>
+
+                <td
+                  dir="ltr"
+                  class="px-3 py-3"
+                >
+                  {{ item.codeMelli || item.nationalCode || '-' }}
+                </td>
+
+                <td class="px-3 py-3">
+                  {{ getPreviousPassengerGenderTitle(item.gender) }}
+                </td>
+
+                <td
+                  dir="ltr"
+                  class="px-3 py-3"
+                >
+                  {{
+                    formatPreviousPassengerBirthDate(
+                      item.birthDate,
+                      normalizePassengerNationality(item.nationality)
+                    )
+                  }}
+                </td>
+
+                <td class="px-3 py-3">
+                  <button
+                    type="button"
+                    class="rounded-full bg-blue-800 px-6 py-2 text-xs font-bold text-white shadow-md transition hover:bg-blue-900"
+                    @click="selectPreviousPassenger(item)"
+                  >
+                    انتخاب
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- نمایش موبایل -->
+          <div class="space-y-3 md:hidden">
+            <div
+              v-for="item in previousPassengers"
+              :key="`mobile-${item.id}`"
+              class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm"
+            >
+              <div class="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <span class="text-gray-400">
+                    نام
+                  </span>
+
+                  <p
+                    dir="ltr"
+                    class="mt-1 font-bold text-gray-800"
+                  >
+                    {{ item.fName || item.firstName || '-' }}
+                  </p>
+                </div>
+
+                <div>
+                  <span class="text-gray-400">
+                    نام خانوادگی
+                  </span>
+
+                  <p
+                    dir="ltr"
+                    class="mt-1 font-bold text-gray-800"
+                  >
+                    {{ item.lName || item.lastName || '-' }}
+                  </p>
+                </div>
+
+                <div>
+                  <span class="text-gray-400">
+                    ملیت
+                  </span>
+
+                  <p class="mt-1 font-bold text-gray-800">
+                    {{ getPreviousPassengerNationalityTitle(item.nationality) }}
+                  </p>
+                </div>
+
+                <div>
+                  <span class="text-gray-400">
+                    جنسیت
+                  </span>
+
+                  <p class="mt-1 font-bold text-gray-800">
+                    {{ getPreviousPassengerGenderTitle(item.gender) }}
+                  </p>
+                </div>
+
+                <div>
+                  <span class="text-gray-400">
+                    کد ملی
+                  </span>
+
+                  <p
+                    dir="ltr"
+                    class="mt-1 font-bold text-gray-800"
+                  >
+                    {{ item.codeMelli || item.nationalCode || '-' }}
+                  </p>
+                </div>
+
+                <div>
+                  <span class="text-gray-400">
+                    تاریخ تولد
+                  </span>
+
+                  <p
+                    dir="ltr"
+                    class="mt-1 font-bold text-gray-800"
+                  >
+                    {{
+                      formatPreviousPassengerBirthDate(
+                        item.birthDate,
+                        normalizePassengerNationality(item.nationality)
+                      )
+                    }}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                class="mt-4 w-full rounded-xl bg-blue-800 py-2.5 text-sm font-bold text-white"
+                @click="selectPreviousPassenger(item)"
+              >
+                انتخاب
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- لیست خالی -->
+        <div
+          v-else
+          class="flex min-h-[250px] flex-col items-center justify-center p-6 text-center"
+        >
+          <i class="bi bi-people mb-4 text-5xl text-gray-300"></i>
+
+          <p class="font-bold text-gray-600">
+            مسافر سابقی برای این کاربر ثبت نشده است.
+          </p>
+        </div>
+      </div>
+    </div>
+  </Transition>
+</Teleport>
   </div>
 </template>
+<style scoped>
+.passenger-modal-enter-active,
+.passenger-modal-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.passenger-modal-enter-active > div,
+.passenger-modal-leave-active > div {
+  transition: transform 0.2s ease;
+}
+
+.passenger-modal-enter-from,
+.passenger-modal-leave-to {
+  opacity: 0;
+}
+
+.passenger-modal-enter-from > div,
+.passenger-modal-leave-to > div {
+  transform: translateY(12px) scale(0.98);
+}
+</style>
