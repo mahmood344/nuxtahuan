@@ -2,7 +2,9 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute } from '#app'
 import moment from 'moment-jalaali'
+import { useFlightStore } from '~/stores/flights'
 
+const flightStore = useFlightStore()
 moment.loadPersian({
   usePersianDigits: false,
   dialect: 'persian-modern'
@@ -225,6 +227,23 @@ function getPreviousPassengerNationalityTitle(value) {
 }
 
 async function openPreviousPassengers(index) {
+  /*
+   * اگر کاربر وارد نشده، به‌جای بازکردن
+   * مودال مسافران سابق، فرم ورود باز شود.
+   */
+  if (!flightStore.isLoggedIn) {
+    previousPassengersModal.value = false
+    selectedPassengerFormIndex.value = null
+
+    flightStore.openModal()
+
+    /*
+     * بعد از ورود موفق، کاربر می‌تواند دوباره
+     * روی انتخاب از مسافران سابق کلیک کند.
+     */
+    return
+  }
+
   selectedPassengerFormIndex.value = index
   previousPassengersModal.value = true
   previousPassengersLoading.value = true
@@ -235,9 +254,14 @@ async function openPreviousPassengers(index) {
     const mobile = getLoggedInMobile()
 
     if (!mobile) {
-      throw new Error(
-        'شماره موبایل کاربر در اطلاعات ورود یافت نشد.'
-      )
+      /*
+       * ممکن است وضعیت Store لاگین باشد ولی
+       * کوکی اطلاعات کاربر هنوز آماده نباشد.
+       */
+      previousPassengersModal.value = false
+      selectedPassengerFormIndex.value = null
+      flightStore.openModal()
+      return
     }
 
     const customerResponse = await $fetch(
@@ -278,15 +302,16 @@ async function openPreviousPassengers(index) {
     const result =
       unwrapApiResponse(passengersResponse)
 
-    const list = Array.isArray(result)
-      ? result
-      : Array.isArray(result?.items)
-        ? result.items
-        : Array.isArray(result?.customerPassengers)
-          ? result.customerPassengers
-          : []
-
-    previousPassengers.value = list
+    previousPassengers.value =
+      Array.isArray(result)
+        ? result
+        : Array.isArray(result?.items)
+          ? result.items
+          : Array.isArray(
+              result?.customerPassengers
+            )
+            ? result.customerPassengers
+            : []
   } catch (error) {
     console.error(
       'Previous passengers error:',

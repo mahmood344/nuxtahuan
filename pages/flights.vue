@@ -1463,7 +1463,20 @@ async function onContinueShopping() {
 
   const contractFlights = mapFlightsToPayload(selectedFlights)
   const contractPassengers = mapPassengersToPayload(passengers, selectedFlights)
+const totalPrice = Number(
+  flightStore.finalBookingPrice || 0
+)
 
+if (
+  !Number.isFinite(totalPrice) ||
+  totalPrice <= 0
+) {
+  alert(
+    'قیمت نهایی قرارداد معتبر نیست.'
+  )
+
+  return
+}
   const payload = {
     id: 0,
     userName: String(contact.phone || contact.mobile || '').trim(),
@@ -1487,6 +1500,7 @@ async function onContinueShopping() {
     tour: false,
     travelVehicle: 'هواپیما',
     visa: false,
+    totalPrice,
     contractFlights,
     contractPassengers
   }

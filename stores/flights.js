@@ -747,7 +747,7 @@ airlineIdMap : {
       userCookie.value = null
       this.userData = null
        this.isUserLoggedIn = false
-      window.location.reload()
+      window.location.replace('/')
     },
     setFlights(flightsList) {
       this.flights = Array.isArray(flightsList) ? flightsList : []
