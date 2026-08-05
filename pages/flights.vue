@@ -1463,9 +1463,50 @@ async function onContinueShopping() {
 
   const contractFlights = mapFlightsToPayload(selectedFlights)
   const contractPassengers = mapPassengersToPayload(passengers, selectedFlights)
-const totalPrice = Number(
-  flightStore.finalBookingPrice || 0
-)
+const departureFlight =
+  flightStore.selectedDepartureFlight ||
+  selectedFlights[0] ||
+  null
+
+const returnFlight =
+  flightStore.selectedReturnFlight ||
+  selectedFlights[1] ||
+  null
+
+const totalPrice =
+  getFinalFlightPrice(
+    departureFlight
+  )
+
+const totalPrice2 =
+  returnFlight
+    ? getFinalFlightPrice(
+        returnFlight
+      )
+    : 0
+
+if (
+  !Number.isFinite(totalPrice) ||
+  totalPrice <= 0
+) {
+  alert(
+    'قیمت نهایی Fare پرواز رفت معتبر نیست.'
+  )
+  return
+}
+
+if (
+  returnFlight &&
+  (
+    !Number.isFinite(totalPrice2) ||
+    totalPrice2 <= 0
+  )
+) {
+  alert(
+    'قیمت نهایی Fare پرواز برگشت معتبر نیست.'
+  )
+  return
+}
 
 if (
   !Number.isFinite(totalPrice) ||
@@ -1500,7 +1541,10 @@ if (
     tour: false,
     travelVehicle: 'هواپیما',
     visa: false,
-    totalPrice,
+     totalPrice,
+
+  // قیمت نهایی Fare پرواز برگشت
+  totalPrice2,
     contractFlights,
     contractPassengers
   }
@@ -1864,7 +1908,29 @@ function formatNiraDate(dateInput) {
 }
 
 
+function getFinalFlightPrice(flight) {
+  if (!flight) return 0
 
+  const pricingItems = Array.isArray(
+    flightStore.selectedFlightsFinalPricing
+  )
+    ? flightStore.selectedFlightsFinalPricing
+    : []
+
+  const pricingItem = pricingItems.find(
+    item =>
+      String(item?.flightId || '') ===
+      String(flight?.id || '')
+  )
+
+  const price = Number(
+    pricingItem?.totalPrice || 0
+  )
+
+  return Number.isFinite(price)
+    ? price
+    : 0
+}
 
 async function checkNiraCredit(selectedFlights) {
   const flights = Array.isArray(selectedFlights)
