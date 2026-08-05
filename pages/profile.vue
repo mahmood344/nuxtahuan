@@ -1328,62 +1328,262 @@
           </section>
 
           <!-- اطلاعات هتل -->
-          <section
-            v-else-if="selectedContract?.hotel"
-            class="mt-7"
+          <!-- اطلاعات هتل و مسافران -->
+<section
+  v-else-if="selectedContract?.hotel"
+  class="mt-7"
+>
+  <h2 class="mb-5 text-lg font-black text-gray-800">
+    اطلاعات هتل
+  </h2>
+
+  <div
+    v-if="selectedContractRoutes.length"
+    class="space-y-4"
+  >
+    <div
+      v-for="route in selectedContractRoutes"
+      :key="route.id"
+      class="grid grid-cols-1 gap-5 rounded-xl bg-white p-5 shadow-[0_4px_20px_rgba(0,0,0,0.08)] sm:grid-cols-2 lg:grid-cols-4"
+    >
+      <div>
+        <p class="text-xs text-gray-400">
+          نام هتل
+        </p>
+
+        <p class="mt-2 font-bold">
+          {{
+            route.hotelName ||
+            route.name ||
+            '-'
+          }}
+        </p>
+      </div>
+
+      <div>
+        <p class="text-xs text-gray-400">
+          اتاق
+        </p>
+
+        <p class="mt-2 font-bold">
+          {{
+            route.roomName ||
+            route.roomType ||
+            '-'
+          }}
+        </p>
+      </div>
+
+      <div>
+        <p class="text-xs text-gray-400">
+          تاریخ ورود
+        </p>
+
+        <p class="mt-2 font-bold">
+          {{
+            formatContractDate(
+              route.checkIn ||
+              route.checkInDate
+            )
+          }}
+        </p>
+      </div>
+
+      <div>
+        <p class="text-xs text-gray-400">
+          تاریخ خروج
+        </p>
+
+        <p class="mt-2 font-bold">
+          {{
+            formatContractDate(
+              route.checkOut ||
+              route.checkOutDate
+            )
+          }}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div
+    v-else
+    class="rounded-xl bg-gray-50 p-7 text-center text-sm text-gray-500"
+  >
+    اطلاعات هتل برای این قرارداد ثبت نشده است.
+  </div>
+
+  <!-- اطلاعات مسافران هتل -->
+  <div class="mt-8">
+    <h2 class="mb-5 text-lg font-black text-gray-800">
+      اطلاعات مسافران
+    </h2>
+
+    <div
+      v-if="selectedContractPassengers.length"
+      class="overflow-x-auto rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.08)]"
+    >
+      <table
+        class="w-full min-w-[900px] border-collapse text-center text-sm"
+      >
+        <thead class="bg-[#d9effd] text-gray-800">
+          <tr>
+            <th class="px-4 py-4">
+              ردیف
+            </th>
+
+            <th class="px-4 py-4">
+              نام
+            </th>
+
+            <th class="px-4 py-4">
+              نام خانوادگی
+            </th>
+
+            <th class="px-4 py-4">
+              بازه سنی
+            </th>
+
+            <th class="px-4 py-4">
+              کد ملی
+            </th>
+
+            <th class="px-4 py-4">
+              شماره پاسپورت
+            </th>
+
+            <th class="px-4 py-4">
+              ملیت
+            </th>
+
+            <th class="px-4 py-4">
+              جنسیت
+            </th>
+
+            <th class="px-4 py-4">
+              تاریخ تولد
+            </th>
+
+            <th class="px-4 py-4">
+              اتاق
+            </th>
+            <th class="px-4 py-4">
+  عملیات
+</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr
+            v-for="(passenger,index) in selectedContractPassengers"
+            :key="passenger.id || index"
+            class="border-b border-gray-100 last:border-b-0"
           >
-            <h2 class="mb-5 text-lg font-black text-gray-800">
-              اطلاعات هتل
-            </h2>
+            <td class="px-4 py-5">
+              {{ toPersianDigits(index+1) }}
+            </td>
 
-            <div class="space-y-4">
-              <div
-                v-for="route in selectedContractRoutes"
-                :key="route.id"
-                class="grid grid-cols-1 gap-5 rounded-xl bg-white p-5 shadow-[0_4px_20px_rgba(0,0,0,0.08)] sm:grid-cols-2 lg:grid-cols-4"
-              >
-                <div>
-                  <p class="text-xs text-gray-400">
-                    نام هتل
-                  </p>
+            <td class="px-4 py-5 font-medium">
+              {{
+                passenger.fName ||
+                passenger.firstName ||
+                '-'
+              }}
+            </td>
 
-                  <p class="mt-2 font-bold">
-                    {{ route.hotelName || '-' }}
-                  </p>
-                </div>
+            <td class="px-4 py-5 font-medium">
+              {{
+                passenger.lName ||
+                passenger.lastName ||
+                '-'
+              }}
+            </td>
 
-                <div>
-                  <p class="text-xs text-gray-400">
-                    اتاق
-                  </p>
+            <td class="px-4 py-5">
+              {{
+                getPassengerTypeTitle(
+                  passenger.age
+                )
+              }}
+            </td>
 
-                  <p class="mt-2 font-bold">
-                    {{ route.roomName || route.roomType || '-' }}
-                  </p>
-                </div>
+            <td
+              dir="ltr"
+              class="px-4 py-5"
+            >
+              {{
+                toPersianDigits(
+                  passenger.codeMelli ||
+                  '-'
+                )
+              }}
+            </td>
 
-                <div>
-                  <p class="text-xs text-gray-400">
-                    تاریخ ورود
-                  </p>
+            <td
+              dir="ltr"
+              class="px-4 py-5"
+            >
+              {{
+                passenger.passportNo ||
+                '-'
+              }}
+            </td>
 
-                  <p class="mt-2 font-bold">
-                    {{ formatContractDate(route.checkIn) }}
-                  </p>
-                </div>
+            <td class="px-4 py-5">
+              {{
+                passenger.nationality ||
+                '-'
+              }}
+            </td>
 
-                <div>
-                  <p class="text-xs text-gray-400">
-                    تاریخ خروج
-                  </p>
+            <td class="px-4 py-5">
+              {{
+                getGenderTitle(
+                  passenger.gender
+                )
+              }}
+            </td>
 
-                  <p class="mt-2 font-bold">
-                    {{ formatContractDate(route.checkOut) }}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </section>
+            <td class="px-4 py-5">
+              {{
+                formatContractDate(
+                  passenger.birthDate
+                )
+              }}
+            </td>
+
+            <td class="px-4 py-5">
+              {{
+                passenger.room ||
+                passenger.roomType ||
+                passenger.hotelRoom?.roomName ||
+                passenger.hotelRoom?.name ||
+                '-'
+              }}
+            </td>
+           <td class="px-4 py-5">
+  <button
+  type="button"
+  class="rounded border border-[#14179e] bg-white px-4 py-2 text-xs font-bold text-[#14179e] hover:bg-blue-50 disabled:opacity-50"
+  :disabled="!passenger?.goTicketUrl"
+  @click="downloadHotelVoucher(passenger)"
+>
+  دانلود واچر هتل
+</button>
+</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div
+      v-else
+      class="rounded-xl bg-gray-50 p-7 text-center text-sm text-gray-500"
+    >
+      مسافری برای این رزرو هتل ثبت نشده است.
+    </div>
+  </div>
+</section>
         </div>
       </div>
     </div>
@@ -2305,7 +2505,27 @@ function parseJsonValue(value){
 
   return result
 }
+function canDownloadHotelVoucher(passenger){
+  return Boolean(
+    passenger?.voucherUrl||
+    passenger?.hotelVoucherUrl||
+    passenger?.voucherFile||
+    selectedContract.value?.voucherUrl
+  )
+}
 
+function downloadHotelVoucher(passenger){
+  const url=passenger?.goTicketUrl
+
+  if(!url){
+    return
+  }
+
+  window.open(
+    url,
+    '_blank'
+  )
+}
 function extractTicketEntries(value){
   const text=String(value||'')
     .replace(/\r?\n/g,' ')
