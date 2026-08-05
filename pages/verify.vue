@@ -699,7 +699,105 @@ const sendContractFlightsSms = async (
 
   return results
 }
+const maskTravelCard=(value:unknown):string=>{
+  const card=String(value||'').trim()
+  return card.length<=4?card:`****${card.slice(-4)}`
+}
 
+const createPaymentSnapshot=(
+  session:PaymentSession
+):FlightProcessDocument['payment']=>({
+  type:session.type,
+  contractTotal:Math.floor(Number(session.totalPrice||0)),
+  bankAmount:Math.floor(Number(session.payableAmount||0)),
+  travelCardUsed:session.travelCardUsed===true,
+  travelCardAmount:Math.floor(Number(session.travelCardAmount||0)),
+  travelCardNumber:maskTravelCard(session.travelCardNumber),
+  recordedAt:new Date().toISOString()
+})
+
+const readFlightDocument=(
+  flight:any,
+  session:PaymentSession
+):FlightProcessDocument=>{
+  try{
+    const parsed=JSON.parse(String(flight?.flightJson||''))
+
+    if(
+      parsed&&
+      !Array.isArray(parsed)&&
+      parsed.version===1&&
+      parsed.issue
+    ){
+      return{
+        ...parsed,
+        payment:parsed.payment||createPaymentSnapshot(session)
+      }
+    }
+
+    /*
+     * سازگاری با flightJson قدیمی:
+     * [{"Tickets":"..."}]
+     */
+    if(Array.isArray(parsed)){
+      const ticketNumbers=parsed
+        .map((x:any)=>String(x?.Tickets||'').trim())
+        .filter(Boolean)
+
+      return{
+        version:1,
+        payment:createPaymentSnapshot(session),
+        issue:{
+          provider:String(flight?.flightSupplier||'').trim().toUpperCase(),
+          status:ticketNumbers.length?'success':'pending',
+          pnr:String(flight?.pnr||'').trim(),
+          ticketNumbers,
+          message:'',
+          response:parsed,
+          attemptedAt:new Date().toISOString()
+        },
+        updatedAt:new Date().toISOString()
+      }
+    }
+  }catch{}
+
+  return{
+    version:1,
+    payment:createPaymentSnapshot(session),
+    issue:{
+      provider:String(flight?.flightSupplier||'').trim().toUpperCase(),
+      status:'pending',
+      pnr:String(flight?.pnr||'').trim(),
+      ticketNumbers:[],
+      message:'',
+      response:null,
+      attemptedAt:new Date().toISOString()
+    },
+    updatedAt:new Date().toISOString()
+  }
+}
+
+const writeFlightDocument=(
+  flight:any,
+  document:FlightProcessDocument
+)=>{
+  document.updatedAt=new Date().toISOString()
+  flight.flightJson=JSON.stringify(document)
+}
+const applyPaymentToFlightJson=(
+  contract:any,
+  session:PaymentSession
+)=>{
+  const flights=Array.isArray(contract?.contractFlights)
+    ?contract.contractFlights
+    :[]
+
+  for(const flight of flights){
+    const document=readFlightDocument(flight,session)
+    document.payment=createPaymentSnapshot(session)
+    writeFlightDocument(flight,document)
+  }
+}
 const issueContractBySupplier = async (contract: any) => {
   const contractId = Number(contract?.id || 0)
 
@@ -1012,12 +1110,49 @@ const issueContractBySupplier = async (contract: any) => {
         continue
       }
 
-      flight.flightJson =
-        JSON.stringify(
-          flightIssueResult.success
-            ? flightIssueResult.tickets
-            : []
-        )
+    if(!session){
+  throw new Error(
+    'اطلاعات پرداخت برای ثبت نتیجه صدور یافت نشد.'
+  )
+}
+
+const document=readFlightDocument(
+  flight,
+  session
+)
+
+document.issue={
+  provider:String(
+    flight?.flightSupplier||'NIRA'
+  ).trim().toUpperCase(),
+  status:flightIssueResult.success
+    ?'success'
+    :'failed',
+  pnr:String(
+    flightIssueResult.pnr||
+    flight?.pnr||
+    ''
+  ).trim(),
+  ticketNumbers:Array.isArray(
+    flightIssueResult.tickets
+  )
+    ?flightIssueResult.tickets
+      .map((x:any)=>
+        String(x?.Tickets||'').trim()
+      )
+      .filter(Boolean)
+    :[],
+  message:String(
+    flightIssueResult.message||''
+  ).trim(),
+  response:flightIssueResult.raw,
+  attemptedAt:new Date().toISOString()
+}
+
+writeFlightDocument(
+  flight,
+  document
+)
     }
 
     /*
@@ -1124,32 +1259,15 @@ const issueContractBySupplier = async (contract: any) => {
      *   updatedContract: { ... }
      * }
      */
-    const updateResponse =
-      await $fetch<any>(
-        'https://api.ahuan.ir/api/Contract/update',
-        {
-          method: 'PUT',
-          body: contract
-        }
-      )
+    
 
-    return {
-      success:
-        allFlightsIssued,
-
-      ticketStatus:
-        finalStatus,
-
-      confirmStatus:
-        finalStatus,
-
-      issueResults,
-
-      contract:
-        updateResponse?.data ||
-        updateResponse ||
-        contract
-    }
+    return{
+  success:allFlightsIssued,
+  ticketStatus:finalStatus,
+  confirmStatus:finalStatus,
+  issueResults,
+  contract
+}
   }
 
   /*
@@ -1240,406 +1358,1170 @@ type SafarCardUpdateResult = {
   error: string
 }
 
-const updateSafarCardAfterIssue = async (
-  session: PaymentSession,
-  contract: any
-): Promise<SafarCardUpdateResult> => {
-  const travelCardUsed =
-    session?.travelCardUsed === true
-
-  const cardNumber = String(
-    session?.travelCardNumber || ''
+const updateSafarCardAfterIssue=async(
+  session:PaymentSession,
+  contract:any,
+  amountToUse:number
+):Promise<SafarCardUpdateResult>=>{
+  const cardNumber=String(
+    session?.travelCardNumber||''
   ).trim()
 
-  const amount = Number(
-    session?.travelCardAmount || 0
+  const amount=Math.floor(
+    Number(amountToUse||0)
   )
 
-  /*
-   * اگر کاربر سفرکارت استفاده نکرده باشد،
-   * اصلاً درخواست ارسال نمی‌شود.
-   */
-  if (
-    !travelCardUsed ||
-    !cardNumber ||
-    !Number.isFinite(amount) ||
-    amount <= 0
-  ) {
-    return {
-      attempted: false,
-      success: true,
-      response: null,
-      error: ''
+  if(
+    session?.travelCardUsed!==true||
+    !cardNumber||
+    !Number.isFinite(amount)||
+    amount<=0
+  ){
+    return{
+      attempted:false,
+      success:true,
+      response:null,
+      error:''
     }
   }
 
-  const contractId = Number(
-    contract?.id ||
-    session?.contractId ||
+  const contractId=Number(
+    contract?.id||
+    session?.contractId||
     0
   )
 
-  const description =
-    contractId > 0
-      ? `کسر اعتبار سفرکارت بابت قرارداد شماره ${contractId}`
-      : 'کسر اعتبار سفرکارت بابت خرید بلیت'
-
-  try {
-    const response = await $fetch<any>(
+  try{
+    const response=await $fetch<any>(
       'https://api.ahuan.ir/api/SafarCard/update',
       {
-        method: 'PUT',
-        body: {
+        method:'PUT',
+        body:{
           cardNumber,
           amount,
-          description
+          description:
+            `کسر اعتبار سفرکارت بابت بخش صادرشده قرارداد شماره ${contractId}`
         },
-        headers: {
-          'Content-Type': 'application/json'
+        headers:{
+          'Content-Type':'application/json'
         }
       }
     )
 
-    /*
-     * پاسخ ممکن است true، false،
-     * یا داخل data باشد.
-     */
-    const success =
-      response === true ||
-      response?.data === true ||
-      response?.success === true
+    const success=
+      response===true||
+      response?.data===true||
+      response?.success===true
 
-    if (!success) {
-      console.error(
-        'SafarCard update returned false:',
-        {
-          contractId,
-          cardNumber,
-          amount,
-          response
-        }
-      )
-    }
-
-    return {
-      attempted: true,
+    return{
+      attempted:true,
       success,
       response,
-      error: success
-        ? ''
-        : 'سرویس سفرکارت عملیات کسر اعتبار را ناموفق اعلام کرد.'
+      error:success
+        ?''
+        :'سرویس سفرکارت عملیات کسر اعتبار را ناموفق اعلام کرد.'
     }
-  } catch (error: any) {
-    /*
-     * خطای سفرکارت نباید Flow صدور را متوقف کند.
-     */
-    const errorMessage =
-      error?.data?.message ||
-      error?.data?.title ||
-      error?.message ||
-      'خطا در بروزرسانی اعتبار سفرکارت'
-
-    console.error(
-      'SafarCard update error:',
-      {
-        contractId,
-        cardNumber,
-        amount,
-        error:
-          error?.data || error
-      }
-    )
-
-    return {
-      attempted: true,
-      success: false,
-      response:
-        error?.data || null,
+  }catch(error:any){
+    return{
+      attempted:true,
+      success:false,
+      response:error?.data||null,
       error:
-        errorMessage
+        error?.data?.message||
+        error?.data?.title||
+        error?.message||
+        'خطا در کسر اعتبار سفرکارت'
     }
   }
 }
-const processVerify = async () => {
-  loading.value = true
-  errorMessage.value = ''
-  statusStep.value = 'PENDING'
+type BankPaymentDetails={
+  amount:number
+  rrn:string
+  traceNo:string
+  paymentId:string
+  token:string
+}
 
-  try {
-    const session = getPaymentSession()
+type PaymentSettlement={
+  contractTotal:number
+  successfulAmount:number
+  failedAmount:number
+  bankPaid:number
+  travelCardPaid:number
+  bankUsed:number
+  travelCardUsed:number
+  bankRefund:number
+  travelCardUnused:number
+}
 
-    if (!session) {
-      statusStep.value = 'BANK_FAILED'
+type RefundResult={
+  attempted:boolean
+  success:boolean
+  amount:number
+  response:any
+  error:string
+}
+type ProcessStatus='not-required'|'pending'|'success'|'failed'|'unknown'
+
+type FlightProcessDocument={
+  version:1
+  payment:{
+    type:PaymentType
+    contractTotal:number
+    bankAmount:number
+    travelCardUsed:boolean
+    travelCardAmount:number
+    travelCardNumber:string
+    recordedAt:string
+  }
+  issue:{
+    provider:string
+    status:'pending'|'success'|'failed'|'unknown'
+    pnr:string
+    ticketNumbers:string[]
+    message:string
+    response:any
+    attemptedAt:string
+  }
+  refund?:{
+    status:ProcessStatus
+    amount:number
+    response:any
+    error:string
+    attemptedAt:string
+  }
+  safarCard?:{
+    status:ProcessStatus
+    deductedAmount:number
+    response:any
+    error:string
+    attemptedAt:string
+  }
+  updatedAt:string
+}
+
+type ContractSaveResult={
+  success:boolean
+  contract:any
+  error:string
+  step:string
+}
+const getBankPaymentDetails=(
+  session:PaymentSession
+):BankPaymentDetails=>{
+  return{
+    amount:Math.floor(
+      Number(
+        route.query.amount||
+        session?.payableAmount||
+        0
+      )
+    ),
+
+    rrn:String(
+      route.query.rrn||
+      route.query.retrievalReferenceNumber||
+      ''
+    ).trim(),
+
+    traceNo:String(
+      route.query.traceNo||
+      route.query.systemTraceAuditNumber||
+      ''
+    ).trim(),
+
+    paymentId:String(
+      route.query.paymentId||
+      ''
+    ).trim(),
+
+    token:String(
+      route.query.token||
+      ''
+    ).trim()
+  }
+}
+const updateContract=async(
+  contract:any
+):Promise<any>=>{
+  contract.reduceFlightLoad=null
+  contract.reduceHotelLoad=null
+
+  const response=await $fetch<any>(
+    'https://api.ahuan.ir/api/Contract/update',
+    {
+      method:'PUT',
+      body:contract,
+      headers:{
+        'Content-Type':'application/json'
+      }
+    }
+  )
+
+  if(response?.success===false||response?.error){
+    throw new Error(
+      response?.message||
+      'ذخیره اطلاعات قرارداد ناموفق بود.'
+    )
+  }
+
+  return response?.data||response||contract
+}
+const failedSaveSteps=ref<string[]>([])
+
+const trySaveContractStep=async(
+  contract:any,
+  step:string
+):Promise<ContractSaveResult>=>{
+  try{
+    const updatedContract=await updateContract(contract)
+
+    return{
+      success:true,
+      contract:updatedContract,
+      error:'',
+      step
+    }
+  }catch(error:any){
+    const message=
+      error?.data?.message||
+      error?.data?.title||
+      error?.message||
+      'خطا در ذخیره قرارداد'
+
+    if(!failedSaveSteps.value.includes(step)){
+      failedSaveSteps.value.push(step)
+    }
+
+    console.error(
+      `Contract update failed at ${step}:`,
+      error
+    )
+
+    /*
+     * همان contract تغییرکرده برمی‌گردد؛
+     * اطلاعات روی حافظه باقی می‌ماند.
+     */
+    return{
+      success:false,
+      contract,
+      error:message,
+      step
+    }
+  }
+}
+const verifyAndApplyBankPayment=async(
+  session:PaymentSession,
+  contract:any
+):Promise<any>=>{
+  const bankCode=String(
+    route.query.code||''
+  ).trim()
+
+  if(bankCode==='17'){
+    statusStep.value='BANK_FAILED'
+
+    throw new Error(
+      'عملیات پرداخت به‌علت انصراف از خرید لغو شد.'
+    )
+  }
+
+  if(bankCode!=='00'){
+    statusStep.value='BANK_FAILED'
+
+    throw new Error(
+      'عملیات پرداخت توسط بانک موفق اعلام نشد.'
+    )
+  }
+
+  const bank=
+    getBankPaymentDetails(
+      session
+    )
+
+  if(
+    !bank.rrn||
+    !bank.traceNo||
+    !bank.token||
+    !bank.paymentId
+  ){
+    statusStep.value='BANK_FAILED'
+
+    throw new Error(
+      'پارامترهای بازگشتی بانک کامل نیست.'
+    )
+  }
+
+  let verifyResponse:any
+
+  try{
+    verifyResponse=
+      await verifyBank({
+        systemTraceAuditNumber:
+          bank.traceNo,
+
+        retrievalReferenceNumber:
+          bank.rrn,
+
+        token:
+          bank.token
+      })
+  }catch{
+    statusStep.value='BANK_FAILED'
+
+    throw new Error(
+      'خطا در ارتباط با سرور برای تأیید تراکنش بانکی.'
+    )
+  }
+
+  const verified=
+    verifyResponse===true||
+    verifyResponse?.data===true||
+    verifyResponse?.success===true||
+    verifyResponse?.verified===true
+
+  if(!verified){
+    statusStep.value='BANK_FAILED'
+
+    throw new Error(
+      'تراکنش بانکی توسط بانک تأیید نشد.'
+    )
+  }
+
+  /*
+   * ساختار موردنظر:
+   * amount-rrn-traceNo-paymentId
+   */
+  contract.paymentId=[
+  bank.amount,
+  bank.rrn,
+  bank.traceNo,
+  bank.paymentId
+].join('-')
+
+applyPaymentToFlightJson(
+  contract,
+  session
+)
+
+return contract
+}
+const calculatePaymentSettlement=(
+  session:PaymentSession,
+  contract:any,
+  issueResults:any[]
+):PaymentSettlement=>{
+  const flights=Array.isArray(
+    contract?.contractFlights
+  )
+    ?contract.contractFlights
+    :[]
+
+  const departurePrice=Math.max(
+    Number(contract?.totalPrice||0),
+    0
+  )
+
+  const returnPrice=Math.max(
+    Number(contract?.totalPrice2||0),
+    0
+  )
+
+  const contractTotal=
+    departurePrice+
+    returnPrice
+
+  if(
+    !flights.length||
+    contractTotal<=0
+  ){
+    throw new Error(
+      'قیمت یا اطلاعات پروازهای قرارداد معتبر نیست.'
+    )
+  }
+
+  let successfulAmount=0
+
+  flights.forEach(
+    (flight:any,index:number)=>{
+      const price=
+        index===0
+          ?departurePrice
+          :returnPrice
+
+      const result=
+        issueResults.find(
+          (item:any)=>
+            String(item?.flightId)===
+            String(flight?.id)
+        )
+
+      if(result?.success===true){
+        successfulAmount+=price
+      }
+    }
+  )
+
+  successfulAmount=Math.min(
+    successfulAmount,
+    contractTotal
+  )
+
+  const failedAmount=
+    contractTotal-
+    successfulAmount
+
+  if(session.type==='agency'){
+    return{
+      contractTotal,
+      successfulAmount,
+      failedAmount,
+      bankPaid:0,
+      travelCardPaid:0,
+      bankUsed:0,
+      travelCardUsed:0,
+      bankRefund:0,
+      travelCardUnused:0
+    }
+  }
+
+  const travelCardPaid=
+    session.travelCardUsed
+      ?Math.min(
+          Math.max(
+            Number(
+              session.travelCardAmount||0
+            ),
+            0
+          ),
+          contractTotal
+        )
+      :0
+
+  const bankPaid=Math.min(
+    Math.max(
+      Number(
+        session.payableAmount||0
+      ),
+      0
+    ),
+    contractTotal-travelCardPaid
+  )
+
+  /*
+   * پرداخت فقط سفرکارت
+   */
+  if(
+    session.type==='travelcard'||
+    bankPaid===0
+  ){
+    const travelCardUsed=Math.min(
+      successfulAmount,
+      travelCardPaid
+    )
+
+    return{
+      contractTotal,
+      successfulAmount,
+      failedAmount,
+      bankPaid:0,
+      travelCardPaid,
+      bankUsed:0,
+      travelCardUsed,
+      bankRefund:0,
+      travelCardUnused:
+        travelCardPaid-
+        travelCardUsed
+    }
+  }
+
+  /*
+   * پرداخت فقط درگاه
+   */
+  if(
+    session.type==='gateway'||
+    travelCardPaid===0
+  ){
+    const bankUsed=Math.min(
+      successfulAmount,
+      bankPaid
+    )
+
+    return{
+      contractTotal,
+      successfulAmount,
+      failedAmount,
+      bankPaid,
+      travelCardPaid:0,
+      bankUsed,
+      travelCardUsed:0,
+      bankRefund:
+        bankPaid-bankUsed,
+      travelCardUnused:0
+    }
+  }
+
+  /*
+   * پرداخت ترکیبی:
+   * تقسیم متناسب بین درگاه و سفرکارت
+   */
+  const bankRatio=
+    bankPaid/contractTotal
+
+  let bankUsed=Math.round(
+    successfulAmount*
+    bankRatio
+  )
+
+  bankUsed=Math.min(
+    bankUsed,
+    bankPaid,
+    successfulAmount
+  )
+
+  const travelCardUsed=Math.min(
+    successfulAmount-bankUsed,
+    travelCardPaid
+  )
+
+  return{
+    contractTotal,
+    successfulAmount,
+    failedAmount,
+    bankPaid,
+    travelCardPaid,
+    bankUsed,
+    travelCardUsed,
+    bankRefund:Math.max(
+      bankPaid-bankUsed,
+      0
+    ),
+    travelCardUnused:Math.max(
+      travelCardPaid-
+      travelCardUsed,
+      0
+    )
+  }
+}
+const getFailedFlightIds=(
+  issueResults:any[]
+):Set<string>=>{
+  return new Set(
+    issueResults
+      .filter(x=>x?.success!==true)
+      .map(x=>String(x?.flightId))
+  )
+}
+
+const markRefundPending=(
+  contract:any,
+  session:PaymentSession,
+  issueResults:any[],
+  amount:number
+)=>{
+  const failedIds=getFailedFlightIds(issueResults)
+
+  for(const flight of contract?.contractFlights||[]){
+    if(!failedIds.has(String(flight?.id)))continue
+
+    const document=readFlightDocument(flight,session)
+
+    document.refund={
+      status:'pending',
+      amount:Math.floor(Number(amount||0)),
+      response:null,
+      error:'',
+      attemptedAt:new Date().toISOString()
+    }
+
+    writeFlightDocument(flight,document)
+  }
+}
+
+const applyRefundResultToFlightJson=(
+  contract:any,
+  session:PaymentSession,
+  issueResults:any[],
+  result:RefundResult
+)=>{
+  const failedIds=getFailedFlightIds(issueResults)
+
+  for(const flight of contract?.contractFlights||[]){
+    if(!failedIds.has(String(flight?.id)))continue
+
+    const document=readFlightDocument(flight,session)
+
+    document.refund={
+      status:result.attempted
+        ?result.success
+          ?'success'
+          :'failed'
+        :'not-required',
+      amount:result.amount,
+      response:result.response,
+      error:result.error,
+      attemptedAt:new Date().toISOString()
+    }
+
+    writeFlightDocument(flight,document)
+  }
+}
+const applySafarCardResultToFlightJson=(
+  contract:any,
+  session:PaymentSession,
+  issueResults:any[],
+  result:SafarCardUpdateResult,
+  deductedAmount:number
+)=>{
+  const successfulIds=new Set(
+    issueResults
+      .filter(x=>x?.success===true)
+      .map(x=>String(x?.flightId))
+  )
+
+  for(const flight of contract?.contractFlights||[]){
+    if(!successfulIds.has(String(flight?.id)))continue
+
+    const document=readFlightDocument(flight,session)
+
+    document.safarCard={
+      status:result.attempted
+        ?result.success
+          ?'success'
+          :'failed'
+        :'not-required',
+      deductedAmount:Math.floor(
+        Number(deductedAmount||0)
+      ),
+      response:result.response,
+      error:result.error,
+      attemptedAt:new Date().toISOString()
+    }
+
+    writeFlightDocument(flight,document)
+  }
+}
+const refundBankPayment=async(
+  contract:any,
+  amount:number
+):Promise<RefundResult>=>{
+  const paymentId=String(
+    contract?.paymentId||''
+  ).trim()
+
+ const[
+  amountPart,
+  rrnPart,
+  traceNoPart,
+  ...requestIdParts
+]=paymentId.split('-')
+
+const originalAmount=Number(
+  amountPart||0
+)
+
+const rrn=String(
+  rrnPart||''
+).trim()
+
+const traceNo=String(
+  traceNoPart||''
+).trim()
+
+const requestId=requestIdParts
+  .join('-')
+  .trim()
+
+  const refundAmount=Math.floor(
+    Number(amount||0)
+  )
+
+  if(refundAmount<=0){
+    return{
+      attempted:false,
+      success:true,
+      amount:0,
+      response:null,
+      error:''
+    }
+  }
+
+  if(
+    !rrn||
+    !traceNo||
+    !requestId
+  ){
+    return{
+      attempted:true,
+      success:false,
+      amount:refundAmount,
+      response:null,
+      error:
+        'اطلاعات تراکنش بانکی برای استرداد کامل نیست.'
+    }
+  }
+
+  if(
+    originalAmount>0&&
+    refundAmount>originalAmount
+  ){
+    return{
+      attempted:true,
+      success:false,
+      amount:refundAmount,
+      response:null,
+      error:
+        'مبلغ استرداد بیشتر از مبلغ پرداخت‌شده است.'
+    }
+  }
+
+  try{
+    const response=await $fetch<any>(
+      'REFUND_API_URL',
+      {
+        method:'POST',
+        body:{
+          rrn,
+          amount:refundAmount,
+          stan:traceNo,
+          terminal:'08102574',
+          acceptor:'992180008102574',
+          requestId,
+          isSettled:false,
+          checkdate:''
+        },
+        headers:{
+          'Content-Type':'application/json'
+        }
+      }
+    )
+
+    const success=
+      response===true||
+      response?.data===true||
+      response?.success===true
+
+    return{
+      attempted:true,
+      success,
+      amount:refundAmount,
+      response,
+      error:success
+        ?''
+        :response?.message||
+          'استرداد بانکی ناموفق بود.'
+    }
+  }catch(error:any){
+    return{
+      attempted:true,
+      success:false,
+      amount:refundAmount,
+      response:error?.data||null,
+      error:
+        error?.data?.message||
+        error?.message||
+        'خطا در استرداد وجه'
+    }
+  }
+}
+const processVerify=async()=>{
+  loading.value=true
+  errorMessage.value=''
+  statusStep.value='PENDING'
+
+  try{
+    const session=
+      getPaymentSession()
+
+    if(!session){
+      statusStep.value='BANK_FAILED'
+
       throw new Error(
         'اطلاعات پرداخت در مرورگر یافت نشد.'
       )
     }
 
-    paymentInfo.value = session
+    paymentInfo.value=session
 
-    const contractId = Number(
-      route.query.responseData ||
+    const contractId=Number(
+      route.query.responseData||
       session.contractId
     )
 
-    if (
-      !Number.isFinite(contractId) ||
-      contractId <= 0
-    ) {
-      statusStep.value = 'BANK_FAILED'
+    if(
+      !Number.isFinite(contractId)||
+      contractId<=0
+    ){
+      statusStep.value='BANK_FAILED'
 
       throw new Error(
         'شناسه قرارداد معتبر نیست.'
       )
     }
 
-    /*
-     * دریافت قرارداد از:
-     * GET /api/Contract/{contractId}
-     */
-    contractData.value =
+    contractData.value=
       await fetchContractDetails(
         contractId
       )
 
-    const type = session.type
-
     /*
-     * اعتبارسنجی پرداخت بانکی
+     * فقط پرداخت‌هایی که درگاه دارند
+     * باید Verify شوند.
      */
-    if (
-      type === 'gateway' ||
-      type === 'travelcard-gateway'
-    ) {
-      const systemTraceAuditNumber =
-        String(
-          route.query
-            .systemTraceAuditNumber ||
-          route.query.traceNo ||
-          ''
-        )
-
-      const retrievalReferenceNumber =
-        String(
-          route.query
-            .retrievalReferenceNumber ||
-          route.query.rrn ||
-          ''
-        )
-
-      const token = String(
-        route.query.token || ''
-      )
-
-      if (
-        !systemTraceAuditNumber ||
-        !retrievalReferenceNumber ||
-        !token
-      ) {
-        statusStep.value =
-          'BANK_FAILED'
-
-        throw new Error(
-          'پارامترهای اعتبارسنجی بازگشت از بانک کامل نیست.'
-        )
-      }
-
-      let isVerified = true
-
-    
-      try {
-        const verifyResponse =
-          await verifyBank({
-            systemTraceAuditNumber,
-            retrievalReferenceNumber,
-            token
-          })
-
-        isVerified =
-          verifyResponse === true ||
-          verifyResponse?.data === true ||
-          verifyResponse?.success === true ||
-          verifyResponse?.verified === true
-      } catch {
-        statusStep.value =
-          'BANK_FAILED'
-
-        throw new Error(
-          'خطا در ارتباط با سرور برای تاییدیه تراکنش بانکی.'
-        )
-      }
-      
-
-      if (!isVerified) {
-        statusStep.value =
-          'BANK_FAILED'
-
-        throw new Error(
-          'تراکنش بانکی توسط بانک تایید نگردید.'
-        )
-      }
-    }
-
-    /*
-     * صدور تمام پروازهای قرارداد
-     */
-    const issueResult =
-      await issueContractBySupplier(
-        contractData.value
-      )
-
-    /*
-     * issueContractBySupplier باید:
-     *
-     * 1. برای هر پرواز NIRA یک Issue بزند.
-     * 2. flightJson همان پرواز را مقداردهی کند.
-     * 3. ticketStatus را confirm یا incomplete کند.
-     * 4. قرارداد را یک بار Update کند.
-     * 5. این نتیجه را برگرداند:
-     *
-     * {
-     *   success: boolean,
-     *   ticketStatus: string,
-     *   issueResults: []
-     * }
-     */
-
-    /*
-     * خروجی Update همان نسخه نهایی قرارداد است؛
-     * بنابراین GET مجدد قرارداد انجام نمی‌شود.
-     */
-    contractData.value =
-      issueResult?.contract ||
-      contractData.value
-
-    /*
-     * ارسال پیامک بعد از Issue و Update.
-     * برای هر پرواز، مستقل از نوع ایرلاین،
-     * یک پیام موفق یا ناموفق ارسال می‌شود.
-     */
-
-
-/*
- * کسر مبلغ سفرکارت بعد از Issue و Update.
- *
- * اگر پاسخ false باشد یا درخواست خطا بدهد،
- * فرآیند صدور و صفحه Verify متوقف نمی‌شود.
- */
-const safarCardResult =
-  await updateSafarCardAfterIssue(
+    if(
+      session.type==='gateway'||
+      session.type==='travelcard-gateway'
+    ){
+     contractData.value=
+  await verifyAndApplyBankPayment(
     session,
     contractData.value
   )
 
-console.log(
-  'SafarCard update result:',
+const verifySave=
+  await trySaveContractStep(
+    contractData.value,
+    'bank-verify'
+  )
+
+contractData.value=
+  verifySave.contract
+    }
+
+    /*
+     * آژانسی و سفرکارت مستقیم
+     * بدون Verify وارد Issue می‌شوند.
+     */
+    const issueResult=
+      await issueContractBySupplier(
+        contractData.value
+      )
+
+    contractData.value=
+      issueResult?.contract||
+      contractData.value
+const issueSave=
+  await trySaveContractStep(
+    contractData.value,
+    'flight-issue'
+  )
+
+contractData.value=
+  issueSave.contract
+    const issueResults=
+      Array.isArray(
+        issueResult?.issueResults
+      )
+        ?issueResult.issueResults
+        :[]
+
+    const settlement=
+      calculatePaymentSettlement(
+        session,
+        contractData.value,
+        issueResults
+      )
+
+    console.log(
+      'Payment settlement:',
+      settlement
+    )
+
+    let safarCardResult:
+      SafarCardUpdateResult|null=null
+
+    let refundResult:
+      RefundResult|null=null
+
+    /*
+     * عملیات مالی براساس نوع پرداخت
+     */
+    switch(session.type){
+      case'agency':
+        /*
+         * بدون Verify، سفرکارت و Refund
+         */
+        break
+
+      case'travelcard':
+  safarCardResult=
+    await updateSafarCardAfterIssue(
+      session,
+      contractData.value,
+      settlement.travelCardUsed
+    )
+
+  applySafarCardResultToFlightJson(
+    contractData.value,
+    session,
+    issueResults,
+    safarCardResult,
+    settlement.travelCardUsed
+  )
+
+  {
+    const save=await trySaveContractStep(
+      contractData.value,
+      'safar-card'
+    )
+
+    contractData.value=save.contract
+  }
+  break
+
+     case'travelcard-gateway':
+  safarCardResult=
+    await updateSafarCardAfterIssue(
+      session,
+      contractData.value,
+      settlement.travelCardUsed
+    )
+
+  applySafarCardResultToFlightJson(
+    contractData.value,
+    session,
+    issueResults,
+    safarCardResult,
+    settlement.travelCardUsed
+  )
+
+  {
+    const save=await trySaveContractStep(
+      contractData.value,
+      'safar-card'
+    )
+
+    contractData.value=save.contract
+  }
+
+  if(settlement.bankRefund>0){
+    markRefundPending(
+      contractData.value,
+      session,
+      issueResults,
+      settlement.bankRefund
+    )
+
+    {
+      const save=await trySaveContractStep(
+        contractData.value,
+        'refund-pending'
+      )
+
+      contractData.value=save.contract
+    }
+
+    refundResult=
+      await refundBankPayment(
+        contractData.value,
+        settlement.bankRefund
+      )
+
+    applyRefundResultToFlightJson(
+      contractData.value,
+      session,
+      issueResults,
+      refundResult
+    )
+
+    {
+      const save=await trySaveContractStep(
+        contractData.value,
+        'refund-result'
+      )
+
+      contractData.value=save.contract
+    }
+  }
+  break
+
+      case'gateway':
+  if(settlement.bankRefund>0){
+    markRefundPending(
+      contractData.value,
+      session,
+      issueResults,
+      settlement.bankRefund
+    )
+
+    {
+      const save=await trySaveContractStep(
+        contractData.value,
+        'refund-pending'
+      )
+
+      contractData.value=save.contract
+    }
+
+    refundResult=
+      await refundBankPayment(
+        contractData.value,
+        settlement.bankRefund
+      )
+
+    applyRefundResultToFlightJson(
+      contractData.value,
+      session,
+      issueResults,
+      refundResult
+    )
+
+    {
+      const save=await trySaveContractStep(
+        contractData.value,
+        'refund-result'
+      )
+
+      contractData.value=save.contract
+    }
+  }
+  break
+    }
+const finalSave=
+  await trySaveContractStep(
+    contractData.value,
+    'final'
+  )
+
+contractData.value=
+  finalSave.contract
+
+if(!finalSave.success){
+  statusStep.value='ISSUE_FAILED'
+
+  throw new Error(
+    'عملیات انجام شد اما ثبت نهایی اطلاعات قرارداد ناموفق بود. لطفاً عملیات پرداخت یا صدور را مجدداً اجرا نکنید و با پشتیبانی تماس بگیرید.'
+  )
+}
+
+failedSaveSteps.value=[]
+   console.log(
+  'SafarCard result:',
   safarCardResult
 )
 
+console.log(
+  'Refund result:',
+  refundResult
+)
+
+/*
+ * ذخیره نهایی تمام اطلاعات انباشته‌شده
+ */
 
 
-
-    let smsResults: FlightSmsResult[] = []
-
-    try {
-      smsResults =
-        await sendContractFlightsSms(
-          contractData.value,
-          Array.isArray(issueResult?.issueResults)
-            ? issueResult.issueResults
-            : []
-        )
-    } catch (smsError) {
-      /*
-       * خطای ارسال پیامک نباید نتیجه صدور بلیت
-       * یا پرداخت موفق را ناموفق نمایش دهد.
-       */
-      console.error(
-        'Error sending contract SMS:',
-        smsError
-      )
-    }
-
-    console.log(
-      'SMS results:',
-      JSON.stringify(smsResults, null, 2)
-    )
+/*
+ * پیامک هر پرواز مستقل ارسال می‌شود.
+ */
+try{
+  await sendContractFlightsSms(
+    contractData.value,
+    issueResults
+  )
+}catch(smsError){
+  console.error(
+    'Error sending contract SMS:',
+    smsError
+  )
+}
 
     /*
-     * اگر یک یا چند پرواز Issue نشده باشند.
+     * صدور ناقص یا کاملاً ناموفق
      */
-    if (!issueResult?.success) {
-      statusStep.value =
-        'ISSUE_FAILED'
+    if(!issueResult?.success){
+      statusStep.value='ISSUE_FAILED'
 
-      const issueResults =
-        Array.isArray(
-          issueResult?.issueResults
-        )
-          ? issueResult.issueResults
-          : []
-
-      const failedFlights =
+      const failedFlights=
         issueResults
           .filter(
-            (item: any) =>
-              item?.success !== true
+            (item:any)=>
+              item?.success!==true
           )
-          .map((item: any) => {
-            const flightNumber =
+          .map(
+            (item:any)=>
               String(
-                item?.flightNumber || ''
+                item?.flightNumber||
+                item?.pnr||
+                ''
               ).trim()
-
-            const pnr =
-              String(
-                item?.pnr || ''
-              ).trim()
-
-            if (
-              flightNumber &&
-              pnr
-            ) {
-              return `${flightNumber} با PNR ${pnr}`
-            }
-
-            return (
-              flightNumber ||
-              pnr ||
-              ''
-            )
-          })
+          )
           .filter(Boolean)
           .join('، ')
 
+      if(
+        refundResult?.attempted&&
+        !refundResult.success
+      ){
+        throw new Error(
+          `صدور ${failedFlights||'یک یا چند پرواز'} ناموفق بود و استرداد بانکی نیز با خطا مواجه شد: ${refundResult.error}`
+        )
+      }
+
+      if(
+        safarCardResult?.attempted&&
+        !safarCardResult.success
+      ){
+        throw new Error(
+          `صدور ${failedFlights||'یک یا چند پرواز'} ناموفق بود و کسر سهم سفرکارت بخش موفق نیز با خطا مواجه شد: ${safarCardResult.error}`
+        )
+      }
+
+      const messages:string[]=[
+        `صدور ${failedFlights||'یک یا چند پرواز'} ناموفق بود.`
+      ]
+
+      if(refundResult?.amount){
+        messages.push(
+          `مبلغ ${formatPrice(refundResult.amount)} ریال برای استرداد بانکی ارسال شد.`
+        )
+      }
+
+      if(settlement.travelCardUsed>0){
+        messages.push(
+          `مبلغ ${formatPrice(settlement.travelCardUsed)} ریال از سفرکارت بابت پرواز صادرشده کسر شد.`
+        )
+      }
+
+      if(
+        session.type==='travelcard'&&
+        settlement.successfulAmount===0
+      ){
+        messages.push(
+          'هیچ مبلغی از سفرکارت کسر نشد.'
+        )
+      }
+
       throw new Error(
-        failedFlights
-          ? `صدور پرواز ${failedFlights} ناموفق بود. وضعیت قرارداد incomplete ثبت شد.`
-          : 'صدور یک یا چند پرواز ناموفق بود. وضعیت قرارداد incomplete ثبت شد.'
+        messages.join(' ')
       )
     }
 
     /*
-     * تمام پروازها Issue شده‌اند و
-     * ticketStatus برابر confirm شده است.
+     * همه پروازها موفق
      */
-    statusStep.value = 'SUCCESS'
-  } catch (err: any) {
-    /*
-     * اگر وضعیت قبلاً BANK_FAILED یا
-     * ISSUE_FAILED شده، همان حفظ می‌شود.
-     */
-    if (statusStep.value === 'PENDING') {
-      statusStep.value =
-        'ISSUE_FAILED'
+    if(
+      safarCardResult?.attempted&&
+      !safarCardResult.success
+    ){
+      statusStep.value='ISSUE_FAILED'
+
+      throw new Error(
+        `بلیت صادر شد اما کسر اعتبار سفرکارت با خطا مواجه شد: ${safarCardResult.error}`
+      )
     }
 
-    errorMessage.value =
-      err?.data?.message ||
-      err?.message ||
+    statusStep.value='SUCCESS'
+  }catch(err:any){
+    if(statusStep.value==='PENDING'){
+      statusStep.value='ISSUE_FAILED'
+    }
+
+    errorMessage.value=
+      err?.data?.message||
+      err?.message||
       'خطای غیرمنتظره‌ای رخ داده است.'
-  } finally {
-    loading.value = false
+  }finally{
+    loading.value=false
   }
 }
 
@@ -1661,3 +2543,531 @@ const getDownloadTicketRoute = (
   return `/downloadticket/${encodedContractId}`
 }
 </script>
+
+
+/*
+|--------------------------------------------------------------------------
+| FLOW کامل صفحه Verify و صدور بلیت
+|--------------------------------------------------------------------------
+|
+| این صفحه چهار نوع پرداخت را پشتیبانی می‌کند:
+|
+| 1) agency
+|    پرداخت اعتباری آژانس
+|
+| 2) travelcard
+|    پرداخت کامل با سفرکارت
+|
+| 3) travelcard-gateway
+|    پرداخت ترکیبی سفرکارت و درگاه بانکی
+|
+| 4) gateway
+|    پرداخت کامل از درگاه بانکی
+|
+|--------------------------------------------------------------------------
+| مرحله 1: خواندن اطلاعات پرداخت
+|--------------------------------------------------------------------------
+|
+| اطلاعات پرداخت از SessionStorage با کلید زیر خوانده می‌شود:
+|
+| flight_payment_session
+|
+| نمونه:
+|
+| {
+|   contractId:10824,
+|   type:'travelcard-gateway',
+|   totalPrice:1000000,
+|   payableAmount:700000,
+|   travelCardUsed:true,
+|   travelCardAmount:300000,
+|   travelCardNumber:'123456789',
+|   mobile:'09109306731',
+|   email:'asd@gmail.com',
+|   travelType:'round-trip'
+| }
+|
+| اگر Session وجود نداشته باشد:
+|
+| - فرآیند متوقف می‌شود.
+| - Issue انجام نمی‌شود.
+| - Refund انجام نمی‌شود.
+| - وضعیت صفحه BANK_FAILED می‌شود.
+|
+|--------------------------------------------------------------------------
+| مرحله 2: دریافت شناسه قرارداد
+|--------------------------------------------------------------------------
+|
+| شناسه قرارداد ابتدا از URL خوانده می‌شود:
+|
+| route.query.responseData
+|
+| در صورت نبودن آن، از Session خوانده می‌شود:
+|
+| session.contractId
+|
+| نمونه URL:
+|
+| /verify?responseData=10824
+|
+| اگر شناسه قرارداد نامعتبر باشد، فرآیند متوقف می‌شود.
+|
+|--------------------------------------------------------------------------
+| مرحله 3: دریافت قرارداد
+|--------------------------------------------------------------------------
+|
+| اطلاعات کامل قرارداد از این سرویس دریافت می‌شود:
+|
+| GET /api/Contract/{contractId}
+|
+| قیمت مسیرها از خود قرارداد خوانده می‌شود:
+|
+| contract.totalPrice
+|   قیمت نهایی Fare پرواز رفت یا پرواز یک‌طرفه
+|
+| contract.totalPrice2
+|   قیمت نهایی Fare پرواز برگشت
+|
+| مبلغ کل قرارداد:
+|
+| contract.totalPrice + contract.totalPrice2
+|
+| در پرواز یک‌طرفه totalPrice2 برابر صفر است.
+|
+|--------------------------------------------------------------------------
+| مرحله 4: تشخیص نیاز به Verify بانکی
+|--------------------------------------------------------------------------
+|
+| فقط این دو نوع پرداخت باید Verify بانکی شوند:
+|
+| gateway
+| travelcard-gateway
+|
+| این دو نوع بدون Verify بانکی وارد Issue نمی‌شوند.
+|
+| این دو نوع Verify بانکی ندارند:
+|
+| agency
+| travelcard
+|
+|--------------------------------------------------------------------------
+| مرحله 5: بررسی پاسخ بانک
+|--------------------------------------------------------------------------
+|
+| برای پرداخت‌های بانکی ابتدا code بررسی می‌شود:
+|
+| code === '00'
+|   تراکنش از سمت بانک موفق اعلام شده و باید Verify شود.
+|
+| code === '17'
+|   کاربر از پرداخت منصرف شده است.
+|   Issue و Refund انجام نمی‌شوند.
+|
+| هر code دیگری:
+|   پرداخت ناموفق است.
+|   Issue و Refund انجام نمی‌شوند.
+|
+| پارامترهای موردنیاز Verify:
+|
+| traceNo
+| rrn
+| token
+| paymentId
+| amount
+|
+| سپس سرویس زیر صدا زده می‌شود:
+|
+| POST /api/Tejarat/Verify
+|
+| فقط در صورتی که Verify موفق باشد، فرآیند ادامه پیدا می‌کند.
+|
+|--------------------------------------------------------------------------
+| مرحله 6: ذخیره اطلاعات بانکی
+|--------------------------------------------------------------------------
+|
+| بعد از Verify موفق، اطلاعات تراکنش داخل paymentId قرارداد
+| با ساختار زیر ذخیره می‌شود:
+|
+| amount-rrn-traceNo-paymentId
+|
+| نمونه:
+|
+| 700000-963258741852-45896321-987654321
+|
+| این اطلاعات برای Refund احتمالی آینده لازم هستند.
+|
+| همچنین Snapshot پرداخت داخل flightJson تمام پروازها ثبت می‌شود:
+|
+| {
+|   version:1,
+|   payment:{
+|     type:'travelcard-gateway',
+|     contractTotal:1000000,
+|     bankAmount:700000,
+|     travelCardUsed:true,
+|     travelCardAmount:300000,
+|     travelCardNumber:'****6789',
+|     recordedAt:'...'
+|   }
+| }
+|
+| سپس قرارداد با مرحله bank-verify ذخیره می‌شود.
+|
+| اگر Update این مرحله ناموفق شود:
+|
+| - اطلاعات در حافظه contract باقی می‌ماند.
+| - فرآیند Issue متوقف نمی‌شود.
+| - نام مرحله در failedSaveSteps ثبت می‌شود.
+| - در Update بعدی، اطلاعات قبلی همراه اطلاعات جدید دوباره ارسال می‌شود.
+|
+|--------------------------------------------------------------------------
+| مرحله 7: صدور مستقل پروازها
+|--------------------------------------------------------------------------
+|
+| هر پرواز بر اساس flightSupplier خودش صادر می‌شود.
+|
+| برای NIRA:
+|
+| GET /api/Nira/ETIssue
+|
+| پارامترها:
+|
+| AirLine
+| PNR
+| Email
+|
+| هر پرواز به‌صورت مستقل Issue می‌شود.
+|
+| بنابراین در رفت‌وبرگشت ممکن است:
+|
+| - هر دو موفق باشند.
+| - فقط رفت موفق باشد.
+| - فقط برگشت موفق باشد.
+| - هر دو ناموفق باشند.
+|
+| معیار موفقیت NIRA:
+|
+| وجود حداقل یک Tickets غیرخالی در AirNRSTICKETS
+|
+| نتیجه صدور هر پرواز داخل flightJson همان پرواز ثبت می‌شود:
+|
+| {
+|   issue:{
+|     provider:'NIRA',
+|     status:'success' | 'failed',
+|     pnr:'...',
+|     ticketNumbers:['...'],
+|     message:'...',
+|     response:{...},
+|     attemptedAt:'...'
+|   }
+| }
+|
+| اگر همه پروازها موفق باشند:
+|
+| ticketStatus = 'confirm'
+| confirmStatus = 'confirm'
+|
+| اگر حداقل یک پرواز ناموفق باشد:
+|
+| ticketStatus = 'incomplete'
+| confirmStatus = 'incomplete'
+|
+| بعد از صدور، قرارداد با مرحله flight-issue ذخیره می‌شود.
+|
+|--------------------------------------------------------------------------
+| مرحله 8: محاسبه نتیجه مالی
+|--------------------------------------------------------------------------
+|
+| مبلغ پروازهای موفق و ناموفق بر اساس نتیجه Issue محاسبه می‌شود.
+|
+| پرواز اول:
+|
+| contract.totalPrice
+|
+| پرواز دوم:
+|
+| contract.totalPrice2
+|
+| مثال:
+|
+| totalPrice  = 400000
+| totalPrice2 = 600000
+|
+| اگر فقط رفت موفق باشد:
+|
+| successfulAmount = 400000
+| failedAmount     = 600000
+|
+| اگر فقط برگشت موفق باشد:
+|
+| successfulAmount = 600000
+| failedAmount     = 400000
+|
+| اگر هر دو موفق باشند:
+|
+| successfulAmount = 1000000
+| failedAmount     = 0
+|
+| اگر هر دو ناموفق باشند:
+|
+| successfulAmount = 0
+| failedAmount     = 1000000
+|
+|--------------------------------------------------------------------------
+| مرحله 9: تسویه پرداخت آژانسی
+|--------------------------------------------------------------------------
+|
+| session.type === 'agency'
+|
+| در پرداخت آژانسی:
+|
+| - Verify بانک انجام نمی‌شود.
+| - سفرکارت کسر نمی‌شود.
+| - Refund بانکی انجام نمی‌شود.
+| - فقط نتیجه Issue و وضعیت قرارداد ذخیره می‌شود.
+| - برای پروازهای موفق و ناموفق پیامک مستقل ارسال می‌شود.
+|
+|--------------------------------------------------------------------------
+| مرحله 10: تسویه پرداخت فقط سفرکارت
+|--------------------------------------------------------------------------
+|
+| session.type === 'travelcard'
+|
+| بعد از مشخص‌شدن نتیجه Issue:
+|
+| فقط سهم پروازهای موفق از سفرکارت کسر می‌شود.
+|
+| اگر همه پروازها موفق باشند:
+|
+| کسر سفرکارت = کل مبلغ سفرکارت
+|
+| اگر فقط یک پرواز موفق باشد:
+|
+| کسر سفرکارت = سهم همان پرواز موفق
+|
+| اگر همه پروازها ناموفق باشند:
+|
+| کسر سفرکارت = صفر
+|
+| چون کسر سفرکارت بعد از Issue انجام می‌شود، برای پروازهای
+| ناموفق نیازی به بازگرداندن اعتبار نیست؛ از ابتدا کسر نمی‌شود.
+|
+| نتیجه کسر سفرکارت داخل flightJson پروازهای موفق ثبت می‌شود:
+|
+| {
+|   safarCard:{
+|     status:'success' | 'failed' | 'not-required',
+|     deductedAmount:...,
+|     response:{...},
+|     error:'...',
+|     attemptedAt:'...'
+|   }
+| }
+|
+| سپس قرارداد با مرحله safar-card ذخیره می‌شود.
+|
+|--------------------------------------------------------------------------
+| مرحله 11: تسویه پرداخت فقط درگاه
+|--------------------------------------------------------------------------
+|
+| session.type === 'gateway'
+|
+| اگر همه پروازها موفق باشند:
+|
+| bankRefund = 0
+|
+| اگر یک پرواز ناموفق باشد:
+|
+| bankRefund = قیمت همان مسیر ناموفق
+|
+| اگر همه پروازها ناموفق باشند:
+|
+| bankRefund = کل مبلغ پرداخت‌شده از بانک
+|
+| مبلغ Refund هرگز نباید بیشتر از مبلغ واقعی پرداخت‌شده
+| از درگاه باشد.
+|
+| قبل از فراخوانی Refund:
+|
+| refund.status = 'pending'
+|
+| داخل flightJson پروازهای ناموفق ذخیره می‌شود و قرارداد با
+| مرحله refund-pending Update می‌شود.
+|
+| سپس سرویس Refund فراخوانی می‌شود.
+|
+| نتیجه Refund داخل flightJson ثبت می‌شود:
+|
+| {
+|   refund:{
+|     status:'success' | 'failed',
+|     amount:...,
+|     response:{...},
+|     error:'...',
+|     attemptedAt:'...'
+|   }
+| }
+|
+| سپس قرارداد با مرحله refund-result ذخیره می‌شود.
+|
+|--------------------------------------------------------------------------
+| مرحله 12: تسویه سفرکارت + درگاه
+|--------------------------------------------------------------------------
+|
+| session.type === 'travelcard-gateway'
+|
+| مبلغ هر پرواز بین سهم بانک و سفرکارت تقسیم می‌شود.
+|
+| برای بخش موفق:
+|
+| - فقط سهم سفرکارت پروازهای موفق کسر می‌شود.
+| - سهم بانکی پروازهای موفق نزد شرکت باقی می‌ماند.
+|
+| برای بخش ناموفق:
+|
+| - سهم بانکی پروازهای ناموفق Refund می‌شود.
+| - سهم سفرکارت پروازهای ناموفق کسر نمی‌شود.
+|
+| مثال:
+|
+| مبلغ کل قرارداد: 1,000,000
+| بانک:             700,000
+| سفرکارت:          300,000
+|
+| سهم بانک:    70 درصد
+| سهم سفرکارت: 30 درصد
+|
+| اگر پرواز 400,000 ریالی موفق و پرواز 600,000 ریالی
+| ناموفق باشد:
+|
+| سهم بانکی پرواز موفق:    280,000
+| سهم سفرکارت پرواز موفق:  120,000
+| Refund بانکی:             420,000
+| سفرکارت کسرنشده:          180,000
+|
+| ابتدا نتیجه سفرکارت ذخیره می‌شود.
+| سپس Refund به حالت pending ذخیره می‌شود.
+| بعد Refund انجام و نتیجه نهایی ثبت می‌شود.
+|
+|--------------------------------------------------------------------------
+| مرحله 13: ذخیره نهایی قرارداد
+|--------------------------------------------------------------------------
+|
+| بعد از تمام عملیات مالی، Update نهایی با مرحله final
+| انجام می‌شود.
+|
+| این Update باید تمام اطلاعات انباشته‌شده را ذخیره کند:
+|
+| - paymentId
+| - payment داخل flightJson
+| - نتیجه Issue
+| - شماره بلیت‌ها
+| - وضعیت هر پرواز
+| - نتیجه سفرکارت
+| - وضعیت Refund
+| - پاسخ Providerها
+| - ticketStatus
+| - confirmStatus
+|
+| اگر ذخیره نهایی ناموفق باشد:
+|
+| - عملیات پرداخت، Issue، Refund یا سفرکارت دوباره اجرا نمی‌شود.
+| - وضعیت صفحه ISSUE_FAILED می‌شود.
+| - کاربر باید با پشتیبانی تماس بگیرد.
+|
+|--------------------------------------------------------------------------
+| مرحله 14: ارسال پیامک
+|--------------------------------------------------------------------------
+|
+| برای هر پرواز یک پیامک مستقل ساخته می‌شود.
+|
+| اگر پرواز موفق باشد:
+|
+| - اطلاعات پرواز
+| - شماره پرواز
+| - تاریخ و ساعت
+| - مسیر
+| - PNR
+| - لینک دانلود بلیت
+|
+| ارسال می‌شود.
+|
+| اگر پرواز ناموفق باشد:
+|
+| پیام عدم موفقیت صدور و پیگیری توسط کارشناسان ارسال می‌شود.
+|
+| خطای پیامک نباید نتیجه اصلی پرداخت و صدور را تغییر دهد.
+|
+|--------------------------------------------------------------------------
+| مرحله 15: تعیین وضعیت نهایی صفحه
+|--------------------------------------------------------------------------
+|
+| BANK_FAILED:
+|
+| - انصراف از بانک
+| - code ناموفق
+| - پارامترهای ناقص بانک
+| - Verify ناموفق
+| - خطا در ارتباط با Verify
+|
+| ISSUE_FAILED:
+|
+| - یک یا چند پرواز صادر نشده‌اند.
+| - کسر سفرکارت ناموفق شده است.
+| - Refund ناموفق شده است.
+| - ذخیره نهایی قرارداد ناموفق شده است.
+|
+| SUCCESS:
+|
+| - تمام پروازها موفق صادر شده‌اند.
+| - عملیات مالی موردنیاز موفق بوده است.
+| - قرارداد نهایی ذخیره شده است.
+|
+|--------------------------------------------------------------------------
+| نکات مهم
+|--------------------------------------------------------------------------
+|
+| 1) برای پرواز یک‌طرفه:
+|
+| totalPrice  = قیمت پرواز
+| totalPrice2 = 0
+|
+| همین Flow بدون تغییر کار می‌کند.
+|
+| 2) برای رفت‌وبرگشت:
+|
+| totalPrice  = قیمت رفت
+| totalPrice2 = قیمت برگشت
+|
+| 3) نوع پرداخت باید دقیقاً یکی از این مقادیر باشد:
+|
+| agency
+| travelcard
+| travelcard-gateway
+| gateway
+|
+| مقدار اشتباه agancy نباید استفاده شود.
+|
+| 4) paymentId فقط پس از Verify موفق بانک ذخیره می‌شود.
+|
+| 5) اگر بانک پرداخت را تأیید نکرده باشد، Refund نباید
+| فراخوانی شود.
+|
+| 6) Refund فقط وقتی انجام می‌شود که:
+|
+| - پرداخت بانکی Verify شده باشد.
+| - یک یا چند پرواز ناموفق باشند.
+| - bankRefund بیشتر از صفر باشد.
+|
+| 7) totalPrice و totalPrice2 بعد از کنسلی یا Refund تغییر
+| نمی‌کنند؛ این دو قیمت اصلی Fare مسیرها هستند.
+|
+| 8) وضعیت‌های مالی و سوابق عملیات داخل flightJson ثبت می‌شوند.
+|
+| 9) Update ناموفق در مراحل میانی نباید Issue یا عملیات مالی
+| انجام‌شده را دوباره اجرا کند. اطلاعات در حافظه باقی می‌ماند
+| و در Update بعدی دوباره برای ذخیره ارسال می‌شود.
+|
+|--------------------------------------------------------------------------
+*/

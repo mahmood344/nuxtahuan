@@ -99,6 +99,28 @@
           v-else-if="tickets.length"
           id="ticket-print-area"
         >
+          <div
+            v-if="cancelledTickets.length"
+            class="mb-5 space-y-3 print:mb-4"
+          >
+            <div
+              v-for="ticket in cancelledTickets"
+              :key="`cancelled-${ticket.key}`"
+              class="rounded-2xl border-2 border-red-500 bg-red-50 px-5 py-4 text-center"
+            >
+              <p class="text-lg font-black text-red-700">
+                این بلیت کنسل شده است
+              </p>
+
+              <p class="mt-1 text-sm text-red-600">
+                شماره بلیت:
+                <span dir="ltr" class="font-bold">
+                  {{ ticket.ticketNo }}
+                </span>
+              </p>
+            </div>
+          </div>
+
           <TicketPrintComponent
             :tickets="tickets"
           />
@@ -129,6 +151,40 @@ import { useFlightStore } from '~/stores/flights'
 definePageMeta({
   name: 'downloadticket'
 })
+type FlightCancellation={
+  ticketNumber:string
+  status:string
+  settlementStatus?:string
+  providerStatus?:string
+}
+
+type FlightJsonData={
+  version:number
+  payment?:unknown
+  issue?:unknown
+  cancellations?:FlightCancellation[]
+  updatedAt?:string
+}
+type FlightJsonPayment={
+  type:string
+  contractTotal:number
+  bankAmount:number
+  travelCardUsed:boolean
+  travelCardAmount:number
+  travelCardNumber:string
+  recordedAt:string
+}
+
+type FlightJsonIssue={
+  provider:string
+  status:string
+  pnr:string
+  ticketNumbers:string[]
+  message:string
+  response:any
+  attemptedAt:string
+}
+
 
 type EtrTax = {
   TaxAmount: number | string
@@ -175,7 +231,10 @@ export type PrintableTicket = {
   contractId: number
   airlineCode: string
   airlineName: string
-
+  isCancelled:boolean
+  cancellationStatus:string
+  cancellationTitle:string
+  cancellation:FlightCancellation|null
   passengerFullName: string
   passengerFirstName: string
   passengerLastName: string
@@ -183,8 +242,8 @@ export type PrintableTicket = {
   passengerTypeTitle: string
   nationalCode: string
   nationality: string
-gender: boolean | null
-genderTitle: string
+  gender:boolean|null
+  genderTitle:string
 
   ticketNo: string
   pnr: string
@@ -217,7 +276,63 @@ type FlightTicketNumber = {
   ticketNo: string
   passengerText: string
 }
+const getFlightDocument=(flight:any):FlightJsonData|null=>{
+  const items=parseFlightJson(
+    flight?.flightJson
+  )
 
+  const documentValue=items?.[0]
+
+  return documentValue&&
+    typeof documentValue==='object'
+      ?documentValue
+      :null
+}
+
+const getTicketCancellation=(
+  flight:any,
+  ticketNo:string
+):FlightCancellation|null=>{
+  const documentValue=
+    getFlightDocument(flight)
+
+  const cancellations=
+    Array.isArray(
+      documentValue?.cancellations
+    )
+      ?documentValue.cancellations
+      :[]
+
+  return cancellations.find(
+    item=>
+      String(item?.ticketNumber||'').trim()===
+      String(ticketNo||'').trim()
+  )||null
+}
+
+const isTicketCancelled=(
+  flight:any,
+  ticketNo:string
+):boolean=>{
+  const cancellation=
+    getTicketCancellation(
+      flight,
+      ticketNo
+    )
+
+  const status=String(
+    cancellation?.status||''
+  )
+    .trim()
+    .toLowerCase()
+
+  return[
+    'success',
+    'provider-cancelled',
+    'settlement-pending',
+    'manual-review'
+  ].includes(status)
+}
 const route = useRoute()
 const flightStore = useFlightStore()
 
@@ -225,6 +340,10 @@ const loading = ref(true)
 const errorMessage = ref('')
 const contractData = ref<any>(null)
 const tickets = ref<PrintableTicket[]>([])
+
+const cancelledTickets=computed(()=>
+  tickets.value.filter(ticket=>ticket.isCancelled)
+)
 
 /*
  * Decode کردن contractId موجود در URL.
@@ -440,9 +559,9 @@ const fetchNiraTicketEtr = async (
 /*
  * flightJson ممکن است string یا Array باشد.
  */
-const parseFlightJson = (
-  flightJson: unknown
-): any[] => {
+const parseFlightJson=(
+  flightJson:unknown
+):FlightJsonData[]=>{
   if (!flightJson) {
     return []
   }
@@ -568,28 +687,62 @@ const extractTicketNumbers = (
   )
 }
 
-const getFlightTicketNumbers = (
-  flight: any
-): FlightTicketNumber[] => {
-  return parseFlightJson(
+const getFlightTicketNumbers=(
+  flight:any
+):FlightTicketNumber[]=>{
+  const items=parseFlightJson(
     flight?.flightJson
   )
-    .flatMap(
-      (item: any) =>
-        extractTicketNumbers(
-          item?.Tickets ||
-          item?.tickets ||
-          ''
+
+  const results:FlightTicketNumber[]=[]
+
+  for(const item of items){
+    /*
+     * ساختار جدید:
+     * issue.ticketNumbers[]
+     */
+    const newTicketValues=
+      Array.isArray(
+        item?.issue?.ticketNumbers
+      )
+        ?item.issue.ticketNumbers
+        :[]
+
+    for(const ticketValue of newTicketValues){
+      results.push(
+        ...extractTicketNumbers(
+          ticketValue
         )
-    )
-    .filter(
-      (item, index, list) =>
-        list.findIndex(
-          (other) =>
-            other.ticketNo ===
-            item.ticketNo
-        ) === index
-    )
+      )
+    }
+
+    /*
+     * پشتیبانی از ساختار قدیمی:
+     * [{Tickets:"..."}]
+     */
+    const oldTicketValue=
+      item?.Tickets||
+      item?.tickets||
+      item?.AirNRSTICKETS?.[0]?.Tickets||
+      ''
+
+    if(oldTicketValue){
+      results.push(
+        ...extractTicketNumbers(
+          oldTicketValue
+        )
+      )
+    }
+  }
+
+  return results.filter(
+    (item,index,list)=>
+      list.findIndex(
+        other=>
+          other.ticketNo===
+          item.ticketNo
+      )===index
+  )
 }
 
 const normalizeName = (
@@ -904,9 +1057,7 @@ const mapEtrToPrintableTicket = (
   etr: EtrResponse
 ): PrintableTicket => {
   const coupon =
-    Array.isArray(
-      etr?.COUPONS
-    )
+    Array.isArray(etr?.COUPONS)
       ? etr.COUPONS[0]
       : null
 
@@ -926,27 +1077,48 @@ const mapEtrToPrintableTicket = (
       coupon?.Departure
     )
 
-  const origin =
-    String(
-      coupon?.Origin ||
-      flight?.origin ||
-      ''
-    )
-      .trim()
-      .toUpperCase()
+  const origin = String(
+    coupon?.Origin ||
+    flight?.origin ||
+    ''
+  )
+    .trim()
+    .toUpperCase()
 
-  const destination =
-    String(
-      coupon?.Destination ||
-      flight?.destination ||
-      ''
+  const destination = String(
+    coupon?.Destination ||
+    flight?.destination ||
+    ''
+  )
+    .trim()
+    .toUpperCase()
+
+  const ticketNo=String(
+    etr?.TicketNo||''
+  ).trim()
+
+  const cancellation=
+    getTicketCancellation(
+      flight,
+      ticketNo
     )
-      .trim()
-      .toUpperCase()
+
+  const cancellationStatus=String(
+    cancellation?.status||''
+  )
+    .trim()
+    .toLowerCase()
+
+  const cancelled=[
+    'success',
+    'provider-cancelled',
+    'settlement-pending',
+    'manual-review'
+  ].includes(cancellationStatus)
 
   return {
     key:
-      `${flight?.id}-${etr.TicketNo}`,
+      `${flight?.id}-${ticketNo}`,
 
     contractId:
       Number(contract?.id || 0),
@@ -957,6 +1129,13 @@ const mapEtrToPrintableTicket = (
       getAirlineName(
         airlineCode
       ),
+
+    isCancelled:cancelled,
+    cancellationStatus,
+    cancellationTitle:cancelled
+      ?'این بلیت کنسل شده است'
+      :'بلیت فعال است',
+    cancellation,
 
     passengerFullName:
       parsedName.fullName,
@@ -1007,19 +1186,18 @@ const mapEtrToPrintableTicket = (
         passenger?.countryName ||
         '-'
       ).trim(),
-gender:
-  passenger?.gender ?? null,
 
-genderTitle:
-  passenger?.gender === true
-    ? 'آقا'
-    : passenger?.gender === false
-      ? 'خانم'
-      : '-',
-    ticketNo:
-      String(
-        etr?.TicketNo || ''
-      ).trim(),
+    gender:
+      passenger?.gender ?? null,
+
+    genderTitle:
+      passenger?.gender === true
+        ? 'آقا'
+        : passenger?.gender === false
+          ? 'خانم'
+          : '-',
+
+    ticketNo,
 
     pnr:
       String(
@@ -1038,6 +1216,7 @@ genderTitle:
     flightClass:
       String(
         coupon?.FlightClass ||
+        flight?.flightClass ||
         ''
       ).trim(),
 
@@ -1055,13 +1234,12 @@ genderTitle:
     destination,
 
     destinationName:
-      getCityName(
-        destination
-      ),
+      getCityName(destination),
 
     departure:
       String(
-        coupon?.Departure || ''
+        coupon?.Departure ||
+        ''
       ).trim(),
 
     departureDate:
@@ -1074,33 +1252,26 @@ genderTitle:
       departure.persianDate,
 
     totalPrice:
-      toNumber(
-        etr?.TotalPrice
-      ),
+      toNumber(etr?.TotalPrice),
 
     fare:
-      toNumber(
-        etr?.Fare
-      ),
+      toNumber(etr?.Fare),
 
     commission:
-      toNumber(
-        etr?.Comission
-      ),
+      toNumber(etr?.Comission),
 
     taxes:
-      Array.isArray(
-        etr?.TAXES
-      )
+      Array.isArray(etr?.TAXES)
         ? etr.TAXES
         : [],
 
-    status:
-      String(
-        coupon?.Status ||
-        etr?.History?.[0]?.Status ||
-        ''
-      ).trim(),
+    status:cancelled
+      ?'CANCELLED'
+      :String(
+          coupon?.Status ||
+          etr?.History?.[0]?.Status ||
+          ''
+        ).trim(),
 
     flight,
     passenger,
@@ -1333,6 +1504,25 @@ const mapMahanToPrintableTicket = (
     )
   }
 
+  const cancellation=
+    getTicketCancellation(
+      flight,
+      ticketNo
+    )
+
+  const cancellationStatus=String(
+    cancellation?.status||''
+  )
+    .trim()
+    .toLowerCase()
+
+  const cancelled=[
+    'success',
+    'provider-cancelled',
+    'settlement-pending',
+    'manual-review'
+  ].includes(cancellationStatus)
+
   const passengerFullName = String(
     data?.passengerFullName ||
     data?.passengerName ||
@@ -1356,6 +1546,13 @@ const mapMahanToPrintableTicket = (
 
     airlineName:
       getAirlineName(airlineCode),
+
+    isCancelled:cancelled,
+    cancellationStatus,
+    cancellationTitle:cancelled
+      ?'این بلیت کنسل شده است'
+      :'بلیت فعال است',
+    cancellation,
 
     passengerFullName,
 
@@ -1482,11 +1679,12 @@ genderTitle:
           ? data.TAXES
           : [],
 
-    status:
-      String(
-        data?.status ||
-        'OPEN FOR USE'
-      ).trim(),
+    status:cancelled
+      ?'CANCELLED'
+      :String(
+          data?.status ||
+          'OPEN FOR USE'
+        ).trim(),
 
     flight,
     passenger,

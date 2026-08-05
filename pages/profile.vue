@@ -1274,9 +1274,9 @@
                     </td>
 
                     <td class="px-4 py-5">
-                      <div class="flex min-w-[155px] flex-col gap-3">
+                      <div class="flex min-w-[175px] flex-col gap-3">
                         <div
-                          class="rounded border border-gray-300 bg-gray-50 px-3 py-2 text-xs text-gray-400"
+                          class="rounded border border-gray-300 bg-gray-50 px-3 py-2 text-xs text-gray-500"
                         >
                           {{
                             row.ticketNumber
@@ -1287,7 +1287,21 @@
 
                         <button
                           type="button"
-                          class="rounded border border-gray-300 px-4 py-2 text-xs transition"
+                          class="rounded border px-4 py-2.5 text-xs font-bold transition disabled:cursor-not-allowed"
+                          :class="getCancelButtonClass(row)"
+                          :disabled="!row.canCancel || cancellingTicketKey === row.key"
+                          @click="openCancelTicket(row)"
+                        >
+                          {{
+                            cancellingTicketKey === row.key
+                              ? 'در حال بررسی جریمه...'
+                              : getCancellationStatusTitle(row)
+                          }}
+                        </button>
+
+                        <button
+                          type="button"
+                          class="rounded border border-gray-300 px-4 py-2.5 text-xs transition"
                           :class="
                             row.canDownload
                               ? 'bg-white text-[#14179e] hover:bg-blue-50'
@@ -1764,6 +1778,202 @@
     </div>
   </Transition>
 </Teleport>
+
+<Teleport to="body">
+  <Transition name="contract-modal">
+    <div
+      v-if="cancelModalOpen"
+      dir="rtl"
+      class="fixed inset-0 z-[4500] flex items-center justify-center bg-black/40 p-4 backdrop-blur-[1px]"
+      @click.self="closeCancelModal"
+    >
+      <div class="max-h-[92vh] w-full max-w-[590px] overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-4">
+          <h2 class="text-lg font-black text-gray-800">
+            کنسل کردن بلیت
+          </h2>
+
+          <button
+            type="button"
+            class="text-3xl leading-none text-gray-500"
+            :disabled="cancelSubmitting"
+            @click="closeCancelModal"
+          >
+            ×
+          </button>
+        </div>
+
+        <div
+          v-if="cancelModalStep === 'confirm'"
+          class="mt-6"
+        >
+          <p class="text-center leading-8 text-gray-700">
+            آیا از کنسل کردن بلیت مسافر
+            <b>{{ selectedCancelRow?.passengerName }}</b>
+            در مسیر
+            <b>
+              {{ selectedCancelRow?.origin }}
+              به
+              {{ selectedCancelRow?.destination }}
+            </b>
+            اطمینان دارید؟
+          </p>
+
+          <div class="mt-5 space-y-3 rounded-xl bg-orange-50 p-4 text-sm">
+            <div class="flex justify-between gap-4">
+              <span class="font-bold">تأمین‌کننده:</span>
+              <span>{{ selectedCancelRow?.provider || '-' }}</span>
+            </div>
+
+            <div class="flex justify-between gap-4">
+              <span class="font-bold">شماره بلیت:</span>
+              <span dir="ltr">{{ selectedCancelRow?.ticketNumber || '-' }}</span>
+            </div>
+
+            <div class="flex justify-between gap-4">
+              <span class="font-bold">کد رزرو:</span>
+              <span dir="ltr">{{ selectedCancelRow?.pnr || '-' }}</span>
+            </div>
+
+            <div class="flex justify-between gap-4">
+              <span class="font-bold">جریمه اولیه:</span>
+              <span>{{ formatPrice(cancelPenalty) }} ریال</span>
+            </div>
+
+            <div class="flex justify-between gap-4">
+              <span class="font-bold">مبلغ قابل استرداد اولیه:</span>
+              <span>{{ formatPrice(cancelRefundAmount) }} ریال</span>
+            </div>
+          </div>
+
+          <p class="mt-4 rounded-lg bg-yellow-50 p-3 text-xs leading-6 text-yellow-800">
+            مبلغ قطعی جریمه هنگام اجرای کنسلی دوباره از سرویس تأمین‌کننده دریافت می‌شود و ممکن است تغییر کند.
+          </p>
+
+          <p
+            v-if="cancelError"
+            class="mt-4 rounded-lg bg-red-50 p-3 text-sm font-bold text-red-600"
+          >
+            {{ cancelError }}
+          </p>
+
+          <div class="mt-6 flex justify-center gap-3">
+            <button
+              type="button"
+              class="min-w-[155px] rounded-full bg-red-600 px-6 py-3 text-sm font-bold text-white disabled:opacity-60"
+              :disabled="cancelSubmitting"
+              @click="confirmCancelTicket"
+            >
+              {{
+                cancelSubmitting
+                  ? 'در حال انجام عملیات...'
+                  : 'بله، کنسل شود'
+              }}
+            </button>
+
+            <button
+              type="button"
+              class="min-w-[100px] rounded-full bg-[#14179e] px-6 py-3 text-sm font-bold text-white disabled:opacity-60"
+              :disabled="cancelSubmitting"
+              @click="closeCancelModal"
+            >
+              خیر
+            </button>
+          </div>
+        </div>
+
+        <div
+          v-else-if="cancelModalStep === 'success'"
+          class="mt-7 text-center"
+        >
+          <div class="text-5xl">✅</div>
+
+          <h3 class="mt-4 text-lg font-black text-green-600">
+            بلیت در تأمین‌کننده کنسل شد
+          </h3>
+
+          <div class="mt-5 space-y-3 rounded-xl bg-green-50 p-4 text-right text-sm">
+            <div class="flex justify-between gap-4">
+              <span>مبلغ قابل استرداد تأمین‌کننده:</span>
+              <b>{{ formatPrice(cancelResult?.providerRefundAmount) }} ریال</b>
+            </div>
+
+            <div
+              v-if="cancelResult?.bankRefundAmount > 0"
+              class="flex justify-between gap-4"
+            >
+              <span>استرداد بانکی:</span>
+              <b>{{ formatPrice(cancelResult.bankRefundAmount) }} ریال</b>
+            </div>
+
+            <div
+              v-if="cancelResult?.travelCardRefundAmount > 0"
+              class="flex justify-between gap-4"
+            >
+              <span>بازگشت سفرکارت:</span>
+              <b>{{ formatPrice(cancelResult.travelCardRefundAmount) }} ریال</b>
+            </div>
+
+            <div
+              v-if="cancelResult?.agencyCreditAmount > 0"
+              class="flex justify-between gap-4"
+            >
+              <span>بستانکاری آژانس:</span>
+              <b>{{ formatPrice(cancelResult.agencyCreditAmount) }} ریال</b>
+            </div>
+
+            <div
+              v-if="cancelResult?.unresolvedAmount > 0"
+              class="flex justify-between gap-4 text-orange-700"
+            >
+              <span>نیازمند بررسی مالی:</span>
+              <b>{{ formatPrice(cancelResult.unresolvedAmount) }} ریال</b>
+            </div>
+          </div>
+
+          <p
+            v-if="cancelResult?.settlementPending"
+            class="mt-4 rounded-lg bg-orange-50 p-3 text-sm font-bold text-orange-700"
+          >
+            کنسلی ایرلاین انجام شده، اما بخشی از تسویه مالی نیازمند پیگیری است. کنسلی را دوباره اجرا نکنید.
+          </p>
+
+          <button
+            type="button"
+            class="mt-6 rounded-full bg-[#14179e] px-8 py-3 text-sm font-bold text-white"
+            @click="closeCancelModal"
+          >
+            بستن
+          </button>
+        </div>
+
+        <div
+          v-else
+          class="mt-7 text-center"
+        >
+          <div class="text-5xl">⚠️</div>
+
+          <h3 class="mt-4 text-lg font-black text-red-600">
+            عملیات با خطا مواجه شد
+          </h3>
+
+          <p class="mt-4 rounded-lg bg-red-50 p-4 text-sm font-bold leading-7 text-red-600">
+            {{ cancelError }}
+          </p>
+
+          <button
+            type="button"
+            class="mt-6 rounded-full bg-[#14179e] px-8 py-3 text-sm font-bold text-white"
+            @click="closeCancelModal"
+          >
+            بستن
+          </button>
+        </div>
+      </div>
+    </div>
+  </Transition>
+</Teleport>
+
 </template>
 
 <script setup>
@@ -1778,6 +1988,31 @@ import {
 } from 'jalaali-js'
 const detailsModalOpen = ref(false)
 const selectedContract = ref(null)
+
+const cancelModalOpen=ref(false)
+const cancelModalStep=ref('confirm')
+const selectedCancelRow=ref(null)
+const cancellingTicketKey=ref('')
+const cancelSubmitting=ref(false)
+const cancelError=ref('')
+const cancelPenalty=ref(0)
+const cancelRefundAmount=ref(0)
+const cancelInitialPreview=ref(null)
+const cancelResult=ref(null)
+
+const BANK_REFUND_API='https://panel.ahuan.ir/api/Refund'
+const SAFAR_CARD_RESTORE_API=''
+
+const CANCELLATION_STATUS={
+  IDLE:'idle',
+  PENALTY_CHECKED:'penalty-checked',
+  PROCESSING:'processing',
+  PROVIDER_CANCELLED:'provider-cancelled',
+  SETTLEMENT_PENDING:'settlement-pending',
+  SUCCESS:'success',
+  FAILED:'failed',
+  MANUAL_REVIEW:'manual-review'
+}
 
 function openOrderDetails(contract) {
   if (!contract) return
@@ -2051,93 +2286,414 @@ function getPassengerFullName(passenger) {
     .trim() || '-'
 }
 
+function parseJsonValue(value){
+  let result=value
+
+  for(let index=0;index<3;index++){
+    if(typeof result!=='string') break
+
+    const normalized=result.trim()
+
+    if(!normalized) return null
+
+    try{
+      result=JSON.parse(normalized)
+    }catch{
+      return result
+    }
+  }
+
+  return result
+}
+
+function extractTicketEntries(value){
+  const text=String(value||'')
+    .replace(/\r?\n/g,' ')
+    .trim()
+
+  if(!text) return[]
+
+  const matches=[
+    ...text.matchAll(
+      /([A-Z0-9' -]+\/[A-Z0-9' -]+?)\s*[=:]\s*(\d{10,14})/gi
+    )
+  ]
+
+  if(matches.length){
+    return matches.map(item=>({
+      passengerName:String(item[1]||'')
+        .trim()
+        .toUpperCase(),
+      ticketNumber:String(item[2]||'')
+        .trim()
+    }))
+  }
+
+  return(
+    text.match(/\b\d{10,14}\b/g)||[]
+  ).map(ticketNumber=>({
+    passengerName:'',
+    ticketNumber
+  }))
+}
+
+function normalizePassengerLatinName(passenger){
+  return[
+    passenger?.lName,
+    passenger?.fName
+  ]
+    .filter(Boolean)
+    .join('/')
+    .replace(/\s+/g,'')
+    .toUpperCase()
+}
+
+function readFlightDocument(flight){
+  const parsed=parseJsonValue(
+    flight?.flightJson
+  )
+
+  if(
+    parsed&&
+    typeof parsed==='object'&&
+    !Array.isArray(parsed)
+  ){
+    return parsed
+  }
+
+  return{
+    version:1,
+    payment:null,
+    issue:null,
+    cancellations:[],
+    updatedAt:new Date().toISOString()
+  }
+}
+
+function writeFlightDocument(
+  flight,
+  documentValue
+){
+  documentValue.version=Number(
+    documentValue?.version||1
+  )
+
+  documentValue.updatedAt=
+    new Date().toISOString()
+
+  flight.flightJson=
+    JSON.stringify(documentValue)
+}
+
+function getFlightTicketEntries(flight){
+  const parsed=parseJsonValue(
+    flight?.flightJson
+  )
+
+  if(!parsed) return[]
+
+  const documents=Array.isArray(parsed)
+    ?parsed
+    :[parsed]
+
+  const entries=[]
+
+  for(const documentValue of documents){
+    const issueTicketNumbers=
+      Array.isArray(
+        documentValue?.issue?.ticketNumbers
+      )
+        ?documentValue.issue.ticketNumbers
+        :[]
+
+    for(const value of issueTicketNumbers){
+      entries.push(
+        ...extractTicketEntries(value)
+      )
+    }
+
+    const legacyValues=[
+      documentValue?.Tickets,
+      documentValue?.tickets,
+      ...(Array.isArray(
+        documentValue?.AirNRSTICKETS
+      )
+        ?documentValue.AirNRSTICKETS.map(
+            item=>item?.Tickets
+          )
+        :[]),
+      ...(Array.isArray(
+        documentValue?.issue?.response?.AirNRSTICKETS
+      )
+        ?documentValue.issue.response.AirNRSTICKETS.map(
+            item=>item?.Tickets
+          )
+        :[])
+    ]
+
+    for(const value of legacyValues){
+      if(!value) continue
+
+      entries.push(
+        ...extractTicketEntries(value)
+      )
+    }
+  }
+
+  return entries.filter(
+    (item,index,list)=>
+      list.findIndex(
+        other=>
+          other.ticketNumber===
+          item.ticketNumber
+      )===index
+  )
+}
+
 function getPassengerTicketNumber(
   passenger,
   flight,
-  passengerIndex
-) {
-  const directTicket =
-    passenger?.goTicketNumber ||
-    passenger?.ticketNumber ||
-    flight?.ticketNumber
+  passengerIndex,
+  flightIndex
+){
+  const directTicket=
+    flightIndex===0
+      ?(
+          passenger?.goTicketNumber||
+          passenger?.ticketNumber||
+          flight?.ticketNumber
+        )
+      :(
+          passenger?.retTicketNumber||
+          passenger?.ticketNumber||
+          flight?.ticketNumber
+        )
 
-  if (directTicket) {
-    return String(directTicket)
+  if(directTicket){
+    return String(directTicket).trim()
   }
 
-  const rawFlightJson = flight?.flightJson
+  const entries=
+    getFlightTicketEntries(flight)
 
-  if (!rawFlightJson) {
-    return ''
-  }
+  const normalizedName=
+    normalizePassengerLatinName(passenger)
 
-  try {
-    const parsed =
-      typeof rawFlightJson === 'string'
-        ? JSON.parse(rawFlightJson)
-        : rawFlightJson
+  const matchedByName=
+    entries.find(item=>{
+      const entryName=String(
+        item?.passengerName||''
+      )
+        .replace(/\s+/g,'')
+        .toUpperCase()
 
-    const ticketsText = Array.isArray(parsed)
-      ? String(parsed?.[0]?.Tickets || '')
-      : String(parsed?.Tickets || '')
+      return(
+        normalizedName&&
+        entryName&&
+        (
+          entryName.includes(normalizedName)||
+          normalizedName.includes(entryName)
+        )
+      )
+    })
 
-    const ticketNumbers =
-      ticketsText.match(/\b\d{10,14}\b/g) || []
-
-    return String(
-      ticketNumbers[passengerIndex] || ''
-    )
-  } catch {
-    return ''
-  }
+  return String(
+    matchedByName?.ticketNumber||
+    entries?.[passengerIndex]?.ticketNumber||
+    ''
+  ).trim()
 }
-const ticketRows = computed(() => {
-  const flights =
+
+function normalizeFlightProvider(value){
+  const provider=String(value||'')
+    .trim()
+    .toUpperCase()
+
+  if(provider==='NRS') return'NIRA'
+  if(provider==='W5') return'MAHAN'
+  if(provider==='IS') return'SEPEHRAN'
+  if(provider==='B9') return'AIRTOUR'
+
+  return provider
+}
+
+function normalizePaymentType(value){
+  const type=String(value||'')
+    .trim()
+    .toLowerCase()
+
+  return type==='agancy'
+    ?'agency'
+    :type
+}
+
+function getCancellationList(documentValue){
+  return Array.isArray(
+    documentValue?.cancellations
+  )
+    ?documentValue.cancellations
+    :[]
+}
+
+function getTicketCancellation(
+  flight,
+  ticketNumber
+){
+  return getCancellationList(
+    readFlightDocument(flight)
+  ).find(
+    item=>
+      String(item?.ticketNumber)===
+      String(ticketNumber)
+  )||null
+}
+
+function upsertCancellation(
+  documentValue,
+  cancellation
+){
+  const list=[
+    ...getCancellationList(
+      documentValue
+    )
+  ]
+
+  const index=list.findIndex(
+    item=>
+      String(item?.ticketNumber)===
+      String(cancellation?.ticketNumber)
+  )
+
+  if(index>=0){
+    list.splice(
+      index,
+      1,
+      {
+        ...list[index],
+        ...cancellation
+      }
+    )
+  }else{
+    list.push(cancellation)
+  }
+
+  documentValue.cancellations=list
+}
+
+const ticketRows=computed(()=>{
+  const flights=
     selectedContractFlights.value
 
-  const passengers =
+  const passengers=
     selectedContractPassengers.value
 
-  const rows = []
+  const rows=[]
 
-  flights.forEach((flight,flightIndex) => {
+  flights.forEach((flight,flightIndex)=>{
     passengers.forEach(
-      (passenger,passengerIndex) => {
-        const ticketNumber =
+      (passenger,passengerIndex)=>{
+        const ticketNumber=
           getPassengerTicketNumber(
             passenger,
             flight,
-            passengerIndex
+            passengerIndex,
+            flightIndex
           )
+
+        const ticketStatus=String(
+          flightIndex===0
+            ?passenger?.goTicketStatus
+            :passenger?.retTicketStatus
+        )
+          .trim()
+          .toLowerCase()
+
+        const provider=
+          normalizeFlightProvider(
+            flight?.flightSupplier||
+            flight?.provider
+          )
+
+        const cancellation=
+          getTicketCancellation(
+            flight,
+            ticketNumber
+          )
+
+        const cancellationStatus=
+          String(
+            cancellation?.status||''
+          )
+            .trim()
+            .toLowerCase()
+
+        const datePart=String(
+          flight?.depDate||''
+        ).split('T')[0]
+
+        const timePart=String(
+          flight?.depTime||'00:00'
+        ).slice(0,5)
+
+        const departureDateTime=
+          new Date(
+            `${datePart}T${timePart}:00`
+          )
+
+        const flightExpired=
+          !Number.isNaN(
+            departureDateTime.getTime()
+          )&&
+          departureDateTime.getTime()<=
+          Date.now()
+
+        const ticketUrl=
+          flightIndex===0
+            ?passenger?.goTicketUrl
+            :passenger?.retTicketUrl
+
+        const lockedStatuses=[
+          CANCELLATION_STATUS.PROCESSING,
+          CANCELLATION_STATUS.PROVIDER_CANCELLED,
+          CANCELLATION_STATUS.SETTLEMENT_PENDING,
+          CANCELLATION_STATUS.SUCCESS,
+          CANCELLATION_STATUS.MANUAL_REVIEW
+        ]
 
         rows.push({
           key:
-            `${flight?.id || flightIndex}-` +
-            `${passenger?.id || passengerIndex}`,
+            `${flight?.id||flightIndex}-`+
+            `${passenger?.id||passengerIndex}`,
 
           flight,
           passenger,
+          flightIndex,
+          passengerIndex,
 
           passengerName:
-            getPassengerFullName(
-              passenger
-            ),
+            getPassengerFullName(passenger),
 
           passengerType:
             getPassengerTypeTitle(
               passenger?.age
             ),
 
-          origin:
-            flight?.origin || '-',
-
+          origin:flight?.origin||'-',
           destination:
-            flight?.destination || '-',
+            flight?.destination||'-',
 
           amount:Number(
-            passenger?.paymentable ??
-            passenger?.price ??
-            0
+            flightIndex===0
+              ?(
+                  passenger?.paymentable??
+                  passenger?.price??
+                  0
+                )
+              :(
+                  passenger?.paymentable2??
+                  passenger?.price2??
+                  0
+                )
           ),
 
           ticketNumber,
@@ -2147,30 +2703,72 @@ const ticketRows = computed(() => {
               flight?.depDate
             ),
 
-          departureTime:
-            String(
-              flight?.depTime || '-'
-            ),
+          departureTime:String(
+            flight?.depTime||'-'
+          ),
 
-          flightNumber:
-            String(
-              flight?.flightNumber || '-'
-            ),
+          flightNumber:String(
+            flight?.flightNumber||'-'
+          ),
 
           flightType:
-            flight?.charterFlight === true
-              ? 'چارتر'
-              : 'سیستمی',
+            flight?.charterFlight===true
+              ?'چارتر'
+              :'سیستمی',
 
           airlineName:
-            flight?.airlineNameFarsi ||
-            flight?.airlineName ||
-            flight?.airlineIataCode ||
+            flight?.airlineNameFarsi||
+            flight?.airlineName||
+            flight?.airlineIataCode||
             '-',
 
+          airlineCode:String(
+            flight?.airlineIataCode||
+            flight?.airlineCode||
+            flight?.airline||
+            ''
+          )
+            .trim()
+            .toUpperCase(),
+
+          provider,
+
+          pnr:String(
+            flight?.pnr||
+            (
+              flightIndex===0
+                ?passenger?.goTicketPNR
+                :passenger?.retTicketPNR
+            )||
+            ''
+          ).trim(),
+
+          ticketUrl,
+          cancellation,
+          cancellationStatus,
+
+          isCancelled:Boolean(
+            ticketStatus==='cancelled'||
+            cancellationStatus===
+              CANCELLATION_STATUS.SUCCESS||
+            cancellationStatus===
+              CANCELLATION_STATUS.PROVIDER_CANCELLED||
+            cancellationStatus===
+              CANCELLATION_STATUS.MANUAL_REVIEW
+          ),
+
+          canCancel:Boolean(
+            cancellationProviders[provider]&&
+            ticketNumber&&
+            !flightExpired&&
+            ticketStatus!=='cancelled'&&
+            !lockedStatuses.includes(
+              cancellationStatus
+            )
+          ),
+
           canDownload:Boolean(
-            ticketNumber ||
-            passenger?.goTicketUrl
+            ticketNumber||ticketUrl
           )
         })
       }
@@ -2179,22 +2777,76 @@ const ticketRows = computed(() => {
 
   return rows
 })
-function downloadContractTicket(row) {
-  const contractId =
+
+function getCancellationStatusTitle(row){
+  const status=String(
+    row?.cancellationStatus||''
+  )
+
+  if(status===CANCELLATION_STATUS.PROCESSING){
+    return'در حال کنسلی'
+  }
+
+  if(
+    status===CANCELLATION_STATUS.PROVIDER_CANCELLED||
+    status===CANCELLATION_STATUS.SETTLEMENT_PENDING
+  ){
+    return'کنسل شده؛ در انتظار تسویه'
+  }
+
+  if(status===CANCELLATION_STATUS.MANUAL_REVIEW){
+    return'کنسل شده؛ نیازمند پیگیری'
+  }
+
+  if(
+    row?.isCancelled||
+    status===CANCELLATION_STATUS.SUCCESS
+  ){
+    return'بلیت کنسل شده'
+  }
+
+  if(status===CANCELLATION_STATUS.FAILED){
+    return'تلاش مجدد برای کنسلی'
+  }
+
+  return'کنسل کردن بلیت'
+}
+
+function getCancelButtonClass(row){
+  if(
+    row?.isCancelled||
+    [
+      CANCELLATION_STATUS.PROCESSING,
+      CANCELLATION_STATUS.PROVIDER_CANCELLED,
+      CANCELLATION_STATUS.SETTLEMENT_PENDING,
+      CANCELLATION_STATUS.SUCCESS,
+      CANCELLATION_STATUS.MANUAL_REVIEW
+    ].includes(row?.cancellationStatus)
+  ){
+    return'cursor-not-allowed border-gray-300 bg-gray-100 text-gray-400'
+  }
+
+  return row?.canCancel
+    ?'border-[#d7a05b] bg-white text-[#a76b20] hover:bg-[#fff8ef]'
+    :'cursor-not-allowed border-gray-300 bg-gray-50 text-gray-300'
+}
+
+function downloadContractTicket(row){
+  const contractId=
     selectedContract.value?.id
 
-  if (!contractId) return
+  if(!contractId) return
 
-  if (row?.passenger?.goTicketUrl) {
+  if(row?.ticketUrl){
     window.open(
-      row.passenger.goTicketUrl,
+      row.ticketUrl,
       '_blank'
     )
 
     return
   }
 
-  const encodedContractId =
+  const encodedContractId=
     window.btoa(
       String(contractId)
     )
@@ -2203,6 +2855,1360 @@ function downloadContractTicket(row) {
     `/downloadticket/${encodedContractId}`
   )
 }
+
+function unwrapApiResponse(response){
+  let value=response
+
+  if(
+    value&&
+    typeof value==='object'&&
+    value.data!==undefined
+  ){
+    value=value.data
+  }
+
+  return parseJsonValue(value)??value
+}
+
+function getApiErrorMessage(
+  error,
+  fallback
+){
+  const raw=
+    error?.data??
+    error?.response?._data??
+    error?.response?.data??
+    error
+
+  const parsed=
+    parseJsonValue(raw)??raw
+
+  return(
+    parsed?.message||
+    parsed?.Message||
+    error?.message||
+    fallback
+  )
+}
+
+function getNiraPenaltyData(response){
+  const unwrapped=
+    unwrapApiResponse(response)
+
+  const data=
+    parseJsonValue(unwrapped)??
+    unwrapped
+
+  return{
+    raw:data,
+    penalty:
+      data&&
+      typeof data==='object'&&
+      !Array.isArray(data)
+        ?data.NRSPenalty||null
+        :null
+  }
+}
+
+async function fetchNiraPenaltyNow(row){
+  const response=await $fetch(
+    'https://api.ahuan.ir/api/Nira/PenaltyNow',
+    {
+      method:'GET',
+      query:{
+        Airline:row.airlineCode,
+        TicketNo:row.ticketNumber
+      }
+    }
+  )
+
+  const result=
+    getNiraPenaltyData(response)
+
+  if(!result.penalty){
+    const rawMessage=
+      typeof result.raw==='string'
+        ?result.raw
+        :result.raw?.message||
+         result.raw?.Message||
+         ''
+
+    if(
+      String(rawMessage)
+        .toUpperCase()
+        .includes(
+          'NO COUPON EXISTS FOR REFUND'
+        )
+    ){
+      throw new Error(
+        'این بلیت قبلاً کنسل شده یا امکان استرداد ندارد.'
+      )
+    }
+
+    throw new Error(
+      rawMessage||
+      'اطلاعات جریمه از نیرا دریافت نشد.'
+    )
+  }
+
+  return{
+    response:result.raw,
+    penalty:Math.max(
+      Math.floor(
+        Number(
+          result.penalty?.PENALTY||0
+        )
+      ),
+      0
+    ),
+    refundedAmount:Math.max(
+      Math.floor(
+        Number(
+          result.penalty?.RefundedAmount||0
+        )
+      ),
+      0
+    ),
+    isDomestic:
+      result.penalty?.IsDomestic===true,
+    refundedTaxes:Array.isArray(
+      result.penalty?.RefundedTaxes
+    )
+      ?result.penalty.RefundedTaxes
+      :[],
+    legs:Array.isArray(
+      result.penalty?.Legs
+    )
+      ?result.penalty.Legs
+      :[]
+  }
+}
+
+async function fetchNiraEtr(row){
+  const response=await $fetch(
+    'https://api.ahuan.ir/api/Nira/ETR',
+    {
+      method:'GET',
+      query:{
+        AirLine:row.airlineCode,
+        TicketNo:row.ticketNumber
+      }
+    }
+  )
+
+  const data=unwrapApiResponse(response)
+
+  if(
+    !data||
+    typeof data!=='object'||
+    data?.Fare===undefined
+  ){
+    throw new Error(
+      'اطلاعات مالی بلیت از ETR دریافت نشد.'
+    )
+  }
+
+  const taxes=Array.isArray(data?.TAXES)
+    ?data.TAXES
+    :[]
+
+  const fare=Math.max(
+    Math.floor(
+      Number(data?.Fare||0)
+    ),
+    0
+  )
+
+  const lp=Math.max(
+    Math.floor(
+      taxes
+        .filter(
+          tax=>
+            String(tax?.TaxCode||'')
+              .trim()
+              .toUpperCase()==='LP'
+        )
+        .reduce(
+          (sum,tax)=>
+            sum+
+            Number(tax?.TaxAmount||0),
+          0
+        )
+    ),
+    0
+  )
+
+  const ku=Math.max(
+    Math.floor(
+      taxes
+        .filter(
+          tax=>
+            String(tax?.TaxCode||'')
+              .trim()
+              .toUpperCase()!=='LP'
+        )
+        .reduce(
+          (sum,tax)=>
+            sum+
+            Number(tax?.TaxAmount||0),
+          0
+        )
+    ),
+    0
+  )
+
+  return{
+    response:data,
+    fare,
+    ku,
+    lp
+  }
+}
+
+async function cancelNiraSeat(row){
+  const departureDate=String(
+    row?.flight?.depDate||''
+  ).split('T')[0]
+
+  const response=await $fetch(
+    'https://api.ahuan.ir/api/Nira/CancelSeat',
+    {
+      method:'GET',
+      query:{
+        Airline:row.airlineCode,
+        PNR:row.pnr,
+        PassengerName:String(
+          row?.passenger?.fName||''
+        ).trim(),
+        PassengerLastName:String(
+          row?.passenger?.lName||''
+        ).trim(),
+        DepartureDate:departureDate,
+        FlightNo:row.flightNumber
+      }
+    }
+  )
+
+  const data=unwrapApiResponse(response)
+  const item=data?.AirCancelSeat?.[0]
+
+  const success=String(
+    item?.Done||''
+  )
+    .trim()
+    .toLowerCase()==='true'
+
+  if(!success){
+    throw new Error(
+      'آزادسازی صندلی مسافر در نیرا ناموفق بود.'
+    )
+  }
+
+  return{
+    success:true,
+    newPnr:String(
+      item?.NewSplittedPNR||''
+    ).trim(),
+    response:data
+  }
+}
+
+async function executeNiraEtRefund(
+  row,
+  etr,
+  penalty
+){
+  const response=await $fetch(
+    'https://api.ahuan.ir/api/Nira/ETRefund',
+    {
+      method:'GET',
+      query:{
+        Airline:row.airlineCode,
+        TicketNo:row.ticketNumber,
+        Fare:etr.fare,
+        KU:etr.ku,
+        LP:etr.lp,
+        Penalty:penalty
+      }
+    }
+  )
+
+  const data=unwrapApiResponse(response)
+  const item=data?.AirNRSRefund?.[0]
+
+  const done=String(
+    item?.Done??''
+  ).trim()
+
+  const description=String(
+    item?.Desc||''
+  ).trim()
+
+  const success=
+    done==='0'||
+    description
+      .toUpperCase()
+      .includes('REFUND SUCCESS')
+
+  if(!success){
+    throw new Error(
+      description||
+      'استرداد بلیت در نیرا ناموفق بود.'
+    )
+  }
+
+  return{
+    success:true,
+    response:data
+  }
+}
+
+async function fetchNiraCancellationPreview(row){
+  const penalty=
+    await fetchNiraPenaltyNow(row)
+
+  return{
+    provider:'NIRA',
+    penaltyAmount:
+      penalty.penalty,
+    providerRefundAmount:
+      penalty.refundedAmount,
+    response:penalty.response
+  }
+}
+
+async function cancelNiraTicket(row){
+  const etr=await fetchNiraEtr(row)
+  const cancelSeat=
+    await cancelNiraSeat(row)
+
+  if(cancelSeat.newPnr){
+    row.pnr=cancelSeat.newPnr
+    row.flight.pnr=cancelSeat.newPnr
+  }
+
+  const penalty=
+    await fetchNiraPenaltyNow(row)
+
+  const refund=
+    await executeNiraEtRefund(
+      row,
+      etr,
+      penalty.penalty
+    )
+
+  return{
+    success:true,
+    provider:'NIRA',
+    providerStatus:'REFUND SUCCESS',
+    ticketNumber:row.ticketNumber,
+    pnr:row.pnr,
+    newPnr:cancelSeat.newPnr||'',
+    penaltyAmount:penalty.penalty,
+    providerRefundAmount:
+      penalty.refundedAmount,
+    responses:{
+      etr:etr.response,
+      cancel:cancelSeat.response,
+      penalty:penalty.response,
+      refund:refund.response
+    }
+  }
+}
+
+function createUnsupportedProviderHandler(
+  provider
+){
+  return{
+    async getPreview(){
+      throw new Error(
+        `سرویس محاسبه جریمه ${provider} هنوز در این کامپوننت متصل نشده است.`
+      )
+    },
+    async cancel(){
+      throw new Error(
+        `سرویس کنسلی ${provider} هنوز در این کامپوننت متصل نشده است.`
+      )
+    }
+  }
+}
+
+const cancellationProviders={
+  NIRA:{
+    getPreview:
+      fetchNiraCancellationPreview,
+    cancel:cancelNiraTicket
+  },
+  MAHAN:
+    createUnsupportedProviderHandler(
+      'ماهان'
+    ),
+  SEPEHRAN:
+    createUnsupportedProviderHandler(
+      'سپهران'
+    ),
+  AIRTOUR:
+    createUnsupportedProviderHandler(
+      'ایرتور'
+    )
+}
+
+function getCancellationProvider(row){
+  const provider=
+    normalizeFlightProvider(
+      row?.provider||
+      row?.flight?.flightSupplier
+    )
+
+  const handler=
+    cancellationProviders[provider]
+
+  if(!handler){
+    throw new Error(
+      `کنسلی خودکار برای Provider «${provider||'-'}» پیاده‌سازی نشده است.`
+    )
+  }
+
+  return{
+    provider,
+    handler
+  }
+}
+
+function getCancellationPayment(row){
+  const documentValue=
+    readFlightDocument(row.flight)
+
+  const payment=documentValue?.payment
+
+  if(
+    !payment||
+    typeof payment!=='object'
+  ){
+    throw new Error(
+      'اطلاعات منابع پرداخت داخل flightJson ثبت نشده است.'
+    )
+  }
+
+  return{
+    documentValue,
+    payment:{
+      ...payment,
+      type:normalizePaymentType(
+        payment?.type
+      ),
+      bankAmount:Math.max(
+        Number(
+          payment?.bankAmount||0
+        ),
+        0
+      ),
+      travelCardAmount:Math.max(
+        Number(
+          payment?.travelCardAmount||0
+        ),
+        0
+      )
+    }
+  }
+}
+
+function calculateCancellationSettlement(
+  payment,
+  providerRefundAmount
+){
+  const type=
+    normalizePaymentType(
+      payment?.type
+    )
+
+  const bankAmount=Math.max(
+    Math.floor(
+      Number(
+        payment?.bankAmount||0
+      )
+    ),
+    0
+  )
+
+  const travelCardAmount=Math.max(
+    Math.floor(
+      Number(
+        payment?.travelCardAmount||0
+      )
+    ),
+    0
+  )
+
+  const providerAmount=Math.max(
+    Math.floor(
+      Number(
+        providerRefundAmount||0
+      )
+    ),
+    0
+  )
+
+  if(type==='agency'){
+    return{
+      type,
+      providerRefundAmount:
+        providerAmount,
+      customerRefundAmount:
+        providerAmount,
+      bankRefundAmount:0,
+      travelCardRefundAmount:0,
+      agencyCreditAmount:
+        providerAmount,
+      unresolvedAmount:0
+    }
+  }
+
+  const customerPaidAmount=
+    bankAmount+travelCardAmount
+
+  if(customerPaidAmount<=0){
+    throw new Error(
+      'مبالغ پرداخت بانک و سفرکارت معتبر نیست.'
+    )
+  }
+
+  const refundableAmount=Math.min(
+    providerAmount,
+    customerPaidAmount
+  )
+
+  if(type==='gateway'){
+    const bankRefundAmount=Math.min(
+      refundableAmount,
+      bankAmount
+    )
+
+    return{
+      type,
+      providerRefundAmount:
+        providerAmount,
+      customerRefundAmount:
+        bankRefundAmount,
+      bankRefundAmount,
+      travelCardRefundAmount:0,
+      agencyCreditAmount:0,
+      unresolvedAmount:Math.max(
+        providerAmount-
+        bankRefundAmount,
+        0
+      )
+    }
+  }
+
+  if(type==='travelcard'){
+    const travelCardRefundAmount=
+      Math.min(
+        refundableAmount,
+        travelCardAmount
+      )
+
+    return{
+      type,
+      providerRefundAmount:
+        providerAmount,
+      customerRefundAmount:
+        travelCardRefundAmount,
+      bankRefundAmount:0,
+      travelCardRefundAmount,
+      agencyCreditAmount:0,
+      unresolvedAmount:Math.max(
+        providerAmount-
+        travelCardRefundAmount,
+        0
+      )
+    }
+  }
+
+  if(type==='travelcard-gateway'){
+    const bankRatio=
+      bankAmount/customerPaidAmount
+
+    let bankRefundAmount=Math.round(
+      refundableAmount*bankRatio
+    )
+
+    bankRefundAmount=Math.min(
+      bankRefundAmount,
+      bankAmount
+    )
+
+    let travelCardRefundAmount=
+      refundableAmount-
+      bankRefundAmount
+
+    travelCardRefundAmount=Math.min(
+      travelCardRefundAmount,
+      travelCardAmount
+    )
+
+    return{
+      type,
+      providerRefundAmount:
+        providerAmount,
+      customerRefundAmount:
+        bankRefundAmount+
+        travelCardRefundAmount,
+      bankRefundAmount,
+      travelCardRefundAmount,
+      agencyCreditAmount:0,
+      unresolvedAmount:Math.max(
+        providerAmount-
+        bankRefundAmount-
+        travelCardRefundAmount,
+        0
+      )
+    }
+  }
+
+  throw new Error(
+    `نوع پرداخت «${type||'-'}» معتبر نیست.`
+  )
+}
+
+function parseContractPaymentId(contract){
+  const value=String(
+    contract?.paymentId||''
+  ).trim()
+
+  const separator=
+    value.includes(',')
+      ?','
+      :'-'
+
+  const parts=value.split(separator)
+
+  return{
+    amount:Number(
+      parts.shift()||0
+    ),
+    rrn:String(
+      parts.shift()||''
+    ).trim(),
+    traceNo:String(
+      parts.shift()||''
+    ).trim(),
+    requestId:parts
+      .join(separator)
+      .trim()
+  }
+}
+
+async function refundGatewayPayment(
+  contract,
+  amount
+){
+  const refundAmount=Math.max(
+    Math.floor(
+      Number(amount||0)
+    ),
+    0
+  )
+
+  if(refundAmount<=0){
+    return{
+      attempted:false,
+      success:true,
+      amount:0,
+      response:null,
+      error:''
+    }
+  }
+
+  const payment=
+    parseContractPaymentId(contract)
+
+  if(
+    !payment.rrn||
+    !payment.traceNo||
+    !payment.requestId
+  ){
+    return{
+      attempted:true,
+      success:false,
+      amount:refundAmount,
+      response:null,
+      error:
+        'اطلاعات تراکنش بانکی قرارداد کامل نیست.'
+    }
+  }
+
+  if(
+    payment.amount>0&&
+    refundAmount>payment.amount
+  ){
+    return{
+      attempted:true,
+      success:false,
+      amount:refundAmount,
+      response:null,
+      error:
+        'مبلغ استرداد بیشتر از مبلغ پرداخت‌شده بانکی است.'
+    }
+  }
+
+  try{
+    const response=await $fetch(
+      BANK_REFUND_API,
+      {
+        method:'POST',
+        body:{
+          rrn:payment.rrn,
+          amount:refundAmount,
+          stan:payment.traceNo,
+          terminal:'08102574',
+          acceptor:'992180008102574',
+          requestId:payment.requestId,
+          isSettled:false,
+          checkdate:''
+        }
+      }
+    )
+
+    const data=unwrapApiResponse(response)
+
+    const success=
+      response===true||
+      data===true||
+      response?.success===true||
+      data?.success===true||
+      data?.done===true
+
+    return{
+      attempted:true,
+      success,
+      amount:refundAmount,
+      response,
+      error:success
+        ?''
+        :data?.message||
+         response?.message||
+         'استرداد بانکی ناموفق بود.'
+    }
+  }catch(error){
+    return{
+      attempted:true,
+      success:false,
+      amount:refundAmount,
+      response:error?.data||null,
+      error:getApiErrorMessage(
+        error,
+        'خطا در استرداد بانکی'
+      )
+    }
+  }
+}
+
+async function restoreTravelCardCredit({
+  payment,
+  contractId,
+  ticketNumber,
+  amount
+}){
+  const restoreAmount=Math.max(
+    Math.floor(
+      Number(amount||0)
+    ),
+    0
+  )
+
+  if(restoreAmount<=0){
+    return{
+      attempted:false,
+      success:true,
+      amount:0,
+      sentAmount:0,
+      response:null,
+      error:''
+    }
+  }
+
+  const cardNumber=String(
+    payment?.travelCardNumber||
+    payment?.cardNumber||
+    ''
+  ).trim()
+
+  if(!cardNumber){
+    return{
+      attempted:true,
+      success:false,
+      amount:restoreAmount,
+      sentAmount:-restoreAmount,
+      response:null,
+      error:'شماره سفرکارت ثبت نشده است.'
+    }
+  }
+
+  if(cardNumber.includes('*')){
+    return{
+      attempted:true,
+      success:false,
+      amount:restoreAmount,
+      sentAmount:-restoreAmount,
+      response:null,
+      error:'شماره کامل سفرکارت ثبت نشده است و بازگرداندن اعتبار امکان‌پذیر نیست.'
+    }
+  }
+
+  try{
+    const response=await $fetch(
+      'https://api.ahuan.ir/api/SafarCard/update',
+      {
+        method:'PUT',
+        body:{
+          cardNumber,
+          amount:-restoreAmount,
+          description:
+            `بازگشت اعتبار بابت کنسلی بلیت ${ticketNumber} - قرارداد ${contractId}`
+        }
+      }
+    )
+
+    const data=
+      unwrapApiResponse(response)
+
+    const success=
+      response===true||
+      data===true||
+      response?.success===true||
+      data?.success===true||
+      response?.status===true||
+      data?.status===true
+
+    return{
+      attempted:true,
+      success,
+      amount:restoreAmount,
+      sentAmount:-restoreAmount,
+      response,
+      error:success
+        ?''
+        :data?.message||
+         response?.message||
+         'بازگرداندن اعتبار سفرکارت ناموفق بود.'
+    }
+  }catch(error){
+    return{
+      attempted:true,
+      success:false,
+      amount:restoreAmount,
+      sentAmount:-restoreAmount,
+      response:error?.data||null,
+      error:getApiErrorMessage(
+        error,
+        'خطا در بازگرداندن اعتبار سفرکارت'
+      )
+    }
+  }
+}
+
+function setTicketCancellationState({
+  row,
+  status,
+  provider,
+  providerResult=null,
+  error=''
+}){
+  if(!row?.flight) return
+
+  const documentValue=
+    readFlightDocument(row.flight)
+
+  upsertCancellation(
+    documentValue,
+    {
+      ticketNumber:
+        row.ticketNumber,
+      passengerId:
+        row.passenger?.id||null,
+      passengerName:
+        row.passengerName,
+      provider:
+        provider||
+        normalizeFlightProvider(
+          row.provider
+        ),
+      status,
+      providerResult,
+      error,
+      updatedAt:
+        new Date().toISOString()
+    }
+  )
+
+  writeFlightDocument(
+    row.flight,
+    documentValue
+  )
+}
+
+function applyProviderCancellationDocument({
+  row,
+  documentValue,
+  providerCancellation,
+  settlement,
+  bankRefundResult,
+  travelCardRefundResult,
+  settlementPending
+}){
+  upsertCancellation(
+    documentValue,
+    {
+      ticketNumber:
+        row.ticketNumber,
+      passengerId:
+        row.passenger?.id||null,
+      passengerName:
+        row.passengerName,
+      provider:
+        providerCancellation.provider,
+      status:settlementPending
+        ?CANCELLATION_STATUS.MANUAL_REVIEW
+        :CANCELLATION_STATUS.SUCCESS,
+      providerStatus:
+        providerCancellation.providerStatus,
+      pnr:
+        providerCancellation.pnr||
+        row.pnr,
+      newPnr:
+        providerCancellation.newPnr||'',
+      origin:row.origin,
+      destination:row.destination,
+      penaltyAmount:
+        providerCancellation.penaltyAmount,
+      providerRefundAmount:
+        providerCancellation
+          .providerRefundAmount,
+      paymentType:settlement.type,
+      customerRefundAmount:
+        settlement.customerRefundAmount,
+      bankRefundAmount:
+        settlement.bankRefundAmount,
+      travelCardRefundAmount:
+        settlement.travelCardRefundAmount,
+      agencyCreditAmount:
+        settlement.agencyCreditAmount,
+      unresolvedAmount:
+        settlement.unresolvedAmount,
+      settlementStatus:
+        settlementPending
+          ?'pending-manual'
+          :'success',
+      bankRefundResult,
+      travelCardRefundResult,
+      providerResponses:
+        providerCancellation.responses||{},
+      completedAt:
+        new Date().toISOString(),
+      updatedAt:
+        new Date().toISOString()
+    }
+  )
+
+  writeFlightDocument(
+    row.flight,
+    documentValue
+  )
+}
+
+function isEveryContractTicketCancelled(
+  contract
+){
+  const flights=Array.isArray(
+    contract?.contractFlights
+  )
+    ?contract.contractFlights
+    :[]
+
+  const passengers=Array.isArray(
+    contract?.contractPassengers
+  )
+    ?contract.contractPassengers
+    :[]
+
+  if(!flights.length||!passengers.length){
+    return false
+  }
+
+  return flights.every(
+    (flight,flightIndex)=>
+      passengers.every(passenger=>{
+        const status=String(
+          flightIndex===0
+            ?passenger?.goTicketStatus
+            :passenger?.retTicketStatus
+        )
+          .trim()
+          .toLowerCase()
+
+        return status==='cancelled'
+      })
+  )
+}
+
+function applyCancelledTicketStatus(
+  contract,
+  row
+){
+  const passengers=Array.isArray(
+    contract?.contractPassengers
+  )
+    ?contract.contractPassengers
+    :[]
+
+  const passenger=passengers.find(
+    item=>
+      String(item?.id)===
+      String(row?.passenger?.id)
+  )
+
+  if(!passenger){
+    throw new Error(
+      'مسافر موردنظر داخل قرارداد پیدا نشد.'
+    )
+  }
+
+  if(row.flightIndex===0){
+    passenger.goTicketStatus='cancelled'
+  }else{
+    passenger.retTicketStatus='cancelled'
+  }
+
+  contract.reduceFlightLoad=1
+  contract.reduceHotelLoad=0
+
+  if(
+    isEveryContractTicketCancelled(
+      contract
+    )
+  ){
+    contract.ticketStatus='cancelled'
+    contract.confirmStatus='cancelled'
+  }
+}
+
+async function updateCancelledContract(
+  contract
+){
+  const response=await $fetch(
+    'https://api.ahuan.ir/api/Contract/update',
+    {
+      method:'PUT',
+      body:contract,
+      headers:{
+        'Content-Type':
+          'application/json'
+      }
+    }
+  )
+
+  return(
+    response?.data||
+    response||
+    contract
+  )
+}
+
+async function openCancelTicket(row){
+  if(!row?.canCancel) return
+
+  cancellingTicketKey.value=row.key
+  cancelError.value=''
+  cancelResult.value=null
+
+  try{
+    const{
+      provider,
+      handler
+    }=getCancellationProvider(row)
+
+    const preview=
+      await handler.getPreview(row)
+
+    selectedCancelRow.value={
+      ...row,
+      provider
+    }
+
+    cancelPenalty.value=Math.max(
+      Number(
+        preview?.penaltyAmount||0
+      ),
+      0
+    )
+
+    cancelRefundAmount.value=Math.max(
+      Number(
+        preview?.providerRefundAmount||0
+      ),
+      0
+    )
+
+    cancelInitialPreview.value=
+      preview
+
+    cancelModalStep.value='confirm'
+    cancelModalOpen.value=true
+  }catch(error){
+    selectedCancelRow.value=row
+
+    cancelError.value=
+      getApiErrorMessage(
+        error,
+        'دریافت جریمه کنسلی با خطا مواجه شد.'
+      )
+
+    cancelModalStep.value='error'
+    cancelModalOpen.value=true
+  }finally{
+    cancellingTicketKey.value=''
+  }
+}
+
+async function confirmCancelTicket(){
+  const row=
+    selectedCancelRow.value
+
+  const contract=
+    selectedContract.value
+
+  if(!row||!contract) return
+
+  cancelSubmitting.value=true
+  cancelError.value=''
+  cancelResult.value=null
+
+  let providerCancellation=null
+
+  try{
+    const{
+      provider,
+      handler
+    }=getCancellationProvider(row)
+
+    setTicketCancellationState({
+      row,
+      status:
+        CANCELLATION_STATUS.PROCESSING,
+      provider
+    })
+
+    providerCancellation=
+      await handler.cancel(row)
+
+    setTicketCancellationState({
+      row,
+      status:
+        CANCELLATION_STATUS.PROVIDER_CANCELLED,
+      provider,
+      providerResult:
+        providerCancellation
+    })
+
+    const{
+      documentValue,
+      payment
+    }=getCancellationPayment(row)
+
+    const settlement=
+      calculateCancellationSettlement(
+        payment,
+        providerCancellation
+          .providerRefundAmount
+      )
+
+    let bankRefundResult={
+      attempted:false,
+      success:true,
+      amount:0,
+      response:null,
+      error:''
+    }
+
+    let travelCardRefundResult={
+      attempted:false,
+      success:true,
+      amount:0,
+      response:null,
+      error:''
+    }
+
+    switch(settlement.type){
+      case'agency':
+        break
+
+      case'gateway':
+        bankRefundResult=
+          await refundGatewayPayment(
+            contract,
+            settlement.bankRefundAmount
+          )
+        break
+
+      case'travelcard':
+        travelCardRefundResult=
+          await restoreTravelCardCredit({
+            payment,
+            contractId:contract.id,
+            ticketNumber:
+              row.ticketNumber,
+            amount:
+              settlement
+                .travelCardRefundAmount
+          })
+        break
+
+      case'travelcard-gateway':
+        if(
+          settlement.bankRefundAmount>0
+        ){
+          bankRefundResult=
+            await refundGatewayPayment(
+              contract,
+              settlement
+                .bankRefundAmount
+            )
+        }
+
+        if(
+          settlement
+            .travelCardRefundAmount>0
+        ){
+          travelCardRefundResult=
+            await restoreTravelCardCredit({
+              payment,
+              contractId:contract.id,
+              ticketNumber:
+                row.ticketNumber,
+              amount:
+                settlement
+                  .travelCardRefundAmount
+            })
+        }
+        break
+    }
+
+    const settlementPending=
+      (
+        bankRefundResult?.attempted&&
+        !bankRefundResult?.success
+      )||
+      (
+        travelCardRefundResult
+          ?.attempted&&
+        !travelCardRefundResult
+          ?.success
+      )||
+      settlement.unresolvedAmount>0
+
+    applyProviderCancellationDocument({
+      row,
+      documentValue,
+      providerCancellation,
+      settlement,
+      bankRefundResult,
+      travelCardRefundResult,
+      settlementPending
+    })
+
+    applyCancelledTicketStatus(
+      contract,
+      row
+    )
+
+    const updatedContract=
+      await updateCancelledContract(
+        contract
+      )
+
+    selectedContract.value=
+      updatedContract
+
+    const contractIndex=
+      contracts.value.findIndex(
+        item=>
+          String(item?.id)===
+          String(updatedContract?.id)
+      )
+
+    if(contractIndex>=0){
+      contracts.value.splice(
+        contractIndex,
+        1,
+        updatedContract
+      )
+    }
+
+    cancelResult.value={
+      provider,
+      ...settlement,
+      bankRefundResult,
+      travelCardRefundResult,
+      settlementPending
+    }
+
+    cancelModalStep.value='success'
+  }catch(error){
+    if(providerCancellation?.success){
+      setTicketCancellationState({
+        row,
+        status:
+          CANCELLATION_STATUS.MANUAL_REVIEW,
+        provider:
+          providerCancellation.provider,
+        providerResult:
+          providerCancellation,
+        error:getApiErrorMessage(
+          error,
+          'تسویه یا ذخیره قرارداد ناموفق بود.'
+        )
+      })
+
+      cancelError.value=
+        'بلیت در تأمین‌کننده کنسل شد، اما تسویه مالی یا ذخیره اطلاعات کامل نشد. کنسلی را دوباره انجام ندهید و با پشتیبانی تماس بگیرید.'
+    }else{
+      setTicketCancellationState({
+        row,
+        status:
+          CANCELLATION_STATUS.FAILED,
+        error:getApiErrorMessage(
+          error,
+          'کنسلی تأمین‌کننده ناموفق بود.'
+        )
+      })
+
+      cancelError.value=
+        getApiErrorMessage(
+          error,
+          'عملیات کنسلی با خطا مواجه شد.'
+        )
+    }
+
+    cancelModalStep.value='error'
+  }finally{
+    cancelSubmitting.value=false
+  }
+}
+
+function closeCancelModal(){
+  if(cancelSubmitting.value) return
+
+  cancelModalOpen.value=false
+  cancelModalStep.value='confirm'
+  selectedCancelRow.value=null
+  cancelError.value=''
+  cancelPenalty.value=0
+  cancelRefundAmount.value=0
+  cancelInitialPreview.value=null
+  cancelResult.value=null
+}
+
 const userLoading = ref(false)
 const userError = ref('')
 
@@ -2566,16 +4572,10 @@ function getContractType(contract) {
 }
 
 function getContractAmount(contract) {
-  const amount = Number(
-    contract?.totalPrice ??
-    contract?.totalPrice2 ??
-    contract?.prePayment ??
-    0
-  )
+  const go = Number(contract?.totalPrice || 0)
+  const ret = Number(contract?.totalPrice2 || 0)
 
-  return Number.isFinite(amount)
-    ? amount
-    : 0
+  return go + ret
 }
 
 function formatContractDateTime(contract) {
@@ -3945,4 +5945,494 @@ watch(
     grid-column:auto;
   }
 }
+@media(min-width:1024px){
+  .profile-menu,.profile-sidebar{
+    position:sticky;
+    top:24px;
+    align-self:start;
+    height:max-content;
+  }
+}
 </style>
+/*
+|--------------------------------------------------------------------------
+| FLOW کامل کنسل‌کردن بلیت در Profile
+|--------------------------------------------------------------------------
+|
+| این Flow برای هر بلیت به‌صورت مستقل اجرا می‌شود.
+| Provider هر پرواز از flightSupplier تشخیص داده می‌شود.
+|
+| Providerهای فعلی:
+|
+| NIRA
+| MAHAN
+| SEPEHRAN
+| AIRTOUR
+|
+| منطق داخلی کنسلی هر Provider داخل Handler مخصوص خودش است،
+| اما نتیجه نهایی همه Providerها باید به یک ساختار مشترک تبدیل شود.
+|
+|--------------------------------------------------------------------------
+| مرحله 1: ساخت ردیف بلیت
+|--------------------------------------------------------------------------
+|
+| برای هر پرواز و هر مسافر یک row ساخته می‌شود.
+|
+| شماره بلیت ابتدا از فیلدهای مستقیم مسافر خوانده می‌شود:
+|
+| goTicketNumber
+| retTicketNumber
+|
+| اگر این فیلدها مقدار نداشته باشند، شماره بلیت از:
+|
+| flightJson.issue.ticketNumbers
+|
+| استخراج می‌شود.
+|
+| سپس براساس شماره بلیت، رکورد کنسلی داخل:
+|
+| flightJson.cancellations[]
+|
+| پیدا می‌شود.
+|
+|--------------------------------------------------------------------------
+| مرحله 2: تشخیص امکان کنسلی
+|--------------------------------------------------------------------------
+|
+| دکمه کنسلی فقط زمانی فعال است که:
+|
+| - Provider برای کنسلی Handler داشته باشد.
+| - شماره بلیت موجود باشد.
+| - زمان پرواز نگذشته باشد.
+| - وضعیت بلیت cancelled نباشد.
+| - عملیات کنسلی قبلاً وارد وضعیت قفل‌شده نشده باشد.
+|
+| وضعیت‌های قفل‌شده:
+|
+| processing
+| provider-cancelled
+| settlement-pending
+| success
+| manual-review
+|
+| در این وضعیت‌ها عملیات Provider نباید دوباره اجرا شود.
+|
+|--------------------------------------------------------------------------
+| مرحله 3: کلیک روی دکمه کنسلی
+|--------------------------------------------------------------------------
+|
+| با اجرای openCancelTicket:
+|
+| 1- Provider تشخیص داده می‌شود.
+|
+| 2- Handler همان Provider دریافت می‌شود.
+|
+| 3- سرویس جریمه اولیه Provider فراخوانی می‌شود.
+|
+| برای نیرا:
+|
+| PenaltyNow
+|
+| این مرحله فقط برای نمایش مبلغ تقریبی به کاربر است.
+|
+| اطلاعات زیر در مودال نمایش داده می‌شود:
+|
+| - نام مسافر
+| - مسیر
+| - شماره بلیت
+| - PNR
+| - Provider
+| - جریمه اولیه
+| - مبلغ قابل استرداد اولیه
+|
+| در این مرحله هنوز:
+|
+| - Seat کنسل نشده است.
+| - Provider Refund انجام نشده است.
+| - بانک Refund نشده است.
+| - سفرکارت افزایش پیدا نکرده است.
+| - قرارداد Update نشده است.
+|
+|--------------------------------------------------------------------------
+| مرحله 4: تأیید کاربر
+|--------------------------------------------------------------------------
+|
+| پس از کلیک روی «بله، کنسل شود»، تابع:
+|
+| confirmCancelTicket
+|
+| اجرا می‌شود.
+|
+| ابتدا وضعیت همان شماره بلیت داخل flightJson برابر می‌شود با:
+|
+| processing
+|
+| سپس Handler مخصوص Provider اجرا می‌شود.
+|
+|--------------------------------------------------------------------------
+| مرحله 5: Flow اختصاصی نیرا
+|--------------------------------------------------------------------------
+|
+| ترتیب واقعی کنسلی نیرا:
+|
+| 1- ETR
+| 2- CancelSeat
+| 3- PenaltyNow مجدد
+| 4- ETRefund
+|
+| توضیح:
+|
+| ETR
+| برای دریافت Fare و Taxهای بلیت استفاده می‌شود.
+|
+| CancelSeat
+| صندلی همان مسافر را آزاد می‌کند.
+|
+| اگر NewSplittedPNR برگردد، PNR جدید روی پرواز ذخیره می‌شود.
+|
+| PenaltyNow مجدد
+| بعد از آزادسازی Seat اجرا می‌شود تا جریمه قطعی دریافت شود.
+|
+| ETRefund
+| استرداد مالی را داخل نیرا ثبت می‌کند.
+|
+| خروجی استاندارد Handler نیرا شامل این موارد است:
+|
+| success
+| provider
+| providerStatus
+| ticketNumber
+| pnr
+| newPnr
+| penaltyAmount
+| providerRefundAmount
+| responses
+|
+|--------------------------------------------------------------------------
+| مرحله 6: Provider کنسل شده است
+|--------------------------------------------------------------------------
+|
+| وقتی Handler Provider موفق برگردد، یعنی بلیت در سیستم
+| تأمین‌کننده کنسل شده است.
+|
+| وضعیت موقت داخل flightJson:
+|
+| provider-cancelled
+|
+| از این مرحله به بعد حتی اگر تسویه یا Update خطا بخورد،
+| عملیات Provider نباید دوباره اجرا شود.
+|
+|--------------------------------------------------------------------------
+| مرحله 7: دریافت اطلاعات پرداخت
+|--------------------------------------------------------------------------
+|
+| اطلاعات پرداخت از:
+|
+| flightJson.payment
+|
+| خوانده می‌شود.
+|
+| نوع پرداخت نرمال می‌شود.
+|
+| مقدار اشتباه قدیمی:
+|
+| agancy
+|
+| به:
+|
+| agency
+|
+| تبدیل می‌شود.
+|
+| نوع‌های پشتیبانی‌شده:
+|
+| agency
+| gateway
+| travelcard
+| travelcard-gateway
+|
+|--------------------------------------------------------------------------
+| مرحله 8: محاسبه مبلغ قابل بازپرداخت
+|--------------------------------------------------------------------------
+|
+| مبلغ پایه تصمیم‌گیری:
+|
+| providerRefundAmount
+|
+| یعنی مبلغی که Provider بعد از کسر جریمه اعلام کرده است.
+|
+| کاربر نباید بیشتر از مبلغ واقعی پرداخت‌شده خودش دریافت کند.
+|
+| برای پرداخت غیرآژانسی:
+|
+| customerRefundAmount
+| حداکثر برابر مجموع:
+|
+| bankAmount + travelCardAmount
+|
+| است.
+|
+|--------------------------------------------------------------------------
+| مرحله 9: تسویه پرداخت آژانسی
+|--------------------------------------------------------------------------
+|
+| payment.type === 'agency'
+|
+| در این حالت:
+|
+| - Refund بانکی انجام نمی‌شود.
+| - سفرکارت افزایش پیدا نمی‌کند.
+| - مبلغ قابل استرداد به‌عنوان بستانکاری آژانس ثبت می‌شود.
+|
+| نتیجه:
+|
+| bankRefundAmount = 0
+| travelCardRefundAmount = 0
+| agencyCreditAmount = providerRefundAmount
+|
+| فعلاً این مبلغ داخل flightJson ثبت می‌شود.
+|
+|--------------------------------------------------------------------------
+| مرحله 10: تسویه فقط درگاه
+|--------------------------------------------------------------------------
+|
+| payment.type === 'gateway'
+|
+| مبلغ Refund بانک:
+|
+| min(providerRefundAmount, bankAmount)
+|
+| اطلاعات تراکنش بانکی از contract.paymentId خوانده می‌شود.
+|
+| سپس API Refund بانک فراخوانی می‌شود.
+|
+| مبلغ Refund هرگز نباید بیشتر از مبلغ پرداخت‌شده بانکی باشد.
+|
+|--------------------------------------------------------------------------
+| مرحله 11: تسویه فقط سفرکارت
+|--------------------------------------------------------------------------
+|
+| payment.type === 'travelcard'
+|
+| مبلغ قابل بازگشت:
+|
+| min(providerRefundAmount, travelCardAmount)
+|
+| برای بازگرداندن اعتبار سفرکارت این API فراخوانی می‌شود:
+|
+| PUT /api/SafarCard/update
+|
+| Payload:
+|
+| {
+|   cardNumber,
+|   amount:-restoreAmount,
+|   description
+| }
+|
+| نکته:
+|
+| برای افزایش اعتبار سفرکارت، amount باید منفی ارسال شود.
+|
+| مثال:
+|
+| مبلغ بازگشتی = 76000
+|
+| مقدار ارسالی:
+|
+| amount = -76000
+|
+|--------------------------------------------------------------------------
+| مرحله 12: تسویه سفرکارت + درگاه
+|--------------------------------------------------------------------------
+|
+| payment.type === 'travelcard-gateway'
+|
+| providerRefundAmount براساس نسبت پرداخت اولیه تقسیم می‌شود.
+|
+| مثال:
+|
+| bankAmount = 300000
+| travelCardAmount = 122000
+| totalPaid = 422000
+|
+| ابتدا نسبت بانک و سفرکارت محاسبه می‌شود.
+|
+| سپس:
+|
+| bankRefundAmount
+| به بانک Refund می‌شود.
+|
+| travelCardRefundAmount
+| با amount منفی به سفرکارت برگردانده می‌شود.
+|
+| هیچ‌کدام از این دو مبلغ نباید بیشتر از سهم اولیه همان
+| منبع پرداخت باشد.
+|
+| اگر providerRefundAmount بیشتر از مجموع پرداخت کاربر باشد،
+| مبلغ اضافه به کاربر پرداخت نمی‌شود و داخل:
+|
+| unresolvedAmount
+|
+| ثبت می‌شود.
+|
+|--------------------------------------------------------------------------
+| مرحله 13: ذخیره نتیجه در flightJson
+|--------------------------------------------------------------------------
+|
+| نتیجه کنسلی هر شماره بلیت داخل:
+|
+| flightJson.cancellations[]
+|
+| ذخیره می‌شود.
+|
+| چون یک پرواز ممکن است چند مسافر داشته باشد، برای هر
+| ticketNumber یک رکورد مستقل نگهداری می‌شود.
+|
+| ساختار تقریبی:
+|
+| {
+|   ticketNumber,
+|   passengerId,
+|   passengerName,
+|   provider,
+|   status,
+|   providerStatus,
+|   pnr,
+|   newPnr,
+|   origin,
+|   destination,
+|   penaltyAmount,
+|   providerRefundAmount,
+|   paymentType,
+|   customerRefundAmount,
+|   bankRefundAmount,
+|   travelCardRefundAmount,
+|   agencyCreditAmount,
+|   unresolvedAmount,
+|   settlementStatus,
+|   bankRefundResult,
+|   travelCardRefundResult,
+|   providerResponses,
+|   completedAt,
+|   updatedAt
+| }
+|
+| اگر قبلاً برای همان ticketNumber رکورد وجود داشته باشد،
+| همان رکورد Update می‌شود و رکورد جدید تکراری ساخته نمی‌شود.
+|
+|--------------------------------------------------------------------------
+| مرحله 14: وضعیت نهایی کنسلی
+|--------------------------------------------------------------------------
+|
+| اگر Provider و تمام تسویه‌های موردنیاز موفق باشند:
+|
+| status = 'success'
+| settlementStatus = 'success'
+|
+| اگر Provider کنسل شده ولی Refund بانک، برگشت سفرکارت
+| یا ذخیره قرارداد مشکل داشته باشد:
+|
+| status = 'manual-review'
+| settlementStatus = 'pending-manual'
+|
+| در این حالت کاربر نباید دوباره دکمه کنسلی را اجرا کند.
+|
+| اگر عملیات قبل از کنسل‌شدن Provider خطا بخورد:
+|
+| status = 'failed'
+|
+| در این حالت امکان تلاش مجدد وجود دارد.
+|
+|--------------------------------------------------------------------------
+| مرحله 15: تغییر وضعیت مسافر
+|--------------------------------------------------------------------------
+|
+| بعد از کنسلی Provider، وضعیت همان بلیت روی مسافر تغییر می‌کند.
+|
+| برای مسیر اول:
+|
+| goTicketStatus = 'cancelled'
+|
+| برای مسیر دوم:
+|
+| retTicketStatus = 'cancelled'
+|
+|--------------------------------------------------------------------------
+| مرحله 16: تنظیم Load قرارداد
+|--------------------------------------------------------------------------
+|
+| بعد از کنسلی:
+|
+| reduceFlightLoad = 1
+| reduceHotelLoad = 0
+|
+|--------------------------------------------------------------------------
+| مرحله 17: وضعیت کلی قرارداد
+|--------------------------------------------------------------------------
+|
+| اگر فقط یک بلیت یا یک مسیر کنسل شده باشد:
+|
+| ticketStatus و confirmStatus قرارداد همچنان confirm می‌مانند.
+|
+| اگر تمام بلیت‌های تمام مسافران و تمام مسیرها کنسل شده باشند:
+|
+| ticketStatus = 'cancelled'
+| confirmStatus = 'cancelled'
+|
+|--------------------------------------------------------------------------
+| مرحله 18: Update قرارداد
+|--------------------------------------------------------------------------
+|
+| کل قرارداد شامل این اطلاعات Update می‌شود:
+|
+| - flightJson جدید
+| - cancellations[]
+| - نتیجه Provider
+| - نتیجه Refund بانک
+| - نتیجه برگشت سفرکارت
+| - goTicketStatus / retTicketStatus
+| - reduceFlightLoad
+| - reduceHotelLoad
+| - وضعیت کلی قرارداد
+|
+| API:
+|
+| PUT /api/Contract/update
+|
+|--------------------------------------------------------------------------
+| مرحله 19: نمایش وضعیت در Profile
+|--------------------------------------------------------------------------
+|
+| وضعیت دکمه براساس flightJson.cancellations[] نمایش داده می‌شود.
+|
+| success:
+| بلیت کنسل شده
+|
+| processing:
+| در حال کنسلی
+|
+| provider-cancelled:
+| کنسل شده؛ در انتظار تسویه
+|
+| settlement-pending:
+| کنسل شده؛ در انتظار تسویه
+|
+| manual-review:
+| کنسل شده؛ نیازمند پیگیری
+|
+| failed:
+| تلاش مجدد برای کنسلی
+|
+|--------------------------------------------------------------------------
+| قانون مهم جلوگیری از اجرای دوباره
+|--------------------------------------------------------------------------
+|
+| بعد از موفقیت Provider، حتی اگر تسویه مالی یا Update قرارداد
+| خطا بخورد، Provider Cancel و ETRefund نباید دوباره اجرا شوند.
+|
+| وضعیت‌های provider-cancelled و manual-review برای جلوگیری
+| از همین تکرار داخل flightJson ذخیره می‌شوند.
+|
+|--------------------------------------------------------------------------
+*/
