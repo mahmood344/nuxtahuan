@@ -4605,8 +4605,18 @@ async function fetchUserProfile() {
     userLoading.value = false
   }
 }
-const activeItem = ref('dashboard')
+const route=useRoute()
 
+const activeItem=ref(
+  String(route.query.tab||'dashboard')
+)
+watch(
+  ()=>route.query.tab,
+  tab=>{
+    activeItem.value=
+      String(tab||'dashboard')
+  }
+)
 const menuItems = [
   { key:'dashboard',label:'داشبورد',icon:'▦' },
   { key:'profile',label:'پروفایل',icon:'◯' },
