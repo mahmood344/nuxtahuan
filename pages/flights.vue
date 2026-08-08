@@ -1390,7 +1390,14 @@ function mapFlightsToPayload(selectedFlights) {
       contractId: 0,
       origin: String(f?.origin || f?.from || f?.originCode || '').trim(),
       destination: String(f?.destination || f?.to || f?.destinationCode || '').trim(),
-      flightClass: String(f?.cabinClass || f?.flightClass || f?.class || 'X').trim(),
+      flightClass:String(
+  f?.bookingClass ||
+  f?.rbd ||
+  f?.cabinClass ||
+  f?.flightClass ||
+  f?.class ||
+  ''
+).trim(),
       airlineId: airlineId,
       flightNumber: String(f?.flightNumber || f?.flightNo || '').trim(),
       depDate: formatFlightDate(departureDate),

@@ -14,25 +14,40 @@
             </div>
           </template>
 
-          <template v-else>
-            <UiBaseButton
-              v-if="!props.hideSelectButton"
-              label="انتخاب پرواز"
-              variant="filled"
-              color="primary"
-              :active="false"
-              :disabled="false"
-              class="flex-1 text-[12px] order-1 md:order-2 text-white py-2 !rounded-3xl ml-2 mt-5"
-              @click="selectFlight"
-            />
+        <template v-else>
+  <div
+    v-if="!props.hideSelectButton"
+    class="flex-1 order-1 md:order-2"
+  >
+    <UiBaseButton
+      label="انتخاب پرواز"
+      variant="filled"
+      color="primary"
+      :active="false"
+      :disabled="false"
+      class="w-full text-[12px] text-white py-2 !rounded-3xl ml-2 mt-5"
+      @click="selectFlight"
+    />
 
-            <div class="flex-[3] order-2 text-right md:order-1">
-              <p class="font-bold text-[22px] text-[var(--color-primary-dark)]">
-                {{ formatPrice(cardPrice) }}
-              </p>
-              <p class="text-sm text-left font-normal">ریال</p>
-            </div>
-          </template>
+    <p
+      v-if="capacityError"
+      class="mt-2 text-center text-[12px] font-bold text-red-500"
+      dir="rtl"
+    >
+      {{ capacityError }}
+    </p>
+  </div>
+
+  <div class="flex-[3] order-2 text-right md:order-1">
+    <p class="font-bold text-[22px] text-[var(--color-primary-dark)]">
+      {{ formatPrice(cardPrice) }}
+    </p>
+
+    <p class="text-sm text-left font-normal">
+      ریال
+    </p>
+  </div>
+</template>
         </div>
 
         <div class="absolute -bottom-3 right-0 w-full flex justify-center md:justify-start gap-4 p-3 md:hidden">
@@ -52,13 +67,30 @@
           </button>
         </div>
 
-        <p
-          v-if="!cardDisabled"
-          class="hidden absolute bottom-0 w-full text-center text-red-500 pb-2 md:block text-[12px] font-bold"
-          dir="rtl"
-        >
-          {{ capacityText }}
-        </p>
+    <div
+  v-if="!cardDisabled"
+  class="hidden absolute bottom-0 w-full text-center pb-2 md:block"
+  dir="rtl"
+>
+  <p class="text-red-500 text-[12px] font-bold">
+    {{ capacityText }}
+  </p>
+
+  <p
+    class="mt-1 text-[11px] font-bold"
+    :class="
+      displayRefundable
+        ?'text-green-600'
+        :'text-red-600'
+    "
+  >
+    {{
+      displayRefundable
+        ?'قابل استرداد'
+        :'غیرقابل استرداد'
+    }}
+  </p>
+</div>
       </div>
 
       <div class="flex-[3] order-1 relative p-3 pb-12 flex flex-col">
@@ -187,12 +219,30 @@
           </div>
         </div>
 
-        <p
-          v-if="!cardDisabled"
-          class="absolute bottom-0 w-full text-center text-red-500 pb-2 font-bold text-[12px] md:hidden"
-        >
-          {{ capacityText }}
-        </p>
+       <div
+  v-if="!cardDisabled"
+  class="absolute bottom-0 w-full text-center pb-2 md:hidden"
+  dir="rtl"
+>
+  <p class="text-red-500 text-[12px] font-bold">
+    {{ capacityText }}
+  </p>
+
+  <p
+    class="mt-1 text-[11px] font-bold"
+    :class="
+      displayRefundable
+        ?'text-green-600'
+        :'text-red-600'
+    "
+  >
+    {{
+      displayRefundable
+        ?'قابل استرداد'
+        :'غیرقابل استرداد'
+    }}
+  </p>
+</div>
 
         <div class="hidden absolute -bottom-3 left-3 w-full md:flex justify-center md:justify-end p-3">
           <button
@@ -452,10 +502,15 @@ const activeTab = ref(null)
 const logoFailed = ref(false)
 const loadingFare = ref(false)
 const niraFare = ref(null)
-
+const capacityError=ref('')
 const isNira = computed(() => String(props.flight.provider || '').toUpperCase() === 'NIRA')
 const isMahan = computed(() => String(props.flight.provider || '').toUpperCase() === 'MAHAN')
-
+const requestedSeatCount=computed(()=>{
+  return(
+    Number(passengerCounts.value.adult||0)+
+    Number(passengerCounts.value.child||0)
+  )
+})
 const passengerCounts = computed(() => {
   return {
     adult: Number(route.query.adl || 1),
@@ -909,16 +964,69 @@ const flightTypeLabel = computed(() => {
   return 'سیستمی'
 })
 
-const capacityText = computed(() => {
-  if (cardDisabled.value) return ''
-  if (minCapacity.value == null) return ''
-  return `${formatNumber(minCapacity.value)} صندلی مانده`
-})
+const capacityText=computed(()=>{
+  if(cardDisabled.value)return ''
 
-const selectFlight = () => {
-  if (cardDisabled.value) return
-  emit('select', props.flight)
+  if(
+    isNira.value&&
+    String(
+      props.flight.rawCapacity||
+      props.flight.meta?.rawCapacity||
+      ''
+    ).toUpperCase()==='A'
+  ){
+    return 'بیشتر از ۹ صندلی مانده'
+  }
+
+  if(!Number.isFinite(displayCapacity.value))
+    return ''
+
+  return `${formatNumber(displayCapacity.value)} صندلی مانده`
+})
+const selectFlight=()=>{
+  capacityError.value=''
+
+  const rawCapacity=String(
+    props.flight.rawCapacity||
+    props.flight.meta?.rawCapacity||
+    ''
+  )
+    .trim()
+    .toUpperCase()
+
+  let availableSeats=null
+
+  if(rawCapacity==='A'){
+    availableSeats=10
+  }else{
+    availableSeats=Number(
+      props.flight.capacity ??
+      props.flight.meta?.capacity ??
+      minCapacity.value
+    )
+  }
+
+  const requestedSeats=
+    Number(passengerCounts.value.adult||0)+
+    Number(passengerCounts.value.child||0)
+
+  if(
+    Number.isFinite(availableSeats)&&
+    requestedSeats>availableSeats
+  ){
+    capacityError.value=
+      `ظرفیت این پرواز ${formatNumber(availableSeats)} نفر است، اما برای ${formatNumber(requestedSeats)} مسافر جستجو کرده‌اید.`
+
+    setTimeout(()=>{
+      capacityError.value=''
+    },2000)
+
+    return
+  }
+
+  emit('select',props.flight)
 }
+
 
 const handleLogoError = () => {
   logoFailed.value = true
@@ -951,7 +1059,39 @@ function formatTime(value) {
 function formatPrice(value) {
   return new Intl.NumberFormat('fa-IR').format(Number(value || 0))
 }
+const displayCapacity=computed(()=>{
+  if(isNira.value){
+    return Number(
+      props.flight.capacity??
+      props.flight.meta?.capacity??
+      0
+    )
+  }
 
+  if(isMahan.value){
+    return Number(
+      props.flight.capacity??
+      props.flight.meta?.raw?.flightItinerary?.[0]?.capacity??
+      0
+    )
+  }
+
+  return Number(
+    props.flight.capacity||0
+  )
+})
+
+const displayRefundable=computed(()=>{
+  if(isNira.value){
+    return props.flight.refundable===true
+  }
+
+  if(isMahan.value){
+    return props.flight.meta?.raw?.isRefundable===true
+  }
+
+  return props.flight.refundable===true
+})
 function formatNumber(value) {
   return new Intl.NumberFormat('fa-IR').format(Number(value || 0))
 }
