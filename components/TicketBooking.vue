@@ -93,6 +93,51 @@
 /></div>
 </div>
   </div>
+<div
+  v-if="activeService==='hotelAhwan'"
+  dir="rtl"
+  class="flex flex-col justify-center"
+>
+  <div
+    class="w-full grid grid-cols-1 md:grid-cols-[2fr_2fr_1fr] gap-4 items-center p-4 md:p-8"
+  >
+
+    <div class="w-full">
+      <UiBaseAutocomplete
+        label="شهر"
+        placeholder="نام شهر را جستجو کنید..."
+        :items="hotelCities"
+        item-text="name"
+        item-value="code"
+        v-model="hotelCity"
+        clearable
+        icon='<i class="bi bi-geo-alt"></i>'
+        iconPosition="right"
+      />
+    </div>
+
+    <div class="w-full">
+      <UiSingleDatePicker
+        v-model="hotelDate"
+        label="تاریخ ورود و خروج"
+        placeholder="انتخاب تاریخ"
+      />
+    </div>
+
+    <div class="w-full">
+      <UiBaseButton
+        label="جستجو"
+        variant="filled"
+        color="primary"
+        :active="false"
+        :disabled="!hotelCity||!hotelDate"
+        class="w-full max-w-[500px] xl:max-w-[500px] h-[40px] !rounded-4xl text-[13px]" 
+        @click="searchAhuanHotel"
+      />
+    </div>
+
+  </div>
+</div>
   </div>
   </div>
 </template>
@@ -100,6 +145,8 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router'
+import { useFlightStore } from '~/stores/flights'
+const flightStore = useFlightStore()
 const router = useRouter()
 const origin = ref(null)
 const destination = ref(null)
@@ -116,6 +163,58 @@ const flightOptions = ref([
   {id: 'international' },
   {id: 'domestic' },
 ]);
+const hotelCity=ref(null)
+const hotelDate=ref(null)
+const hotelDatePickerOpen=ref(false)
+
+const hotelCities=computed(()=>{
+  const items=Array.isArray(
+    flightStore.popularCities
+  )
+    ?flightStore.popularCities
+    :[]
+
+  return items
+    .filter(item=>
+      item?.countryCode==='IR'
+    )
+    .map(item=>({
+      code:
+        item.cityCode||
+        item.iataCode||
+        '',
+      name:
+        item.cityNicName||
+        item.nicName||
+        item.cityName||
+        ''
+    }))
+    .filter(item=>
+      item.code&&item.name
+    )
+})
+
+const hotelDateLabel=computed(()=>{
+  if(!hotelDate.value)return ''
+
+  return String(hotelDate.value)
+    .replace(/-/g,'/')
+})
+
+function handleHotelDateChange(value){
+  hotelDate.value=value
+  hotelDatePickerOpen.value=false
+}
+
+function searchAhuanHotel(){
+  if(!hotelCity.value||!hotelDate.value)
+    return
+
+  console.log({
+    city:hotelCity.value,
+    date:hotelDate.value
+  })
+}
 const images = [
   '/imgs/ticketbooking/flightbackground.png',
   '/imgs/ticketbooking/flightbackground2.png',
@@ -129,10 +228,10 @@ const images = [
 const services = [
   { key: "flight", label: "بلیط هواپیما", icon: "🛫" },
   { key: "package", label: "تور (گروهی)", icon: "🧳" },
-  { key: "hotel", label: "هتل آهوان", icon: "🏩" },
+  { key: "hotelAhwan", label: "هتل آهوان", icon: "🏩" },
   { key: "train", label: "قطار", icon: "🚄" },
   { key: "bus", label: "اتوبوس", icon: "🚍" },
-  { key: "hotelAhwan", label: "هتل", icon: "🏝️" },
+  { key: "hotel", label: "هتل", icon: "🏝️" },
   { key: "insurance", label: "بیمه سفر", icon: "🛡️" },
 ]
 
