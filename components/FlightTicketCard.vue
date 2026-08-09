@@ -505,6 +505,11 @@ const niraFare = ref(null)
 const capacityError=ref('')
 const isNira = computed(() => String(props.flight.provider || '').toUpperCase() === 'NIRA')
 const isMahan = computed(() => String(props.flight.provider || '').toUpperCase() === 'MAHAN')
+const isParto=computed(()=>
+  String(
+    props.flight.provider||''
+  ).toUpperCase()==='PARO'
+)
 const requestedSeatCount=computed(()=>{
   return(
     Number(passengerCounts.value.adult||0)+
@@ -518,7 +523,77 @@ const passengerCounts = computed(() => {
     infant: Number(route.query.inf || 0)
   }
 })
+const partoPassengerPrices=computed(()=>{
+  const prices=
+    props.flight.passengerPrices||{}
 
+  const result=[]
+
+  if(
+    passengerCounts.value.adult>0&&
+    prices.adult
+  ){
+    result.push({
+      label:'بزرگسال',
+      count:
+        passengerCounts.value.adult,
+
+      unitPrice:Number(
+        prices.adult.totalFare||0
+      ),
+
+      total:
+        Number(
+          prices.adult.totalFare||0
+        )*
+        passengerCounts.value.adult
+    })
+  }
+
+  if(
+    passengerCounts.value.child>0&&
+    prices.child
+  ){
+    result.push({
+      label:'کودک',
+      count:
+        passengerCounts.value.child,
+
+      unitPrice:Number(
+        prices.child.totalFare||0
+      ),
+
+      total:
+        Number(
+          prices.child.totalFare||0
+        )*
+        passengerCounts.value.child
+    })
+  }
+
+  if(
+    passengerCounts.value.infant>0&&
+    prices.infant
+  ){
+    result.push({
+      label:'نوزاد',
+      count:
+        passengerCounts.value.infant,
+
+      unitPrice:Number(
+        prices.infant.totalFare||0
+      ),
+
+      total:
+        Number(
+          prices.infant.totalFare||0
+        )*
+        passengerCounts.value.infant
+    })
+  }
+
+  return result
+})
 const airlineFromStore = computed(() => {
   if (!props.flight.airline) return null
   return flightStore.airlines.find((a) => a.code === props.flight.airline) || null
@@ -690,45 +765,110 @@ const niraPassengerPrices = computed(() => {
   return items
 })
 
-const panelPassengerPrices = computed(() => {
-  if (isNira.value) return niraPassengerPrices.value
-  if (isMahan.value) return mahanPassengerPrices.value
+const panelPassengerPrices=computed(()=>{
+  if(isNira.value){
+    return niraPassengerPrices.value
+  }
 
-  const basePrice = Number(props.flight.priceFrom || 0)
+  if(isMahan.value){
+    return mahanPassengerPrices.value
+  }
 
-  return [
+  if(isParto.value){
+    return partoPassengerPrices.value
+  }
+
+  const basePrice=
+    Number(
+      props.flight.priceFrom||0
+    )
+
+  return[
     {
-      label: 'بزرگسال',
-      count: passengerCounts.value.adult,
-      unitPrice: basePrice,
-      total: basePrice * passengerCounts.value.adult
+      label:'بزرگسال',
+      count:
+        passengerCounts.value.adult,
+
+      unitPrice:basePrice,
+
+      total:
+        basePrice*
+        passengerCounts.value.adult
     },
     {
-      label: 'کودک',
-      count: passengerCounts.value.child,
-      unitPrice: Math.round(basePrice * 0.75),
-      total: Math.round(basePrice * 0.75) * passengerCounts.value.child
+      label:'کودک',
+      count:
+        passengerCounts.value.child,
+
+      unitPrice:
+        Math.round(
+          basePrice*.75
+        ),
+
+      total:
+        Math.round(
+          basePrice*.75
+        )*
+        passengerCounts.value.child
     },
     {
-      label: 'نوزاد',
-      count: passengerCounts.value.infant,
-      unitPrice: Math.round(basePrice * 0.1),
-      total: Math.round(basePrice * 0.1) * passengerCounts.value.infant
+      label:'نوزاد',
+      count:
+        passengerCounts.value.infant,
+
+      unitPrice:
+        Math.round(
+          basePrice*.1
+        ),
+
+      total:
+        Math.round(
+          basePrice*.1
+        )*
+        passengerCounts.value.infant
     }
-  ].filter((item) => item.count > 0)
+  ].filter(
+    item=>item.count>0
+  )
 })
 
-const cardPrice = computed(() => {
-  if (isNira.value) {
-    return Number(props.flight.priceFrom || 0)
+const cardPrice=computed(()=>{
+  if(isNira.value){
+    return Number(
+      props.flight.priceFrom||0
+    )
   }
 
-  if (isMahan.value) {
-    const adultPrice = mahanPassengerPrices.value.find((item) => item.label === 'بزرگسال')?.unitPrice
-    return Number(adultPrice || props.flight.priceFrom || 0)
+  if(isMahan.value){
+    const adultPrice=
+      mahanPassengerPrices.value
+        .find(
+          item=>
+            item.label==='بزرگسال'
+        )
+        ?.unitPrice
+
+    return Number(
+      adultPrice||
+      props.flight.priceFrom||
+      0
+    )
   }
 
-  return Number(props.flight.priceFrom || 0)
+  if(isParto.value){
+    return Number(
+      props.flight
+        .passengerPrices
+        ?.adult
+        ?.totalFare||
+      props.flight.priceFrom||
+      0
+    )
+  }
+
+  return Number(
+    props.flight.priceFrom||0
+  )
 })
 
 const panelTotalPrice = computed(() => {

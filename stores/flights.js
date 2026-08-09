@@ -414,7 +414,7 @@ airlineIdMap : {
     authLoading: false,
     backgroundLoading: false,
     searchFinished: false,
-
+    partoSessionId:null,
     selectedFlight: null,
     selectedDepartureFlight: null,
     selectedReturnFlight: null,
@@ -536,6 +536,13 @@ airlineIdMap : {
       this.error = ''
       this.successMessage = ''
     },
+    setPartoSessionId(sessionId){
+  this.partoSessionId=sessionId||null
+},
+
+clearPartoSessionId(){
+  this.partoSessionId=null
+},
     closeModal() {
       this.isAuthModalOpen = false
       this.authStep = 'mobile' // بازنشانی مرحله مودال به اولین وضعیت
