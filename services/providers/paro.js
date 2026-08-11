@@ -1,5 +1,36 @@
-import{useFlightStore}from'../../stores/flights.js'
 const BASE_URL='https://api.ahuan.ir/api'
+const PARTO_SESSION_COOKIE='parto_session_id'
+let creatingSessionPromise=null
+function getPartoSessionCookie(){
+  return useCookie(
+    PARTO_SESSION_COOKIE,
+    {
+      sameSite:'lax',
+      secure:process.env.NODE_ENV==='production'
+    }
+  )
+}
+
+function getPartoSessionId(){
+  const cookie=getPartoSessionCookie()
+
+  return String(
+    cookie.value||''
+  ).trim()
+}
+
+function savePartoSessionId(sessionId){
+  const cookie=getPartoSessionCookie()
+
+  cookie.value=String(
+    sessionId||''
+  ).trim()
+}
+
+function clearPartoSessionId(){
+  const cookie=getPartoSessionCookie()
+  cookie.value=null
+}
 export async function createParoSession(){
   const response=await $fetch(
     `${BASE_URL}/PartoAir/create-session`,
@@ -19,24 +50,44 @@ export async function createParoSession(){
     )
   }
 
-  return response.sessionId
-}
+  const sessionId=String(
+    response.sessionId
+  ).trim()
 
-async function getOrCreateParoSession(){
-  const flightStore=useFlightStore()
-
-  if(flightStore.partoSessionId){
-    return flightStore.partoSessionId
-  }
-
-  const sessionId=
-    await createParoSession()
-
-  flightStore.setPartoSessionId(
+  savePartoSessionId(
     sessionId
   )
 
   return sessionId
+}
+
+async function getOrCreateParoSession(){
+  const currentSessionId=
+    getPartoSessionId()
+
+  if(currentSessionId){
+    return currentSessionId
+  }
+
+  /*
+   * جلوگیری از چند create-session همزمان.
+   *
+   * اگر چند درخواست همزمان وارد این متد شوند،
+   * فقط اولین درخواست create-session می‌زند
+   * و بقیه منتظر همان Promise می‌مانند.
+   */
+  if(creatingSessionPromise){
+    return await creatingSessionPromise
+  }
+
+  creatingSessionPromise=
+    createParoSession()
+
+  try{
+    return await creatingSessionPromise
+  }finally{
+    creatingSessionPromise=null
+  }
 }
 function isParoSessionError(error){
   const data=
@@ -48,87 +99,159 @@ function isParoSessionError(error){
   const errors=
     data?.errors||{}
 
-  const sessionErrors=
-    errors?.SessionId||
-    errors?.sessionId||
-    []
+  const sessionErrors=[
+    ...(Array.isArray(errors?.SessionId)
+      ?errors.SessionId
+      :[]),
 
-  if(
-    Array.isArray(sessionErrors)&&
-    sessionErrors.some(message=>
-      String(message)
+    ...(Array.isArray(errors?.sessionId)
+      ?errors.sessionId
+      :[])
+  ]
+
+  const messages=[
+    ...sessionErrors,
+
+    data?.error?.message,
+    data?.message,
+    data?.title,
+    error?.message
+  ]
+    .filter(Boolean)
+    .map(value=>
+      String(value)
+        .trim()
         .toLowerCase()
-        .includes('sessionid')
     )
-  ){
-    return true
-  }
 
-  const message=String(
-    data?.title||
-    data?.message||
-    error?.message||
-    ''
-  ).toLowerCase()
-
-  return(
+  return messages.some(message=>
     message.includes('sessionid')||
-    message.includes('session id')
+    message.includes('session id')||
+    message.includes('session expired')||
+    message.includes('session has expired')||
+    message.includes('invalid session')||
+    message.includes('session is invalid')
   )
 }
 async function executeParoRequest(
   requestFactory
 ){
-  const flightStore=useFlightStore()
-
+  /*
+   * درخواست اول:
+   * اگر Session در Cookie داریم استفاده می‌کنیم،
+   * اگر نداریم ساخته می‌شود.
+   */
   let sessionId=
     await getOrCreateParoSession()
 
+  let response
+
   try{
-    return await requestFactory(
-      sessionId
-    )
+    response=
+      await requestFactory(
+        sessionId
+      )
   }catch(error){
-    if(!isParoSessionError(error)){
+    /*
+     * فقط خطای HTTP مربوط به Session
+     */
+    if(
+      !isParoSessionError(
+        error
+      )
+    ){
       throw error
     }
 
+    console.warn(
+      'PARTO INVALID SESSION:',
+      sessionId
+    )
+
     /*
-     * Session خراب/منقضی/ارسال نشده
+     * Session قبلی قطعاً خراب است.
      */
-    flightStore.clearPartoSessionId()
-
-    sessionId=
-      await getOrCreateParoSession()
+    clearPartoSessionId()
 
     /*
-     * فقط یک Retry
+     * مهم:
+     * اینجا دیگر getOrCreate نزن.
+     * حتماً Session جدید بساز.
+     */
+    sessionId=
+      await createParoSession()
+
+    console.log(
+      'PARTO NEW SESSION:',
+      sessionId
+    )
+
+    /*
+     * Retry دقیقاً با Session جدید
      */
     return await requestFactory(
       sessionId
     )
   }
+
+  /*
+   * Parto ممکن است HTTP 200 بدهد
+   * ولی داخل Body بگوید Session نامعتبر است.
+   */
+  if(
+    isParoSessionResponseError(
+      response
+    )
+  ){
+    console.warn(
+      'PARTO INVALID SESSION RESPONSE:',
+      sessionId
+    )
+
+    clearPartoSessionId()
+
+    /*
+     * مستقیم create-session
+     */
+    sessionId=
+      await createParoSession()
+
+    console.log(
+      'PARTO NEW SESSION:',
+      sessionId
+    )
+
+    /*
+     * فقط یک Retry
+     */
+    const retryResponse=
+      await requestFactory(
+        sessionId
+      )
+
+    /*
+     * اگر حتی Session جدید هم نامعتبر بود
+     * دیگر Retry نکن.
+     */
+    if(
+      isParoSessionResponseError(
+        retryResponse
+      )
+    ){
+      clearPartoSessionId()
+
+      throw new Error(
+        retryResponse?.error?.message||
+        'Session جدید Parto نیز نامعتبر است'
+      )
+    }
+
+    return retryResponse
+  }
+
+  return response
 }
-// export async function createParoSession(){
-//   const response=await $fetch(
-//     `${BASE_URL}/PartoAir/create-session`,
-//     {
-//       method:'POST'
-//     }
-//   )
 
-//   if(
-//     !response?.success||
-//     !response?.sessionId
-//   ){
-//     throw new Error(
-//       response?.error||
-//       'دریافت SessionId از PartoAir ناموفق بود'
-//     )
-//   }
-
-//   return response.sessionId
-// }
 function normalizeDate(value){
   if(!value)return ''
 
@@ -226,7 +349,30 @@ export function buildParoAvailabilityPayload(
     }
   }
 }
+function isParoSessionResponseError(response){
+  const errorId=
+    String(
+      response?.error?.id||
+      ''
+    )
+      .trim()
+      .toLowerCase()
 
+  const message=
+    String(
+      response?.error?.message||
+      ''
+    )
+      .trim()
+      .toLowerCase()
+
+  return(
+    errorId==='err0102008'||
+    message.includes('invalid sessionid')||
+    message.includes('invalid session id')||
+    message.includes('session expired')
+  )
+}
 function getPassengerPrice(
   pricingInfo,
   passengerType
@@ -301,8 +447,7 @@ function mapParoSegment(segment){
 
     flightNumber:String(
       segment.flightNumber||
-      segment.operatingAirline
-        ?.flightNumber||
+      segment.operatingAirline?.flightNumber||
       ''
     ),
 
@@ -340,26 +485,23 @@ function mapParoSegment(segment){
       '',
 
     aircraftTypeCode:
-      segment.operatingAirline
-        ?.equipment||
+      segment.operatingAirline?.equipment||
       '',
 
     aircraftTypeName:
-      segment.operatingAirline
-        ?.equipmentName||
+      segment.operatingAirline?.equipmentName||
       '',
-
-    stopQuantity:Number(
-      segment.stopQuantity||0
-    ),
 
     journeyDuration:
       segment.journeyDuration||
       '',
 
     journeyDurationMinutes:Number(
-      segment.journeyDurationPerMinute||
-      0
+      segment.journeyDurationPerMinute||0
+    ),
+
+    connectionTimeMinutes:Number(
+      segment.connectionTimePerMinute||0
     ),
 
     departureTerminal:
@@ -375,9 +517,7 @@ function mapParoSegment(segment){
       segment.isReturn===true,
 
     technicalStops:
-      Array.isArray(
-        segment.technicalStops
-      )
+      Array.isArray(segment.technicalStops)
         ?segment.technicalStops
         :[]
   }
@@ -594,9 +734,10 @@ export function mapParoItineraryToFlight(
      * nonRefundableType را هنوز
      * قطعی نکرده‌ایم.
      */
-    refundable:null,
+    refundable:
+  Number(nonRefundableType)!==2,
 
-    nonRefundableType,
+nonRefundableType,
 
     refundMethod:
       itinerary?.refundMethod,
@@ -604,7 +745,22 @@ export function mapParoItineraryToFlight(
     baggage:
       first.baggage||
       '',
+    stopQuantity:
+  Math.max(
+    mappedSegments.length-1,
+    0
+  ),
 
+isDirect:
+  mappedSegments.length===1,
+  returnStopQuantity:
+  Math.max(
+    mappedReturnSegments.length-1,
+    0
+  ),
+
+returnIsDirect:
+  mappedReturnSegments.length===1,
     aircraftTypeCode:
       first.operatingAirline
         ?.equipment||
@@ -790,39 +946,174 @@ export function mapParoResponseToFlights(response){
  * چون endpoint Paro در کدی که فرستادی وجود نداشت،
  * عمداً حدس نزدم.
  */
-export async function searchParoFlights(params){
-  return executeParoRequest(
-    async sessionId=>{
-      const payload=
-        buildParoAvailabilityPayload(
-          params,
+export async function searchParoFlights(
+  params
+){
+  const response=
+    await executeParoRequest(
+      async sessionId=>{
+        const payload=
+          buildParoAvailabilityPayload(
+            params,
+            sessionId
+          )
+
+        console.log(
+          'PARTO REQUEST SESSION:',
           sessionId
         )
 
-      const response=
-        await $fetch(
-          `${BASE_URL}/PartoAir/search`,
+        const result=
+          await $fetch(
+            `${BASE_URL}/PartoAir/search`,
+            {
+              method:'POST',
+              body:payload
+            }
+          )
+
+        console.log(
+          'PARTO RESPONSE:',
           {
-            method:'POST',
-            body:payload
+            requestSessionId:
+              sessionId,
+
+            success:
+              result?.success,
+
+            error:
+              result?.error
           }
         )
 
-      const flights=
-        mapParoResponseToFlights(
-          response
+        /*
+         * مهم:
+         * اینجا throw نکن.
+         */
+        return result
+      }
+    )
+
+  /*
+   * executeParoRequest قبلاً Session Error
+   * را مدیریت کرده.
+   *
+   * پس اگر هنوز success=false است،
+   * خطای واقعی Search است.
+   */
+  if(
+    response?.success===false
+  ){
+    throw new Error(
+      response?.error?.message||
+      'خطا در جستجوی Parto'
+    )
+  }
+
+  const sessionId=
+    getPartoSessionId()
+
+  const flights=
+    mapParoResponseToFlights(
+      response
+    )
+
+  return flights.map(
+    flight=>({
+      ...flight,
+
+      sessionId,
+
+      meta:{
+        ...flight.meta,
+        sessionId
+      }
+    })
+  )
+}
+export async function getParoRules({
+  fareSourceCode,
+  uniqueId=''
+}){
+  if(!fareSourceCode){
+    throw new Error(
+      'FareSourceCode پرواز Parto مشخص نیست'
+    )
+  }
+
+  return executeParoRequest(
+    async sessionId=>{
+      const response=
+        await $fetch(
+          `${BASE_URL}/PartoAir/rules`,
+          {
+            method:'POST',
+            body:{
+              uniqueId:String(
+                uniqueId||''
+              ),
+              fareSourceCode:String(
+                fareSourceCode
+              ),
+              sessionId
+            }
+          }
         )
 
-      return flights.map(flight=>({
-        ...flight,
+      if(
+        response?.success===false&&
+        !isParoSessionResponseError(response)
+      ){
+        throw new Error(
+          response?.error?.message||
+          'دریافت قوانین کنسلی ناموفق بود'
+        )
+      }
 
-        sessionId,
+      return response
+    }
+  )
+}
+export async function getParoBaggages(
+  fareSourceCode
+){
+  if(!fareSourceCode){
+    throw new Error(
+      'FareSourceCode پرواز Parto مشخص نیست'
+    )
+  }
 
-        meta:{
-          ...flight.meta,
-          sessionId
-        }
-      }))
+  return executeParoRequest(
+    async sessionId=>{
+      const response=
+        await $fetch(
+          `${BASE_URL}/PartoAir/baggages`,
+          {
+            method:'POST',
+            body:{
+              fareSourceCode:
+                String(fareSourceCode),
+              sessionId
+            }
+          }
+        )
+
+      /*
+       * خطای معمولی Parto
+       * خطای Session توسط executeParoRequest
+       * مدیریت می‌شود.
+       */
+      if(
+        response?.success===false&&
+        !isParoSessionResponseError(response)
+      ){
+        throw new Error(
+          response?.error?.message||
+          'دریافت بار مجاز ناموفق بود'
+        )
+      }
+
+      return response
     }
   )
 }

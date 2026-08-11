@@ -316,11 +316,19 @@ const isSortDropdownOpen = ref(false)
 
 const sortOptions = ['نام ایرلاین', 'دیرترین', 'زودترین', 'ارزان‌ترین', 'گران‌ترین']
 
-const activeFilters = ref({
-  departureTimeRange: null,
+const activeFilters=ref({
+  departureTimeRange:null,
+
   economy:true,
+  premiumEconomy:true,
+
   business:true,
-  airlines: []
+  premiumBusiness:true,
+
+  first:true,
+  premiumFirst:true,
+
+  airlines:[]
 })
 const scrollToTop = async () => {
   await nextTick()
@@ -550,46 +558,127 @@ function getFlightBookingClass(flight) {
     ''
   )
 }
-function getFlightCabinType(flight) {
-  const airlineCode = getFlightAirlineCode(flight)
-  const bookingClass = getFlightBookingClass(flight)
+function getFlightCabinType(flight){
+  const provider=normalizeCabinCode(
+    flight?.provider
+  )
 
-  if (
+  /*
+   * PARTO
+   */
+  if(provider==='PARTO'){
+    const firstSegment=
+      Array.isArray(flight?.segments)
+        ?flight.segments[0]
+        :null
+
+    const cabinType=Number(
+      firstSegment?.cabinType??
+      flight?.cabinType
+    )
+
+    switch(cabinType){
+      case 1:
+        return'economy'
+
+      case 2:
+        return'premiumEconomy'
+
+      case 3:
+        return'business'
+
+      case 4:
+        return'premiumBusiness'
+
+      case 5:
+        return'first'
+
+      case 6:
+        return'premiumFirst'
+    }
+
+    const bookingClass=
+      normalizeCabinCode(
+        firstSegment?.bookingClass||
+        firstSegment?.rbd||
+        flight?.bookingClass||
+        flight?.rbd
+      )
+
+    switch(bookingClass){
+      case'Y':
+        return'economy'
+
+      case'S':
+        return'premiumEconomy'
+
+      case'C':
+        return'business'
+
+      case'J':
+        return'premiumBusiness'
+
+      case'F':
+        return'first'
+
+      case'P':
+        return'premiumFirst'
+    }
+
+    return null
+  }
+
+  /*
+   * NIRA / MAHAN
+   * منطق قبلی
+   */
+  const airlineCode=
+    getFlightAirlineCode(flight)
+
+  const bookingClass=
+    getFlightBookingClass(flight)
+
+  if(
     flightClasses[airlineCode]
       ?.business
       ?.includes(bookingClass)
-  ) {
-    return 'business'
+  ){
+    return'business'
   }
-   const cabinName = normalizeCabinCode(
-    flight?.cabinName ||
-    flight?.cabin ||
-    flight?.cabinTitle ||
-    flight?.meta?.raw?.CabinName ||
-    flight?.meta?.raw?.cabinName ||
-    flight?.meta?.raw?.Cabin ||
-    flight?.meta?.raw?.cabin ||
-    ''
-  )
 
-  if (
-    cabinName.includes('BUSINESS') ||
+  const cabinName=
+    normalizeCabinCode(
+      flight?.cabinName||
+      flight?.cabin||
+      flight?.cabinTitle||
+      flight?.meta?.raw?.CabinName||
+      flight?.meta?.raw?.cabinName||
+      flight?.meta?.raw?.Cabin||
+      flight?.meta?.raw?.cabin||
+      ''
+    )
+
+  if(
+    cabinName.includes('BUSINESS')||
     cabinName.includes('بیزینس')
-  ) {
-    return 'business'
+  ){
+    return'business'
   }
 
-  const cabinType = Number(
-    flight?.cabinType ??
-    flight?.meta?.raw?.CabinType ??
+  const cabinType=Number(
+    flight?.cabinType??
+    flight?.meta?.raw?.CabinType??
     flight?.meta?.raw?.cabinType
   )
 
-  if (cabinType === 2 || cabinType === 5) {
-    return 'business'
+  if(
+    cabinType===2||
+    cabinType===5
+  ){
+    return'business'
   }
 
-  return 'economy'
+  return'economy'
 }
 function getFlightAirlineFilterCode(flight) {
   return normalizeCabinCode(
@@ -668,22 +757,15 @@ const sortedFlights = computed(() => {
       /*
        * فیلتر اکونومی و بیزینس
        */
-      const cabinType =
-        getFlightCabinType(flight)
+      const cabinType=
+  getFlightCabinType(flight)
 
-      if (
-        cabinType === 'economy' &&
-        !economySelected
-      ) {
-        return false
-      }
-
-      if (
-        cabinType === 'business' &&
-        !businessSelected
-      ) {
-        return false
-      }
+if(
+  cabinType&&
+  activeFilters.value?.[cabinType]===false
+){
+  return false
+}
 
       /*
        * فیلتر ایرلاین
@@ -852,53 +934,90 @@ const performSearch = async (payload) => {
   }
 }
 
-const handleDateChange = async (dateObj) => {
-  const newDate = dateObj?.fullDate
-  if (!newDate) return
+// const handleDateChange = async (dateObj) => {
+//   const newDate = dateObj?.fullDate
+//   if (!newDate) return
 
-  const cleanedDate = String(newDate)
-    .replace(/\//g, '-')
+//   const cleanedDate = String(newDate)
+//     .replace(/\//g, '-')
+//     .trim()
+
+//   selectedDate.value = cleanedDate
+
+//   const isSelectingReturnFlight =
+//     travelType.value === 'round-trip' &&
+//     flightStore.currentStep === 1 &&
+//     !!flightStore.selectedDepartureFlight
+
+//   await router.replace({
+//     query: {
+//       ...route.query,
+//       ...(isSelectingReturnFlight
+//         ? { returnDate: cleanedDate }
+//         : { departDate: cleanedDate })
+//     }
+//   })
+
+//   if (isSelectingReturnFlight) {
+//     await performSearch(
+//       buildSearchPayload({
+//         from: baseSearchParamsFromRoute.value.to,
+//         to: baseSearchParamsFromRoute.value.from,
+//         departureDate: cleanedDate,
+//         returnDate: '',
+//         travelType: 'one-way'
+//       })
+//     )
+
+//     return
+//   }
+
+//   await performSearch(
+//     buildSearchPayload({
+//       from: baseSearchParamsFromRoute.value.from,
+//       to: baseSearchParamsFromRoute.value.to,
+//       departureDate: cleanedDate,
+//       returnDate: baseSearchParamsFromRoute.value.returnDate,
+//       travelType: baseSearchParamsFromRoute.value.travelType
+//     })
+//   )
+// }
+const handleDateChange=async dateObj=>{
+  const newDate=dateObj?.fullDate
+  if(!newDate)return
+
+  const cleanedDate=String(newDate)
+    .replace(/\//g,'-')
     .trim()
 
-  selectedDate.value = cleanedDate
-
-  const isSelectingReturnFlight =
-    travelType.value === 'round-trip' &&
-    flightStore.currentStep === 1 &&
-    !!flightStore.selectedDepartureFlight
-
-  await router.replace({
-    query: {
-      ...route.query,
-      ...(isSelectingReturnFlight
-        ? { returnDate: cleanedDate }
-        : { departDate: cleanedDate })
-    }
-  })
-
-  if (isSelectingReturnFlight) {
-    await performSearch(
-      buildSearchPayload({
-        from: baseSearchParamsFromRoute.value.to,
-        to: baseSearchParamsFromRoute.value.from,
-        departureDate: cleanedDate,
-        returnDate: '',
-        travelType: 'one-way'
-      })
-    )
-
+  if(
+    cleanedDate===selectedDate.value
+  ){
     return
   }
 
-  await performSearch(
-    buildSearchPayload({
-      from: baseSearchParamsFromRoute.value.from,
-      to: baseSearchParamsFromRoute.value.to,
-      departureDate: cleanedDate,
-      returnDate: baseSearchParamsFromRoute.value.returnDate,
-      travelType: baseSearchParamsFromRoute.value.travelType
-    })
-  )
+  selectedDate.value=cleanedDate
+
+  const isSelectingReturnFlight=
+    travelType.value==='round-trip'&&
+    flightStore.currentStep===1&&
+    !!flightStore.selectedDepartureFlight
+
+  await router.replace({
+    query:{
+      ...route.query,
+
+      ...(isSelectingReturnFlight
+        ?{returnDate:cleanedDate}
+        :{departDate:cleanedDate}
+      )
+    }
+  })
+
+  /*
+   * اینجا دیگر performSearch نزن.
+   * watcher تغییر route خودش Search را اجرا می‌کند.
+   */
 }
 
 const formStep = computed(() => {
