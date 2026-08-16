@@ -9,6 +9,28 @@ moment.loadPersian({
   usePersianDigits: false,
   dialect: 'persian-modern'
 })
+
+
+const countryOptions=
+  computed(
+    ()=>flightStore.countries
+  )
+
+const countriesLoading=
+  computed(
+    ()=>flightStore.countriesLoading
+  )
+
+async function loadCountries(){
+  try{
+    await flightStore.loadCountries()
+  }catch(error){
+    console.error(
+      'Countries load error:',
+      error
+    )
+  }
+}
 function handleDebugPassengers() {
   const isValid = validateAll()
   const data = getData()
@@ -78,7 +100,35 @@ const previousPassengersLoading = ref(false)
 const previousPassengersError = ref('')
 const previousPassengers = ref([])
 const selectedPassengerFormIndex = ref(null)
+function onPassportIssueDayChange(passenger,value){
+  passenger.passportIssueDate.day=
+    onlyNumbers(extractValue(value)).slice(0,2)
 
+  clearFieldError(
+    passenger,
+    'passportIssueDay'
+  )
+}
+
+function onPassportIssueMonthChange(passenger,value){
+  passenger.passportIssueDate.month=
+    onlyNumbers(extractValue(value)).slice(0,2)
+
+  clearFieldError(
+    passenger,
+    'passportIssueMonth'
+  )
+}
+
+function onPassportIssueYearChange(passenger,value){
+  passenger.passportIssueDate.year=
+    onlyNumbers(extractValue(value)).slice(0,4)
+
+  clearFieldError(
+    passenger,
+    'passportIssueYear'
+  )
+}
 function getLoggedInUser() {
   const userCookie = useCookie('user_data')
   let user = userCookie.value
@@ -158,7 +208,59 @@ function normalizePreviousPassengerGender(value) {
 
   return ''
 }
+ function parsePreviousGregorianDate(value){
+  if(!value){
+    return{
+      day:'',
+      month:'',
+      year:'',
+      calendar:'gregorian'
+    }
+  }
 
+  const date=moment(value)
+
+  if(!date.isValid()){
+    return{
+      day:'',
+      month:'',
+      year:'',
+      calendar:'gregorian'
+    }
+  }
+
+  return{
+    day:date.format('D'),
+    month:date.format('M'),
+    year:date.format('YYYY'),
+    calendar:'gregorian'
+  }
+}
+// function parsePreviousPassengerPassportExpireDate(value){
+//   if(!value){
+//     return{
+//       day:'',
+//       month:'',
+//       year:''
+//     }
+//   }
+
+//   const date=moment(value)
+
+//   if(!date.isValid()){
+//     return{
+//       day:'',
+//       month:'',
+//       year:''
+//     }
+//   }
+
+//   return{
+//     day:date.format('D'),
+//     month:date.format('M'),
+//     year:date.format('YYYY')
+//   }
+// }
 function parsePreviousPassengerBirthDate(
   value,
   nationality
@@ -170,6 +272,7 @@ function parsePreviousPassengerBirthDate(
       year: ''
     }
   }
+ 
 
   const date = moment(value)
 
@@ -195,7 +298,44 @@ function parsePreviousPassengerBirthDate(
     year: date.format('YYYY')
   }
 }
+function onCountryChange(passenger,value){
+  passenger.countryCode=
+    String(
+      extractValue(value)||''
+    )
+      .trim()
+      .toUpperCase()
 
+  clearFieldError(
+    passenger,
+    'countryCode'
+  )
+}
+function parsePreviousPassengerPassportExpireDate(value){
+  if(!value){
+    return{
+      day:'',
+      month:'',
+      year:''
+    }
+  }
+
+  const date=moment(value)
+
+  if(!date.isValid()){
+    return{
+      day:'',
+      month:'',
+      year:''
+    }
+  }
+
+  return{
+    day:date.format('D'),
+    month:date.format('M'),
+    year:date.format('YYYY')
+  }
+}
 function formatPreviousPassengerBirthDate(
   value,
   nationality
@@ -334,76 +474,100 @@ function closePreviousPassengersModal() {
   previousPassengersError.value = ''
 }
 
-function selectPreviousPassenger(item) {
-  const index =
-    selectedPassengerFormIndex.value
+function selectPreviousPassenger(item){
+  const index=selectedPassengerFormIndex.value
 
-  if (
-    !Number.isInteger(index) ||
+  if(
+    !Number.isInteger(index)||
     !passengers.value[index]
-  ) {
+  ){
     return
   }
 
-  const target =
-    passengers.value[index]
+  const target=passengers.value[index]
 
-  const nationality =
+  const nationality=
     normalizePassengerNationality(
       item?.nationality
     )
 
-  const birthDate =
+  const birthDate=
     parsePreviousPassengerBirthDate(
       item?.birthDate,
       nationality
     )
 
-  target.firstName = onlyLatin(
+  const passportIssueDate=
+  parsePreviousGregorianDate(
+    item?.passportIssueDate||
+    item?.passportIssueDateGregorian||
+    item?.passportIssueDateFa
+  )
+
+ const passportExpireDate=
+  parsePreviousPassengerPassportExpireDate(
+    item?.passportExpDate||
+    item?.passportExpireDate||
+    item?.passportExpiryDate
+  )
+
+  target.firstName=onlyLatin(
     normalizeSpaces(
-      item?.fName ||
-      item?.firstName ||
+      item?.fName||
+      item?.firstName||
       ''
     )
   )
 
-  target.lastName = onlyLatin(
+  target.lastName=onlyLatin(
     normalizeSpaces(
-      item?.lName ||
-      item?.lastName ||
+      item?.lName||
+      item?.lastName||
       ''
     )
   )
 
-  target.nationality = nationality
+  target.nationality=nationality
 
-  target.nationalCode = onlyNumbers(
-    item?.codeMelli ||
-    item?.nationalCode ||
+  target.nationalCode=onlyNumbers(
+    item?.codeMelli||
+    item?.nationalCode||
     ''
-  ).slice(0, 10)
+  ).slice(0,10)
 
-  target.passportNumber =
+  target.passportNumber=
     normalizeSpaces(
-      item?.passportNo ||
-      item?.passportNumber ||
+      item?.passportNo||
+      item?.passportNumber||
       ''
     )
       .toUpperCase()
-      .slice(0, 10)
+      .slice(0,10)
 
-  target.gender =
+  target.passportIssueDate={
+    day:passportIssueDate.day,
+    month:passportIssueDate.month,
+    year:passportIssueDate.year
+  }
+
+  target.passportExpireDate={
+    day:passportExpireDate.day,
+    month:passportExpireDate.month,
+    year:passportExpireDate.year
+  }
+
+  target.gender=
     normalizePreviousPassengerGender(
       item?.gender
     )
 
-  target.birthDate = {
-    day: birthDate.day,
-    month: birthDate.month,
-    year: birthDate.year
+  target.birthDate={
+    day:birthDate.day,
+    month:birthDate.month,
+    year:birthDate.year
   }
 
-  target.errors = {}
+  target.errors={}
 
   closePreviousPassengersModal()
 }
@@ -492,7 +656,46 @@ function getYearOptions(nationality) {
 
   return years
 }
+function getPassportIssueYearOptions(){
+  const years=[]
+  const currentYear=new Date().getFullYear()
 
+  for(
+    let year=currentYear;
+    year>=1920;
+    year-=1
+  ){
+    years.push({
+      label:String(year),
+      value:String(year)
+    })
+  }
+
+  return years
+}
+
+const passportIssueYearOptions=
+  getPassportIssueYearOptions()
+function getPassportExpireYearOptions(){
+  const years=[]
+  const currentYear=new Date().getFullYear()
+
+  for(
+    let year=currentYear;
+    year<=currentYear+15;
+    year+=1
+  ){
+    years.push({
+      label:String(year),
+      value:String(year)
+    })
+  }
+
+  return years
+}
+
+const passportExpireYearOptions=
+  getPassportExpireYearOptions()
 function getDayOptions() {
   const days = []
   for (let day = 1; day <= 31; day += 1) {
@@ -585,22 +788,33 @@ function calculateAge(birthDateObj, nationality) {
   return { years: ageYears, months: ageMonths, days: ageDays, totalDays: Math.floor((today - birthDate) / (1000 * 60 * 60 * 24)) }
 }
 
-function createPassenger(type, index) {
-  return {
+function createPassenger(type,index){
+  return{
     type,
-    label: getPassengerTitle(type, index),
-    firstName: '',
-    lastName: '',
-    nationality: 'IR',
-    nationalCode: '',
-    passportNumber: '',
-    gender: 'male',
-    birthDate: {
-      day: '',
-      month: '',
-      year: '',
+    label:getPassengerTitle(type,index),
+    firstName:'',
+    lastName:'',
+    nationality:'IR',
+    countryCode:'',
+    nationalCode:'',
+    passportNumber:'',
+    passportIssueDate:{
+      day:'',
+      month:'',
+      year:''
     },
-    errors: {},
+    passportExpireDate:{
+      day:'',
+      month:'',
+      year:''
+    },
+    gender:'male',
+    birthDate:{
+      day:'',
+      month:'',
+      year:''
+    },
+    errors:{}
   }
 }
 
@@ -631,6 +845,19 @@ function clearIdentityFields(passenger) {
   delete passenger.errors.month
   delete passenger.errors.year
   delete passenger.errors.ageRange
+  passenger.passportIssueDate.day=''
+passenger.passportIssueDate.month=''
+passenger.passportIssueDate.year=''
+
+  passenger.passportExpireDate.day=''
+passenger.passportExpireDate.month=''
+passenger.passportExpireDate.year=''
+delete passenger.errors.passportIssueDay
+delete passenger.errors.passportIssueMonth
+delete passenger.errors.passportIssueYear
+delete passenger.errors.passportExpireDay
+delete passenger.errors.passportExpireMonth
+delete passenger.errors.passportExpireYear
 }
 
 function validateBirthDate(passenger) {
@@ -682,7 +909,69 @@ function validateBirthDate(passenger) {
 
   return errors
 }
+function validatePassportExpireDate(
+  passenger
+){
+  const errors={}
 
+  if(!shouldShowPassport(passenger)){
+    return errors
+  }
+
+  const{
+    day,
+    month,
+    year
+  }=passenger.passportExpireDate
+
+  if(!day){
+    errors.passportExpireDay=
+      'روز انقضا الزامی است'
+  }
+
+  if(!month){
+    errors.passportExpireMonth=
+      'ماه انقضا الزامی است'
+  }
+
+  if(!year){
+    errors.passportExpireYear=
+      'سال انقضا الزامی است'
+  }
+
+  if(
+    errors.passportExpireDay||
+    errors.passportExpireMonth||
+    errors.passportExpireYear
+  ){
+    return errors
+  }
+
+  const expireDate=new Date(
+    Number(year),
+    Number(month)-1,
+    Number(day),
+    23,59,59
+  )
+
+  if(
+    Number.isNaN(
+      expireDate.getTime()
+    )
+  ){
+    errors.passportExpireDay=
+      'تاریخ انقضا نامعتبر است'
+
+    return errors
+  }
+
+  if(expireDate<=new Date()){
+    errors.passportExpireYear=
+      'پاسپورت منقضی شده است'
+  }
+
+  return errors
+}
 function validatePassenger(passenger) {
   const errors = {}
 
@@ -713,7 +1002,14 @@ function validatePassenger(passenger) {
   if (!passenger.nationality) {
     errors.nationality = 'ملیت را انتخاب کنید'
   }
-
+if(
+  isInternationalFlight.value&&
+  passenger.nationality==='FOREIGN'&&
+  !passenger.countryCode
+){
+  errors.countryCode=
+    'کشور را انتخاب کنید'
+}
   if (shouldShowNationalCode(passenger)) {
     if (!passenger.nationalCode) {
       errors.nationalCode = 'کد ملی الزامی است'
@@ -729,7 +1025,12 @@ function validatePassenger(passenger) {
       errors.passportNumber = 'شماره پاسپورت معتبر نیست'
     }
   }
-
+Object.assign(
+  errors,
+  validatePassportExpireDate(
+    passenger
+  )
+)
   Object.assign(errors, validateBirthDate(passenger))
   passenger.errors = errors
 
@@ -746,23 +1047,60 @@ function validateAll() {
   return isValid
 }
 
-function getData() {
-  return passengers.value.map((passenger) => ({
-    type: passenger.type,
-    label: passenger.label,
-    firstName: passenger.firstName,
-    lastName: passenger.lastName,
-    nationality: passenger.nationality,
-    nationalCode: shouldShowNationalCode(passenger) ? passenger.nationalCode : '',
-    passportNumber: shouldShowPassport(passenger) ? passenger.passportNumber : '',
-    gender: passenger.gender,
-    birthDate: {
-      day: passenger.birthDate.day,
-      month: passenger.birthDate.month,
-      year: passenger.birthDate.year,
-      calendar: passenger.nationality === 'IR' ? 'jalali' : 'gregorian',
-    },
-  }))
+function getData(){
+  return passengers.value.map(
+    passenger=>({
+      type:passenger.type,
+      label:passenger.label,
+      firstName:passenger.firstName,
+      lastName:passenger.lastName,
+      nationality:passenger.nationality,
+countryCode:
+  passenger.nationality==='IR'
+    ?'IR'
+    :passenger.countryCode,
+      nationalCode:
+        shouldShowNationalCode(passenger)
+          ?passenger.nationalCode
+          :'',
+
+      passportNumber:
+        shouldShowPassport(passenger)
+          ?passenger.passportNumber
+          :'',
+passportIssueDate:
+  shouldShowPassport(passenger)
+    ?{
+        day:passenger.passportIssueDate.day,
+        month:passenger.passportIssueDate.month,
+        year:passenger.passportIssueDate.year,
+        calendar:'gregorian'
+      }
+    :null,
+     passportExpDate:
+  shouldShowPassport(passenger)
+    ?{
+        day:passenger.passportExpireDate.day,
+        month:passenger.passportExpireDate.month,
+        year:passenger.passportExpireDate.year,
+        calendar:'gregorian'
+      }
+    :null,
+
+      gender:passenger.gender,
+
+      birthDate:{
+        day:passenger.birthDate.day,
+        month:passenger.birthDate.month,
+        year:passenger.birthDate.year,
+
+        calendar:
+          passenger.nationality==='IR'
+            ?'jalali'
+            :'gregorian'
+      }
+    })
+  )
 }
 
 function onFirstNameChange(passenger, value) {
@@ -785,10 +1123,32 @@ function onPassportChange(passenger, value) {
   clearFieldError(passenger, 'passportNumber')
 }
 
-function onNationalityChange(passenger, value) {
-  passenger.nationality = String(extractValue(value) || '')
-  clearFieldError(passenger, 'nationality')
-  clearIdentityFields(passenger)
+function onNationalityChange(passenger,value){
+  passenger.nationality=
+    String(
+      extractValue(value)||''
+    )
+
+  if(
+    passenger.nationality==='IR'
+  ){
+    passenger.countryCode='IR'
+  }else{
+    passenger.countryCode=''
+
+    if(isInternationalFlight.value){
+      loadCountries()
+    }
+  }
+
+  clearFieldError(
+    passenger,
+    'nationality'
+  )
+
+  clearIdentityFields(
+    passenger
+  )
 }
 
 function onGenderChange(passenger, value) {
@@ -800,7 +1160,50 @@ function onBirthDayChange(passenger, value) {
   passenger.birthDate.day = onlyNumbers(extractValue(value)).slice(0, 2)
   clearFieldError(passenger, 'day')
 }
+function onPassportExpireDayChange(
+  passenger,
+  value
+){
+  passenger.passportExpireDate.day=
+    onlyNumbers(
+      extractValue(value)
+    ).slice(0,2)
 
+  clearFieldError(
+    passenger,
+    'passportExpireDay'
+  )
+}
+
+function onPassportExpireMonthChange(
+  passenger,
+  value
+){
+  passenger.passportExpireDate.month=
+    onlyNumbers(
+      extractValue(value)
+    ).slice(0,2)
+
+  clearFieldError(
+    passenger,
+    'passportExpireMonth'
+  )
+}
+
+function onPassportExpireYearChange(
+  passenger,
+  value
+){
+  passenger.passportExpireDate.year=
+    onlyNumbers(
+      extractValue(value)
+    ).slice(0,4)
+
+  clearFieldError(
+    passenger,
+    'passportExpireYear'
+  )
+}
 function onBirthMonthChange(passenger, value) {
   passenger.birthDate.month = onlyNumbers(extractValue(value)).slice(0, 2)
   clearFieldError(passenger, 'month')
@@ -893,7 +1296,29 @@ defineExpose({
               :error="passenger.errors.nationality"
               @update:model-value="onNationalityChange(passenger, $event)"
             />
-
+<UiBaseAutocomplete
+  v-if="
+    isInternationalFlight&&
+    passenger.nationality==='FOREIGN'
+  "
+  :model-value="passenger.countryCode"
+  :items="countryOptions"
+  item-text="label"
+  item-value="value"
+  label="کشور"
+  placeholder="کشور را انتخاب کنید"
+  :clearable="false"
+  :rtl="true"
+  :loading="countriesLoading"
+  :error="passenger.errors.countryCode"
+  @focus="loadCountries"
+  @update:model-value="
+    onCountryChange(
+      passenger,
+      $event
+    )
+  "
+/>
             <UiBaseInput
               v-if="shouldShowNationalCode(passenger)"
               :model-value="passenger.nationalCode"
@@ -973,6 +1398,134 @@ defineExpose({
                 />
               </div>
             </div>
+            <div
+  v-if="shouldShowPassport(passenger)"
+  class="space-y-1 text-right md:col-span-3"
+>
+  <div class="mb-3 pr-1 text-xs text-gray-400">
+    تاریخ صدور پاسپورت
+  </div>
+
+  <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+    <UiBaseAutocomplete
+      :model-value="passenger.passportIssueDate.day"
+      :items="dayOptions"
+      item-text="label"
+      item-value="value"
+      label="روز"
+      placeholder="روز"
+      :rtl="true"
+      :menu-props="scrollableMenuProps"
+      :error="passenger.errors.passportIssueDay"
+      @update:model-value="
+        onPassportIssueDayChange(
+          passenger,
+          $event
+        )
+      "
+    />
+
+    <UiBaseAutocomplete
+      :model-value="passenger.passportIssueDate.month"
+      :items="gregorianMonthOptions"
+      item-text="label"
+      item-value="value"
+      label="ماه"
+      placeholder="ماه"
+      :rtl="true"
+      :menu-props="scrollableMenuProps"
+      :error="passenger.errors.passportIssueMonth"
+      @update:model-value="
+        onPassportIssueMonthChange(
+          passenger,
+          $event
+        )
+      "
+    />
+
+    <UiBaseAutocomplete
+      :model-value="passenger.passportIssueDate.year"
+      :items="passportIssueYearOptions"
+      item-text="label"
+      item-value="value"
+      label="سال"
+      placeholder="سال میلادی"
+      :rtl="true"
+      :menu-props="scrollableMenuProps"
+      :error="passenger.errors.passportIssueYear"
+      @update:model-value="
+        onPassportIssueYearChange(
+          passenger,
+          $event
+        )
+      "
+    />
+  </div>
+</div>
+            <div
+  v-if="shouldShowPassport(passenger)"
+  class="space-y-1 text-right md:col-span-3"
+>
+  <div class="mb-3 pr-1 text-xs text-gray-400">
+    تاریخ انقضای پاسپورت
+  </div>
+
+  <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+    <UiBaseAutocomplete
+      :model-value="passenger.passportExpireDate.day"
+      :items="dayOptions"
+      item-text="label"
+      item-value="value"
+      label="روز"
+      placeholder="روز"
+      :rtl="true"
+      :menu-props="scrollableMenuProps"
+      :error="passenger.errors.passportExpireDay"
+      @update:model-value="
+        onPassportExpireDayChange(
+          passenger,
+          $event
+        )
+      "
+    />
+
+    <UiBaseAutocomplete
+      :model-value="passenger.passportExpireDate.month"
+      :items="gregorianMonthOptions"
+      item-text="label"
+      item-value="value"
+      label="ماه"
+      placeholder="ماه"
+      :rtl="true"
+      :menu-props="scrollableMenuProps"
+      :error="passenger.errors.passportExpireMonth"
+      @update:model-value="
+        onPassportExpireMonthChange(
+          passenger,
+          $event
+        )
+      "
+    />
+
+    <UiBaseAutocomplete
+      :model-value="passenger.passportExpireDate.year"
+      :items="passportExpireYearOptions"
+      item-text="label"
+      item-value="value"
+      label="سال"
+      placeholder="سال میلادی"
+      :rtl="true"
+      :menu-props="scrollableMenuProps"
+      :error="passenger.errors.passportExpireYear"
+      @update:model-value="
+        onPassportExpireYearChange(
+          passenger,
+          $event
+        )
+      "
+    />
+  </div>
+</div>
           </div>
         </div>
       </div>
