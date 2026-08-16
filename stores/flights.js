@@ -410,6 +410,9 @@ airlineIdMap : {
   H8: 1070
 },
     flights: [],
+    countries:[],
+  countriesLoading:false,
+  countriesLoaded:false,
     loading: false,
     authLoading: false,
     backgroundLoading: false,
@@ -539,7 +542,68 @@ airlineIdMap : {
     setPartoSessionId(sessionId){
   this.partoSessionId=sessionId||null
 },
+async loadCountries(){
+  if(
+    this.countriesLoading||
+    this.countriesLoaded
+  ){
+    return this.countries
+  }
 
+  this.countriesLoading=true
+
+  try{
+    const response=
+      await $fetch(
+        'https://api.ahuan.ir/api/BasicInfo/countries'
+      )
+
+    const items=
+      Array.isArray(response)
+        ?response
+        :Array.isArray(response?.data)
+          ?response.data
+          :[]
+
+    this.countries=
+      items
+        .filter(item=>
+          /^[A-Z]{2}$/.test(
+            String(item?.code2||'')
+              .trim()
+              .toUpperCase()
+          )
+        )
+        .map(item=>({
+          label:
+            item?.nicName||
+            item?.name||
+            item?.code2,
+
+          value:
+            String(item.code2)
+              .trim()
+              .toUpperCase(),
+
+          name:
+            item?.name||'',
+
+          code3:
+            item?.code3||''
+        }))
+
+    this.countriesLoaded=true
+
+    return this.countries
+  }catch(error){
+    this.countries=[]
+    this.countriesLoaded=false
+
+    throw error
+  }finally{
+    this.countriesLoading=false
+  }
+},
 clearPartoSessionId(){
   this.partoSessionId=null
 },

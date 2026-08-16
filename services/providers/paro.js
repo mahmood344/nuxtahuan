@@ -1117,3 +1117,84 @@ export async function getParoBaggages(
     }
   )
 }
+export async function getParoCredit(){
+  return executeParoRequest(
+    async sessionId=>{
+      return await $fetch(
+        `${BASE_URL}/PartoAir/credit`,
+        {
+          method:'POST',
+          body:{
+            sessionId
+          }
+        }
+      )
+    }
+  )
+}
+
+export async function revalidateParoFlight(
+  fareSourceCode
+){
+  if(!fareSourceCode){
+    throw new Error(
+      'FareSourceCode پرواز Parto مشخص نیست'
+    )
+  }
+
+  const response=
+    await executeParoRequest(
+      async sessionId=>{
+        return await $fetch(
+          `${BASE_URL}/PartoAir/revalidate`,
+          {
+            method:'POST',
+            body:{
+              sessionId,
+              fareSourceCode:
+                String(fareSourceCode),
+              isGenuine:true
+            }
+          }
+        )
+      }
+    )
+
+  if(response?.success!==true){
+    throw new Error(
+      response?.error?.message||
+      'اعتبارسنجی پرواز Parto ناموفق بود'
+    )
+  }
+
+  return response
+}
+export async function bookParoFlight(
+  payload
+){
+  const response=
+    await executeParoRequest(
+      async sessionId=>{
+        return await $fetch(
+          `${BASE_URL}/PartoAir/book`,
+          {
+            method:'POST',
+
+            body:{
+              ...payload,
+              sessionId
+            }
+          }
+        )
+      }
+    )
+
+  if(response?.success!==true){
+    throw new Error(
+      response?.error?.message||
+      'رزرو پرواز Parto ناموفق بود'
+    )
+  }
+
+  return response
+}

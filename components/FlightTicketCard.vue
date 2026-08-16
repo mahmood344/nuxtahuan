@@ -2041,9 +2041,34 @@ const handleLogoError = () => {
   logoFailed.value = true
 }
 
-const segmentTitle = (index) => {
-  if (!isRoundTripView.value) return ''
-  return index === 0 ? 'پرواز رفت' : 'پرواز برگشت'
+const segmentTitle=(index)=>{
+  if(!isRoundTripView.value){
+    return''
+  }
+
+  const segment=
+    segments.value[index]
+
+  if(!segment){
+    return''
+  }
+
+  if(segment.direction==='outbound'){
+    return index===0
+      ?'پرواز رفت'
+      :''
+  }
+
+  if(segment.direction==='return'){
+    const previousSegment=
+      segments.value[index-1]
+
+    return previousSegment?.direction!=='return'
+      ?'پرواز برگشت'
+      :''
+  }
+
+  return''
 }
 
 function parseDate(value) {

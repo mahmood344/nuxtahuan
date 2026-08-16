@@ -299,7 +299,11 @@ import {
 import { useRoute, useRouter } from 'vue-router'
 import { useFlightStore } from '~/stores/flights'
 import { searchAllProviders } from '~/services/searchFlights'
-
+import{
+  getParoCredit,
+  revalidateParoFlight,
+  bookParoFlight
+}from'~/services/providers/paro'
 moment.loadPersian({ usePersianDigits: false, dialect: 'persian-modern' })
 
 const route = useRoute()
@@ -1333,34 +1337,106 @@ function getFlightPassengerTaxes(flight, passengerType) {
 }
 
 // نگاشت داده‌های مسافران فرم ورودی به ساختار جدول مسافران API
-function mapPassengersToPayload(passengers, selectedFlights = []) {
-  const mainFlight = selectedFlights[0] || null
+function mapPassengersToPayload(
+  passengers,
+  selectedFlights=[]
+){
+  const mainFlight=
+    selectedFlights[0]||null
 
-  return passengers.map((p) => {
-    const passengerType = String(p?.type || 'ADL').toUpperCase()
-    const nationalCode = normalizeDigits(p.nationalCode).trim()
-    const passportNumber = normalizeDigits(p.passportNumber).trim()
-    const nationalityCode = String(p.nationality || 'IR').toUpperCase()
+  return passengers.map(p=>{
+    const passengerType=
+      String(
+        p?.type||'ADL'
+      ).toUpperCase()
 
-    const isIranianPassenger =
-      nationalityCode === 'IR' ||
-      nationalityCode === 'IRAN' ||
-      nationalityCode === 'ایرانی'
+    const nationalCode=
+      normalizeDigits(
+        p?.nationalCode
+      ).trim()
 
-    return {
-      id: 0,
-      contractId: 0,
-      fName: String(p.firstName || '').trim(),
-      lName: String(p.lastName || '').trim(),
-      age: passengerType,
-      gender: p.gender === 'male' || p.gender === true,
-      birthDate: toIsoBirthDate(p.birthDate),
-      codeMelli: nationalCode,
-      passportNo: passportNumber || (isIranianPassenger ? nationalCode : ''),
-      nationality: isIranianPassenger ? 'ایرانی' : String(p.nationality || '').trim(),
-      description: '',
-      contractPassengerTaxes: getFlightPassengerTaxes(mainFlight, passengerType)
-    }
+    /*
+     * پاسپورت می‌تواند حروف داشته باشد،
+     * پس normalizeDigits نزن.
+     */
+    const passportNumber=
+      String(
+        p?.passportNumber||''
+      )
+        .trim()
+        .toUpperCase()
+
+    const nationalityCode=
+  String(
+    p?.nationality==='IR'
+      ?'IR'
+      :p?.countryCode||p?.nationality||''
+  )
+    .trim()
+    .toUpperCase()
+
+const isIranianPassenger=
+  nationalityCode==='IR'
+
+    return{
+  id:0,
+  contractId:0,
+
+  fName:
+    String(
+      p?.firstName||''
+    ).trim(),
+
+  lName:
+    String(
+      p?.lastName||''
+    ).trim(),
+
+  age:
+    passengerType,
+
+  gender:
+    p?.gender==='male'||
+    p?.gender===true,
+
+  birthDate:
+    toIsoBirthDate(
+      p?.birthDate
+    ),
+
+  codeMelli:
+    nationalCode,
+
+  passportNo:
+    passportNumber||
+    (
+      isIranianPassenger
+        ?nationalCode
+        :''
+    ),
+passportIssueDate:
+  p?.passportIssueDate
+    ?toIsoBirthDate(
+        p.passportIssueDate
+      )
+    :null,
+  passportExpDate:
+    p?.passportExpDate
+      ?toIsoBirthDate(
+          p.passportExpDate
+        )
+      :null,
+
+ nationality:nationalityCode,
+
+  description:'',
+
+  contractPassengerTaxes:
+    getFlightPassengerTaxes(
+      mainFlight,
+      passengerType
+    )
+}
   })
 }
 
@@ -2337,6 +2413,234 @@ function isNiraFlight(flight) {
 function isMahanFlight(flight) {
   return getFlightSupplier(flight) === 'MAHAN'
 }
+function isPartoFlight(flight){
+  return getFlightSupplier(flight)==='PARTO'
+}
+function hasPartoFlights(flights){
+  return(flights||[])
+    .some(isPartoFlight)
+}
+function getPartoFareSourceCode(flight){
+  return String(
+    flight?.fareSourceCode||
+    flight?.meta?.fareSourceCode||
+    flight?.meta?.raw?.fareSourceCode||
+    ''
+  ).trim()
+}
+
+function getPartoFareType(flight){
+  return Number(
+    flight?.meta?.fareType??
+    flight?.meta?.raw
+      ?.airItineraryPricingInfo
+      ?.fareType??
+    flight?.fareType
+  )
+}
+function getPartoPassengerType(
+  passenger
+){
+  const type=String(
+    passenger?.type||
+    passenger?.age||
+    'ADL'
+  )
+    .trim()
+    .toUpperCase()
+
+  if(type==='CHD')return 2
+  if(type==='INF')return 3
+
+  return 1
+}
+
+function getPartoGender(
+  passenger
+){
+  const value=String(
+    passenger?.gender??''
+  )
+    .trim()
+    .toLowerCase()
+
+  if(
+    passenger?.gender===true||
+    value==='male'||
+    value==='m'
+  ){
+    return 0
+  }
+
+  return 1
+}
+
+function getPartoPassengerTitle(
+  passenger
+){
+  const passengerType=
+    getPartoPassengerType(
+      passenger
+    )
+
+  const isMale=
+    getPartoGender(
+      passenger
+    )===0
+
+  if(
+    passengerType===2||
+    passengerType===3
+  ){
+    return isMale?4:3
+  }
+
+  return isMale?0:2
+}
+function mapPassengerToParto(
+  passenger
+){
+  const partoNationality=
+    passenger?.nationality==='IR'
+      ?'IR'
+      :String(
+          passenger?.countryCode||
+          passenger?.nationality||
+          ''
+        )
+          .trim()
+          .toUpperCase()
+
+  return{
+    dateOfBirth:
+      toIsoBirthDate(
+        passenger?.birthDate
+      ),
+
+    gender:
+      getPartoGender(
+        passenger
+      ),
+
+    passengerType:
+      getPartoPassengerType(
+        passenger
+      ),
+
+    passengerName:{
+      passengerFirstName:
+        passenger?.firstName||'',
+
+      passengerMiddleName:'',
+
+      passengerLastName:
+        passenger?.lastName||'',
+
+      passengerTitle:
+        getPartoPassengerTitle(
+          passenger
+        )
+    },
+
+    passport:{
+      country:
+        partoNationality,
+
+      expiryDate:
+        toIsoBirthDate(
+          passenger?.passportExpDate
+        )||null,
+
+      issueDate:
+        toIsoBirthDate(
+          passenger?.passportIssueDate
+        )||'',
+
+      passportNumber:
+        passenger?.passportNumber||''
+    },
+
+    nationalId:
+      partoNationality==='IR'
+        ?String(
+            passenger?.nationalCode||''
+          )
+        :'',
+
+    nationality:
+      partoNationality,
+
+    extraServiceId:[],
+    mealTypeServiceId:[],
+    seatServiceId:[],
+
+    frequentFlyerNumber:'',
+    seatPreference:0,
+    mealPreference:0,
+    wheelchair:false,
+    destinationAddress:''
+  }
+}
+
+async function checkPartoCredit(
+  flight
+){
+  const response=
+    await getParoCredit()
+
+  if(response?.success!==true){
+    throw new Error(
+      response?.error?.message||
+      'دریافت اعتبار Parto ناموفق بود'
+    )
+  }
+
+  const balance=
+    Number(
+      response?.balance
+    )
+
+  const requiredAmount=
+    Number(
+      flight?.priceFrom||
+      flight?.meta?.totalFare||
+      0
+    )
+
+  if(
+    !Number.isFinite(balance)
+  ){
+    throw new Error(
+      'موجودی Parto معتبر نیست'
+    )
+  }
+
+  if(
+    !Number.isFinite(requiredAmount)||
+    requiredAmount<=0
+  ){
+    throw new Error(
+      'مبلغ پرواز Parto معتبر نیست'
+    )
+  }
+
+  if(
+    balance<requiredAmount
+  ){
+    throw new Error(
+      'اعتبار Parto برای رزرو این پرواز کافی نیست'
+    )
+  }
+
+  return{
+    balance,
+    requiredAmount,
+    remainingBalance:
+      balance-requiredAmount,
+
+    raw:response
+  }
+}
 function getMahanRawFlight(flight) {
   return flight?.meta?.raw || {}
 }
@@ -2527,34 +2831,311 @@ async function reserveMahanFlight(flight, passengers, contactInfo) {
     reserveResponse: response
   }
 }
-async function reserveFlightByProvider(flight, passengers, contactInfo) {
-  const supplier = getFlightSupplier(flight)
+async function reservePartoFlight(
+  flight,
+  passengers,
+  contactInfo
+){
+  if(
+    !flight||
+    !isPartoFlight(flight)
+  ){
+    throw new Error(
+      'پرواز Parto معتبر نیست'
+    )
+  }
 
-  if (supplier === 'NIRA') {
-    const result = await reserveNiraFlight(flight, passengers, contactInfo)
+  const fareSourceCode=
+    getPartoFareSourceCode(
+      flight
+    )
 
-    return {
-      flightId: flight?.id || null,
-      supplier: 'NIRA',
-      airline: flight?.airline || '',
-      pnr: result?.pnr || '',
-      reserveResponse: result?.reserveResponse || result?.raw || result
+  if(!fareSourceCode){
+    throw new Error(
+      'FareSourceCode پرواز Parto موجود نیست'
+    )
+  }
+
+  /*
+   * 1. CREDIT
+   */
+  const credit=
+    await checkPartoCredit(
+      flight
+    )
+
+  /*
+   * 2. REVALIDATE
+   */
+  const revalidate=
+    await revalidateParoFlight(
+      fareSourceCode
+    )
+
+  const fareType=
+    Number(
+      revalidate
+        ?.pricedItinerary
+        ?.airItineraryPricingInfo
+        ?.fareType??
+      getPartoFareType(
+        flight
+      )
+    )
+
+  console.log(
+    'PARTO REVALIDATE:',
+    revalidate
+  )
+
+  console.log(
+    'PARTO FARE TYPE:',
+    fareType
+  )
+
+  /*
+   * 3. WEB FARE
+   *
+   * طبق Flow قدیمی:
+   * قبل از پرداخت Book نمی‌زنیم.
+   */
+  if(fareType===4){
+    return{
+      flightId:
+        flight?.id||null,
+
+      supplier:'PARTO',
+
+      airline:
+        flight?.airline||'',
+
+      pnr:'',
+      uniqueId:'',
+
+      fareType,
+
+      partoFlow:
+        'BOOK_AFTER_PAYMENT',
+
+      fareSourceCode,
+
+      creditResponse:
+        credit,
+
+      revalidateResponse:
+        revalidate,
+
+      reserveResponse:null
     }
   }
 
-  if (supplier === 'MAHAN') {
-    const result = await reserveMahanFlight(flight, passengers, contactInfo)
+  /*
+   * 4. NORMAL FARE
+   */
+  const airTravelers=
+    (passengers||[])
+      .map(
+        mapPassengerToParto
+      )
 
-    return {
-      flightId: flight?.id || null,
-      supplier: 'MAHAN',
-      airline: flight?.airline || 'W5',
-      pnr: result?.pnr || '',
-      reserveResponse: result?.reserveResponse || result?.raw || result
+  if(!airTravelers.length){
+    throw new Error(
+      'اطلاعات مسافران Parto موجود نیست'
+    )
+  }
+
+  const bookingPayload={
+    fareSourceCode,
+
+    clientUniqueId:
+      `AHUAN-${Date.now()}`,
+
+    markupForAdult:0,
+    markupForChild:0,
+    markupForInfant:0,
+
+    cancellationGuaranteeId:'',
+
+    travelerInfo:{
+      phoneNumber:
+        contactInfo?.mobile||
+        contactInfo?.phone||
+        '',
+
+      email:
+        contactInfo?.email||
+        '',
+
+      ownerPhoneNumber:
+        contactInfo?.mobile||
+        contactInfo?.phone||
+        '',
+
+      ownerEmail:
+        contactInfo?.email||
+        '',
+
+      airTravelers
+    },
+
+    payLaterServiceId:''
+  }
+
+  console.log(
+    'PARTO BOOK PAYLOAD:',
+    bookingPayload
+  )
+
+  /*
+   * 5. BOOK
+   */
+  const book=
+    await bookParoFlight(
+      bookingPayload
+    )
+
+  console.log(
+    'PARTO BOOK RESPONSE:',
+    book
+  )
+
+  if(
+    book?.success!==true
+  ){
+    throw new Error(
+      book?.error?.message||
+      'رزرو پرواز Parto ناموفق بود'
+    )
+  }
+
+  if(!book?.uniqueId){
+    throw new Error(
+      'UniqueId رزرو Parto دریافت نشد'
+    )
+  }
+
+  return{
+    flightId:
+      flight?.id||null,
+
+    supplier:'PARTO',
+
+    airline:
+      flight?.airline||'',
+
+    pnr:
+      book.uniqueId,
+
+    uniqueId:
+      book.uniqueId,
+
+    fareType,
+
+    fareSourceCode,
+
+    category:
+      book?.category,
+
+    status:
+      book?.status,
+
+    priceChange:
+      book?.priceChange===true,
+
+    warningMessage:
+      book?.warningMessage||[],
+
+    partoFlow:
+      'ISSUE_AFTER_PAYMENT',
+
+    creditResponse:
+      credit,
+
+    revalidateResponse:
+      revalidate,
+
+    reserveResponse:
+      book
+  }
+}
+async function reserveFlightByProvider(
+  flight,
+  passengers,
+  contactInfo
+){
+  const supplier=
+    getFlightSupplier(
+      flight
+    )
+
+  if(supplier==='NIRA'){
+    const result=
+      await reserveNiraFlight(
+        flight,
+        passengers,
+        contactInfo
+      )
+
+    return{
+      flightId:
+        flight?.id||null,
+
+      supplier:'NIRA',
+
+      airline:
+        flight?.airline||'',
+
+      pnr:
+        result?.pnr||'',
+
+      reserveResponse:
+        result?.reserveResponse||
+        result?.raw||
+        result
     }
   }
 
-  throw new Error(`تامین‌کننده پشتیبانی نمی‌شود: ${supplier || 'UNKNOWN'}`)
+  if(supplier==='MAHAN'){
+    const result=
+      await reserveMahanFlight(
+        flight,
+        passengers,
+        contactInfo
+      )
+
+    return{
+      flightId:
+        flight?.id||null,
+
+      supplier:'MAHAN',
+
+      airline:
+        flight?.airline||
+        'W5',
+
+      pnr:
+        result?.pnr||'',
+
+      reserveResponse:
+        result?.reserveResponse||
+        result?.raw||
+        result
+    }
+  }
+
+  if(supplier==='PARTO'){
+    return await reservePartoFlight(
+      flight,
+      passengers,
+      contactInfo
+    )
+  }
+
+  throw new Error(
+    `تامین‌کننده پشتیبانی نمی‌شود: ${
+      supplier||'UNKNOWN'
+    }`
+  )
 }
 async function reserveFlights(flights, passengers, contactInfo) {
   const safeFlights = Array.isArray(flights) ? flights.filter(Boolean) : []
@@ -2679,11 +3260,12 @@ async function handleFinalPayment() {
     /*
      * ۶. ذخیره در sessionStorage
      */
-    const paymentSession =
-      savePaymentSession({
-        contractId,
-        paymentData
-      })
+    const paymentSession=
+  savePaymentSession({
+    contractId,
+    paymentData,
+    reserveResults
+  })
 
     /*
      * ۷. ادامه مراحل براساس نوع پرداخت
@@ -2967,8 +3549,9 @@ const travelCardNumber =
 }
 function savePaymentSession({
   contractId,
-  paymentData
-}) {
+  paymentData,
+  reserveResults=[]
+}){
   if (typeof window === 'undefined') {
     throw new Error(
       'sessionStorage در دسترس نیست'
@@ -3010,7 +3593,29 @@ function savePaymentSession({
 
   mobile: String(
     paymentData.mobile || ''
-  ).trim()
+  ).trim(),
+  providerResults:
+  reserveResults.map(
+    item=>({
+      flightId:
+        item?.flightId||null,
+
+      supplier:
+        item?.supplier||'',
+
+      pnr:
+        item?.pnr||'',
+
+      uniqueId:
+        item?.uniqueId||'',
+
+      fareType:
+        item?.fareType??null,
+
+      partoFlow:
+        item?.partoFlow||''
+    })
+  )
   }
 
   sessionStorage.setItem(
