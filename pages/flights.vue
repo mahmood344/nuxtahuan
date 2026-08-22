@@ -165,7 +165,7 @@
 
   <ContactInfoForm
     ref="contactFormRef"
-  :loading="flightStore.pricingRefreshLoading"
+  :loading="continueShoppingLoading"
   @submit="onContinueShopping"
   />
 </div>
@@ -299,7 +299,11 @@ import {
 import { useRoute, useRouter } from 'vue-router'
 import { useFlightStore } from '~/stores/flights'
 import { searchAllProviders } from '~/services/searchFlights'
-
+import{
+  getParoCredit,
+  revalidateParoFlight,
+  bookParoFlight
+}from'~/services/providers/paro'
 moment.loadPersian({ usePersianDigits: false, dialect: 'persian-modern' })
 
 const route = useRoute()
@@ -316,11 +320,19 @@ const isSortDropdownOpen = ref(false)
 
 const sortOptions = ['نام ایرلاین', 'دیرترین', 'زودترین', 'ارزان‌ترین', 'گران‌ترین']
 
-const activeFilters = ref({
-  departureTimeRange: null,
+const activeFilters=ref({
+  departureTimeRange:null,
+
   economy:true,
+  premiumEconomy:true,
+
   business:true,
-  airlines: []
+  premiumBusiness:true,
+
+  first:true,
+  premiumFirst:true,
+
+  airlines:[]
 })
 const scrollToTop = async () => {
   await nextTick()
@@ -351,7 +363,71 @@ const flightSteps = computed(() => {
     { icon: '🎫', label: 'دریافت بلیط' }
   ]
 })
+const getContractFlightClass=(flight)=>{
+  const provider=
+    String(
+      flight?.provider||
+      flight?.flightSupplier||
+      ''
+    )
+      .trim()
+      .toUpperCase()
 
+  /*
+   * PARTO
+   * cabinType:
+   * 1 = Economy
+   * 2 = Premium Economy
+   * 3 = Business
+   * 4 = Premium Business
+   * 5 = First
+   * 6 = Premium First
+   */
+  if(provider==='PARTO'){
+    const cabinType=
+      Number(
+        flight?.cabinType
+      )
+
+    switch(cabinType){
+      case 1:return'Y'
+      case 2:return'S'
+      case 3:return'C'
+      case 4:return'J'
+      case 5:return'F'
+      case 6:return'P'
+    }
+
+    const code=
+      String(
+        flight?.bookingClass||
+        flight?.rbd||
+        ''
+      )
+        .trim()
+        .toUpperCase()
+
+    if(
+      ['Y','S','C','J','F','P']
+        .includes(code)
+    ){
+      return code
+    }
+
+    return''
+  }
+
+  /*
+   * NIRA / MAHAN
+   * منطق فعلی دست نمی‌خورد
+   */
+  return String(
+    flight?.bookingClass||
+    flight?.rbd||
+    flight?.flightClass||
+    ''
+  ).trim()
+}
 const getStartDateForCarousel = (dateStr) => {
   if (!dateStr) return moment().format('YYYY-MM-DD')
 
@@ -550,46 +626,127 @@ function getFlightBookingClass(flight) {
     ''
   )
 }
-function getFlightCabinType(flight) {
-  const airlineCode = getFlightAirlineCode(flight)
-  const bookingClass = getFlightBookingClass(flight)
+function getFlightCabinType(flight){
+  const provider=normalizeCabinCode(
+    flight?.provider
+  )
 
-  if (
+  /*
+   * PARTO
+   */
+  if(provider==='PARTO'){
+    const firstSegment=
+      Array.isArray(flight?.segments)
+        ?flight.segments[0]
+        :null
+
+    const cabinType=Number(
+      firstSegment?.cabinType??
+      flight?.cabinType
+    )
+
+    switch(cabinType){
+      case 1:
+        return'economy'
+
+      case 2:
+        return'premiumEconomy'
+
+      case 3:
+        return'business'
+
+      case 4:
+        return'premiumBusiness'
+
+      case 5:
+        return'first'
+
+      case 6:
+        return'premiumFirst'
+    }
+
+    const bookingClass=
+      normalizeCabinCode(
+        firstSegment?.bookingClass||
+        firstSegment?.rbd||
+        flight?.bookingClass||
+        flight?.rbd
+      )
+
+    switch(bookingClass){
+      case'Y':
+        return'economy'
+
+      case'S':
+        return'premiumEconomy'
+
+      case'C':
+        return'business'
+
+      case'J':
+        return'premiumBusiness'
+
+      case'F':
+        return'first'
+
+      case'P':
+        return'premiumFirst'
+    }
+
+    return null
+  }
+
+  /*
+   * NIRA / MAHAN
+   * منطق قبلی
+   */
+  const airlineCode=
+    getFlightAirlineCode(flight)
+
+  const bookingClass=
+    getFlightBookingClass(flight)
+
+  if(
     flightClasses[airlineCode]
       ?.business
       ?.includes(bookingClass)
-  ) {
-    return 'business'
+  ){
+    return'business'
   }
-   const cabinName = normalizeCabinCode(
-    flight?.cabinName ||
-    flight?.cabin ||
-    flight?.cabinTitle ||
-    flight?.meta?.raw?.CabinName ||
-    flight?.meta?.raw?.cabinName ||
-    flight?.meta?.raw?.Cabin ||
-    flight?.meta?.raw?.cabin ||
-    ''
-  )
 
-  if (
-    cabinName.includes('BUSINESS') ||
+  const cabinName=
+    normalizeCabinCode(
+      flight?.cabinName||
+      flight?.cabin||
+      flight?.cabinTitle||
+      flight?.meta?.raw?.CabinName||
+      flight?.meta?.raw?.cabinName||
+      flight?.meta?.raw?.Cabin||
+      flight?.meta?.raw?.cabin||
+      ''
+    )
+
+  if(
+    cabinName.includes('BUSINESS')||
     cabinName.includes('بیزینس')
-  ) {
-    return 'business'
+  ){
+    return'business'
   }
 
-  const cabinType = Number(
-    flight?.cabinType ??
-    flight?.meta?.raw?.CabinType ??
+  const cabinType=Number(
+    flight?.cabinType??
+    flight?.meta?.raw?.CabinType??
     flight?.meta?.raw?.cabinType
   )
 
-  if (cabinType === 2 || cabinType === 5) {
-    return 'business'
+  if(
+    cabinType===2||
+    cabinType===5
+  ){
+    return'business'
   }
 
-  return 'economy'
+  return'economy'
 }
 function getFlightAirlineFilterCode(flight) {
   return normalizeCabinCode(
@@ -668,22 +825,15 @@ const sortedFlights = computed(() => {
       /*
        * فیلتر اکونومی و بیزینس
        */
-      const cabinType =
-        getFlightCabinType(flight)
+      const cabinType=
+  getFlightCabinType(flight)
 
-      if (
-        cabinType === 'economy' &&
-        !economySelected
-      ) {
-        return false
-      }
-
-      if (
-        cabinType === 'business' &&
-        !businessSelected
-      ) {
-        return false
-      }
+if(
+  cabinType&&
+  activeFilters.value?.[cabinType]===false
+){
+  return false
+}
 
       /*
        * فیلتر ایرلاین
@@ -852,53 +1002,90 @@ const performSearch = async (payload) => {
   }
 }
 
-const handleDateChange = async (dateObj) => {
-  const newDate = dateObj?.fullDate
-  if (!newDate) return
+// const handleDateChange = async (dateObj) => {
+//   const newDate = dateObj?.fullDate
+//   if (!newDate) return
 
-  const cleanedDate = String(newDate)
-    .replace(/\//g, '-')
+//   const cleanedDate = String(newDate)
+//     .replace(/\//g, '-')
+//     .trim()
+
+//   selectedDate.value = cleanedDate
+
+//   const isSelectingReturnFlight =
+//     travelType.value === 'round-trip' &&
+//     flightStore.currentStep === 1 &&
+//     !!flightStore.selectedDepartureFlight
+
+//   await router.replace({
+//     query: {
+//       ...route.query,
+//       ...(isSelectingReturnFlight
+//         ? { returnDate: cleanedDate }
+//         : { departDate: cleanedDate })
+//     }
+//   })
+
+//   if (isSelectingReturnFlight) {
+//     await performSearch(
+//       buildSearchPayload({
+//         from: baseSearchParamsFromRoute.value.to,
+//         to: baseSearchParamsFromRoute.value.from,
+//         departureDate: cleanedDate,
+//         returnDate: '',
+//         travelType: 'one-way'
+//       })
+//     )
+
+//     return
+//   }
+
+//   await performSearch(
+//     buildSearchPayload({
+//       from: baseSearchParamsFromRoute.value.from,
+//       to: baseSearchParamsFromRoute.value.to,
+//       departureDate: cleanedDate,
+//       returnDate: baseSearchParamsFromRoute.value.returnDate,
+//       travelType: baseSearchParamsFromRoute.value.travelType
+//     })
+//   )
+// }
+const handleDateChange=async dateObj=>{
+  const newDate=dateObj?.fullDate
+  if(!newDate)return
+
+  const cleanedDate=String(newDate)
+    .replace(/\//g,'-')
     .trim()
 
-  selectedDate.value = cleanedDate
-
-  const isSelectingReturnFlight =
-    travelType.value === 'round-trip' &&
-    flightStore.currentStep === 1 &&
-    !!flightStore.selectedDepartureFlight
-
-  await router.replace({
-    query: {
-      ...route.query,
-      ...(isSelectingReturnFlight
-        ? { returnDate: cleanedDate }
-        : { departDate: cleanedDate })
-    }
-  })
-
-  if (isSelectingReturnFlight) {
-    await performSearch(
-      buildSearchPayload({
-        from: baseSearchParamsFromRoute.value.to,
-        to: baseSearchParamsFromRoute.value.from,
-        departureDate: cleanedDate,
-        returnDate: '',
-        travelType: 'one-way'
-      })
-    )
-
+  if(
+    cleanedDate===selectedDate.value
+  ){
     return
   }
 
-  await performSearch(
-    buildSearchPayload({
-      from: baseSearchParamsFromRoute.value.from,
-      to: baseSearchParamsFromRoute.value.to,
-      departureDate: cleanedDate,
-      returnDate: baseSearchParamsFromRoute.value.returnDate,
-      travelType: baseSearchParamsFromRoute.value.travelType
-    })
-  )
+  selectedDate.value=cleanedDate
+
+  const isSelectingReturnFlight=
+    travelType.value==='round-trip'&&
+    flightStore.currentStep===1&&
+    !!flightStore.selectedDepartureFlight
+
+  await router.replace({
+    query:{
+      ...route.query,
+
+      ...(isSelectingReturnFlight
+        ?{returnDate:cleanedDate}
+        :{departDate:cleanedDate}
+      )
+    }
+  })
+
+  /*
+   * اینجا دیگر performSearch نزن.
+   * watcher تغییر route خودش Search را اجرا می‌کند.
+   */
 }
 
 const formStep = computed(() => {
@@ -1005,32 +1192,118 @@ const showFlightDetails = async (flight) => {
   const plainFlight = JSON.parse(JSON.stringify(flight))
   await flightStore.loadFlightDetails(plainFlight)
 }
+async function loadRouteBasicInfo(){
+  try{
+    await flightStore.loadBasicAirlines()
 
-onMounted(async () => {
-  const qDate = String(route.query.departDate || '')
+    const type=
+      String(
+        route.query.flightType||
+        'domestic'
+      )
+        .trim()
+        .toLowerCase()
+
+    if(type!=='international'){
+      return
+    }
+
+    const origin=
+      String(
+        route.query.origin||''
+      )
+        .trim()
+        .toUpperCase()
+
+    const destination=
+      String(
+        route.query.destination||''
+      )
+        .trim()
+        .toUpperCase()
+
+    const codes=[
+      ...new Set(
+        [
+          origin,
+          destination
+        ].filter(Boolean)
+      )
+    ]
+
+    if(!codes.length){
+      return
+    }
+
+    await Promise.all(
+      codes.map(
+        code=>
+          flightStore
+            .loadAirportByCode(code)
+      )
+    )
+  }catch(error){
+    console.error(
+      'Load route basic info error:',
+      error
+    )
+  }
+}
+onMounted(async()=>{
+  await loadRouteBasicInfo()
+
+  const qDate=
+    String(
+      route.query.departDate||''
+    )
 
   flightStore.clearSelectedFlights()
 
-  if (qDate) {
-    selectedDate.value = qDate.replace(/\//g, '-').trim()
-  } else {
-    selectedDate.value = moment().format('YYYY-MM-DD')
-    await router.replace({ query: { ...route.query, departDate: selectedDate.value } })
+  if(qDate){
+    selectedDate.value=
+      qDate
+        .replace(/\//g,'-')
+        .trim()
+  }else{
+    selectedDate.value=
+      moment()
+        .format('YYYY-MM-DD')
+
+    await router.replace({
+      query:{
+        ...route.query,
+        departDate:
+          selectedDate.value
+      }
+    })
   }
 
   await performSearch(
     buildSearchPayload({
-      from: baseSearchParamsFromRoute.value.from,
-      to: baseSearchParamsFromRoute.value.to,
-      departureDate: selectedDate.value,
-      returnDate: baseSearchParamsFromRoute.value.returnDate,
-      travelType: baseSearchParamsFromRoute.value.travelType
+      from:
+        baseSearchParamsFromRoute
+          .value.from,
+
+      to:
+        baseSearchParamsFromRoute
+          .value.to,
+
+      departureDate:
+        selectedDate.value,
+
+      returnDate:
+        baseSearchParamsFromRoute
+          .value.returnDate,
+
+      travelType:
+        baseSearchParamsFromRoute
+          .value.travelType
     })
   )
 })
 
 watch(
-  () => [
+  ()=>[
     route.query.origin,
     route.query.destination,
     route.query.departDate,
@@ -1041,41 +1314,59 @@ watch(
     route.query.flightType,
     route.query.travelType
   ],
-  async () => {
-    const searchParams =
+  async()=>{
+    const searchParams=
       baseSearchParamsFromRoute.value
 
-    if (
-      !searchParams.from ||
-      !searchParams.to ||
+    if(
+      !searchParams.from||
+      !searchParams.to||
       !searchParams.departureDate
-    ) {
+    ){
       return
     }
 
-    const isSelectingReturnFlight =
-      searchParams.travelType === 'round-trip' &&
-      flightStore.currentStep === 1 &&
-      !!flightStore.selectedDepartureFlight
+    /*
+     * هر بار Query عوض شد:
+     * Airline + Airportهای Route جدید
+     */
+    await loadRouteBasicInfo()
 
-    const activeDate = isSelectingReturnFlight
-      ? searchParams.returnDate
-      : searchParams.departureDate
+    const isSelectingReturnFlight=
+      searchParams.travelType===
+        'round-trip'&&
+      flightStore.currentStep===1&&
+      !!flightStore
+        .selectedDepartureFlight
 
-    selectedDate.value = String(activeDate || '')
-      .replace(/\//g, '-')
-      .trim()
+    const activeDate=
+      isSelectingReturnFlight
+        ?searchParams.returnDate
+        :searchParams.departureDate
 
-    flightStore.cancelAllPendingRequests()
+    selectedDate.value=
+      String(activeDate||'')
+        .replace(/\//g,'-')
+        .trim()
 
-    if (isSelectingReturnFlight) {
+    flightStore
+      .cancelAllPendingRequests()
+
+    if(isSelectingReturnFlight){
       await performSearch(
         buildSearchPayload({
-          from: searchParams.to,
-          to: searchParams.from,
-          departureDate: searchParams.returnDate,
-          returnDate: '',
-          travelType: 'one-way'
+          from:
+            searchParams.to,
+
+          to:
+            searchParams.from,
+
+          departureDate:
+            searchParams.returnDate,
+
+          returnDate:'',
+
+          travelType:'one-way'
         })
       )
 
@@ -1087,11 +1378,20 @@ watch(
 
     await performSearch(
       buildSearchPayload({
-        from: searchParams.from,
-        to: searchParams.to,
-        departureDate: searchParams.departureDate,
-        returnDate: searchParams.returnDate,
-        travelType: searchParams.travelType
+        from:
+          searchParams.from,
+
+        to:
+          searchParams.to,
+
+        departureDate:
+          searchParams.departureDate,
+
+        returnDate:
+          searchParams.returnDate,
+
+        travelType:
+          searchParams.travelType
       })
     )
   }
@@ -1104,7 +1404,7 @@ watch(
 )
 const passengerFormRef = ref(null)
 const contactFormRef = ref(null)
-
+const continueShoppingLoading=ref(false)
 // توابع کمکی ساخت تاریخ و زمان جاری
 function getCurrentDate() {
   return moment().format('YYYY-MM-DD')
@@ -1214,34 +1514,106 @@ function getFlightPassengerTaxes(flight, passengerType) {
 }
 
 // نگاشت داده‌های مسافران فرم ورودی به ساختار جدول مسافران API
-function mapPassengersToPayload(passengers, selectedFlights = []) {
-  const mainFlight = selectedFlights[0] || null
+function mapPassengersToPayload(
+  passengers,
+  selectedFlights=[]
+){
+  const mainFlight=
+    selectedFlights[0]||null
 
-  return passengers.map((p) => {
-    const passengerType = String(p?.type || 'ADL').toUpperCase()
-    const nationalCode = normalizeDigits(p.nationalCode).trim()
-    const passportNumber = normalizeDigits(p.passportNumber).trim()
-    const nationalityCode = String(p.nationality || 'IR').toUpperCase()
+  return passengers.map(p=>{
+    const passengerType=
+      String(
+        p?.type||'ADL'
+      ).toUpperCase()
 
-    const isIranianPassenger =
-      nationalityCode === 'IR' ||
-      nationalityCode === 'IRAN' ||
-      nationalityCode === 'ایرانی'
+    const nationalCode=
+      normalizeDigits(
+        p?.nationalCode
+      ).trim()
 
-    return {
-      id: 0,
-      contractId: 0,
-      fName: String(p.firstName || '').trim(),
-      lName: String(p.lastName || '').trim(),
-      age: passengerType,
-      gender: p.gender === 'male' || p.gender === true,
-      birthDate: toIsoBirthDate(p.birthDate),
-      codeMelli: nationalCode,
-      passportNo: passportNumber || (isIranianPassenger ? nationalCode : ''),
-      nationality: isIranianPassenger ? 'ایرانی' : String(p.nationality || '').trim(),
-      description: '',
-      contractPassengerTaxes: getFlightPassengerTaxes(mainFlight, passengerType)
-    }
+    /*
+     * پاسپورت می‌تواند حروف داشته باشد،
+     * پس normalizeDigits نزن.
+     */
+    const passportNumber=
+      String(
+        p?.passportNumber||''
+      )
+        .trim()
+        .toUpperCase()
+
+    const nationalityCode=
+  String(
+    p?.nationality==='IR'
+      ?'IR'
+      :p?.countryCode||p?.nationality||''
+  )
+    .trim()
+    .toUpperCase()
+
+const isIranianPassenger=
+  nationalityCode==='IR'
+
+    return{
+  id:0,
+  contractId:0,
+
+  fName:
+    String(
+      p?.firstName||''
+    ).trim(),
+
+  lName:
+    String(
+      p?.lastName||''
+    ).trim(),
+
+  age:
+    passengerType,
+
+  gender:
+    p?.gender==='male'||
+    p?.gender===true,
+
+  birthDate:
+    toIsoBirthDate(
+      p?.birthDate
+    ),
+
+  codeMelli:
+    nationalCode,
+
+  passportNo:
+    passportNumber||
+    (
+      isIranianPassenger
+        ?nationalCode
+        :''
+    ),
+passportIssueDate:
+  p?.passportIssueDate
+    ?toIsoBirthDate(
+        p.passportIssueDate
+      )
+    :null,
+  passportExpDate:
+    p?.passportExpDate
+      ?toIsoBirthDate(
+          p.passportExpDate
+        )
+      :null,
+
+ nationality:nationalityCode,
+
+  description:'',
+
+  contractPassengerTaxes:
+    getFlightPassengerTaxes(
+      mainFlight,
+      passengerType
+    )
+}
   })
 }
 
@@ -1334,82 +1706,340 @@ function formatFlightTime(dateTimeValue, fallbackTime = '') {
   console.error('Invalid flight time:', value)
   return ''
 }
-
-// دریافت شناسه ایرلاین از استور بر اساس کد ایرلاین
-function resolveAirlineId(flight) {
-  const airlineCode = String(
-    flight?.stepfindip ||
-    flight?.stepFindIp ||
-    flight?.airlineCode ||
-    flight?.airline_code ||
-    flight?.carrierCode ||
-    flight?.marketingAirline ||
-    flight?.operatingAirline ||
-    flight?.airline?.code ||
-    flight?.airline ||
+function resolveAirlineCode(flight){
+  return String(
+    flight?.airline||
+    flight?.airlineCode||
+    flight?.airline_code||
+    flight?.carrierCode||
+    flight?.validatingAirlineCode||
+    flight?.marketingAirline||
+    flight?.operatingAirline||
+    flight?.stepfindip||
+    flight?.stepFindIp||
     ''
-  ).trim().toUpperCase()
+  )
+    .trim()
+    .toUpperCase()
+}
+// دریافت شناسه ایرلاین از استور بر اساس کد ایرلاین
+function resolveAirlineId(flight){
+  const airlineCode=
+    resolveAirlineCode(flight)
 
-  let mappedAirlineId = 0
+  let mappedAirlineId=0
 
-  if (typeof flightStore.getAirlineId === 'function') {
-    mappedAirlineId = Number(flightStore.getAirlineId(airlineCode))
+  if(
+    typeof flightStore.getAirlineId===
+    'function'
+  ){
+    mappedAirlineId=
+      Number(
+        flightStore.getAirlineId(
+          airlineCode
+        )
+      )
   }
 
-  if ((!Number.isInteger(mappedAirlineId) || mappedAirlineId <= 0) && flightStore.airlineIdMap) {
-    mappedAirlineId = Number(flightStore.airlineIdMap[airlineCode] || 0)
+  if(
+    (
+      !Number.isInteger(mappedAirlineId)||
+      mappedAirlineId<=0
+    )&&
+    flightStore.airlineIdMap
+  ){
+    mappedAirlineId=
+      Number(
+        flightStore
+          .airlineIdMap[airlineCode]||0
+      )
   }
 
-  if (Number.isInteger(mappedAirlineId) && mappedAirlineId > 0) {
+  if(
+    Number.isInteger(mappedAirlineId)&&
+    mappedAirlineId>0
+  ){
     return mappedAirlineId
   }
 
-  const directAirlineId = Number(flight?.airlineId)
-  if (Number.isInteger(directAirlineId) && directAirlineId > 0) {
+  const directAirlineId=
+    Number(
+      flight?.airlineId
+    )
+
+  if(
+    Number.isInteger(directAirlineId)&&
+    directAirlineId>0
+  ){
     return directAirlineId
   }
 
-  console.error('Airline ID not found for flight:', flight)
+  console.error(
+    'Airline ID not found:',{
+      airlineCode,
+      flight
+    }
+  )
+
   return 0
 }
+function expandPartoFlightForContract(flight){
+  if(
+    !flight||
+    !isPartoFlight(flight)||
+    flight?.isRoundTrip!==true
+  ){
+    return[flight]
+  }
 
+  const outbound={
+    ...flight,
+
+    __sourceFlightId:
+      flight?.id||null,
+
+    __partoDirection:'OUTBOUND',
+
+    origin:
+      flight?.origin||'',
+
+    destination:
+      flight?.destination||'',
+
+    departure:
+      flight?.departure||'',
+
+    arrival:
+      flight?.arrival||'',
+
+    flightNumber:
+      flight?.flightNumber||'',
+
+    bookingClass:
+      flight?.bookingClass||
+      flight?.rbd||
+      '',
+
+    rbd:
+      flight?.rbd||
+      flight?.bookingClass||
+      '',
+
+    cabinType:
+      flight?.cabinType,
+
+    capacity:
+      flight?.capacity,
+
+    aircraftTypeCode:
+      flight?.aircraftTypeCode||'',
+
+    aircraftTypeName:
+      flight?.aircraftTypeName||'',
+
+    aircraft:
+      flight?.aircraftTypeCode||
+      flight?.aircraftTypeName||
+      '',
+
+    isCharter:
+      flight?.isCharter===true,
+
+    isReturn:false,
+
+    segments:
+      Array.isArray(flight?.segments)
+        ?flight.segments
+        :[],
+
+    provider:'PARTO',
+    flightSupplier:'PARTO'
+  }
+
+  const inbound={
+    ...flight,
+
+    __sourceFlightId:
+      flight?.id||null,
+
+    __partoDirection:'RETURN',
+
+    origin:
+      flight?.returnOrigin||'',
+
+    destination:
+      flight?.returnDestination||'',
+
+    departure:
+      flight?.returnDeparture||'',
+
+    arrival:
+      flight?.returnArrival||'',
+
+    flightNumber:
+      flight?.returnFlightNumber||'',
+
+    bookingClass:
+      flight?.returnBookingClass||
+      flight?.returnRbd||
+      '',
+
+    rbd:
+      flight?.returnRbd||
+      flight?.returnBookingClass||
+      '',
+
+    cabinType:
+      flight?.returnCabinType,
+
+    capacity:
+      flight?.returnCapacity,
+
+    aircraftTypeCode:
+      flight?.returnAircraftTypeCode||'',
+
+    aircraftTypeName:
+      flight?.returnAircraftTypeName||'',
+
+    aircraft:
+      flight?.returnAircraftTypeCode||
+      flight?.returnAircraftTypeName||
+      '',
+
+    isCharter:
+      Array.isArray(
+        flight?.returnSegments
+      )
+        ?flight.returnSegments.some(
+            x=>x?.isCharter===true
+          )
+        :flight?.isCharter===true,
+
+    isReturn:true,
+
+    segments:
+      Array.isArray(
+        flight?.returnSegments
+      )
+        ?flight.returnSegments
+        :[],
+
+    provider:'PARTO',
+    flightSupplier:'PARTO'
+  }
+
+  return[
+    outbound,
+    inbound
+  ]
+}
+function expandFlightsForContract(
+  selectedFlights
+){
+  return(
+    Array.isArray(selectedFlights)
+      ?selectedFlights
+      :[]
+  )
+    .filter(Boolean)
+    .flatMap(flight=>
+      isPartoFlight(flight)
+        ?expandPartoFlightForContract(
+            flight
+          )
+        :[flight]
+    )
+}
 // نگاشت داده‌های پروازهای انتخابی استور به ساختار جدول پروازهای API
-function mapFlightsToPayload(selectedFlights) {
-  return selectedFlights.filter(Boolean).map((f) => {
-    const departureValue = f?.departure || f?.departureDateTime || f?.depDateTime || ''
-    const arrivalValue = f?.arrival || f?.arrivalDateTime || f?.arrDateTime || ''
+function mapFlightsToPayload(
+  selectedFlights
+){
+  const contractFlights=
+    expandFlightsForContract(
+      selectedFlights
+    )
 
-    const departureDate = f?.depDate || f?.departureDate || departureValue
-    const arrivalDate = f?.arrDate || f?.arrivalDate || arrivalValue
-    const departureTime = f?.depTime || f?.departureTime || departureValue
-    const arrivalTime = f?.arrTime || f?.arrivalTime || arrivalValue
+  return contractFlights.map(
+    f=>{
+      const departureValue=
+        f?.departure||
+        f?.departureDateTime||
+        f?.depDateTime||
+        ''
 
-    const airlineId = resolveAirlineId(f)
+      const arrivalValue=
+        f?.arrival||
+        f?.arrivalDateTime||
+        f?.arrDateTime||
+        ''
 
-    return {
-      contractId: 0,
-      origin: String(f?.origin || f?.from || f?.originCode || '').trim(),
-      destination: String(f?.destination || f?.to || f?.destinationCode || '').trim(),
-      flightClass:String(
-  f?.bookingClass ||
-  f?.rbd ||
-  f?.cabinClass ||
-  f?.flightClass ||
-  f?.class ||
-  ''
-).trim(),
-      airlineId: airlineId,
-      flightNumber: String(f?.flightNumber || f?.flightNo || '').trim(),
-      depDate: formatFlightDate(departureDate),
-      depTime: formatFlightTime(departureTime, f?.depTime),
-      arrDate: formatFlightDate(arrivalDate),
-      arrTime: formatFlightTime(arrivalTime, f?.arrTime),
-      airplaneType: String(f?.aircraft || f?.airplaneType || f?.aircraftType || '').trim(),
-      charterFlight: f?.isCharter === true || f?.charterFlight === true,
-      description: '',
-      flightSupplier: String(f?.provider || f?.flightSupplier || '').trim(),
+      return{
+        contractId:0,
+
+        origin:
+          String(
+            f?.origin||''
+          ).trim(),
+
+        destination:
+          String(
+            f?.destination||''
+          ).trim(),
+
+        flightClass:
+  getContractFlightClass(f),
+
+        airlineId:
+          resolveAirlineId(f),
+         
+
+        flightNumber:
+          String(
+            f?.flightNumber||''
+          ).trim(),
+
+        depDate:
+          formatFlightDate(
+            departureValue
+          ),
+
+        depTime:
+          formatFlightTime(
+            departureValue
+          ),
+
+        arrDate:
+          formatFlightDate(
+            arrivalValue
+          ),
+
+        arrTime:
+          formatFlightTime(
+            arrivalValue
+          ),
+
+        airplaneType:
+          String(
+            f?.aircraftTypeCode||
+            f?.aircraftTypeName||
+            f?.aircraft||
+            ''
+          ).trim(),
+
+        charterFlight:
+          f?.isCharter===true,
+
+        description:'',
+
+        flightSupplier:
+          String(
+            f?.provider||
+            f?.flightSupplier||
+            ''
+          ).trim()
+      }
     }
-  })
+  )
 }
 async function addContract(payload) {
   try {
@@ -1430,140 +2060,199 @@ async function addContract(payload) {
 
 // ثبت قرارداد و ادامه خرید
 // ثبت قرارداد و ادامه خرید
-async function onContinueShopping() {
-  const passengerValid = passengerFormRef.value?.validateAll?.() ?? false
-  const contactValid = contactFormRef.value?.validateAll?.() ?? false
+async function onContinueShopping(){
+  if(continueShoppingLoading.value)return
 
-  if (!passengerValid || !contactValid) return
+ const passengerValid=
+  await passengerFormRef.value?.validateAll?.()??false
 
-  if (!flightStore.isLoggedIn) {
+  const contactValid=
+    contactFormRef.value?.validateAll?.()??false
+
+  if(!passengerValid||!contactValid)return
+
+  if(!flightStore.isLoggedIn){
     flightStore.openModal()
-    flightStore.pendingAction = () => onContinueShopping()
+    flightStore.pendingAction=()=>onContinueShopping()
     return
   }
 
-  const passengers = passengerFormRef.value?.getData?.() ?? []
-  const contact = contactFormRef.value?.getData?.() ?? {}
+  continueShoppingLoading.value=true
 
-  if (!passengers.length) return
+  try{
+    const passengers=
+      passengerFormRef.value?.getData?.()??[]
 
-  bookingData.value.passengers = passengers
-  bookingData.value.contact = contact
+    const contact=
+      contactFormRef.value?.getData?.()??{}
 
-  const passengerCounts = {
-    adult: passengers.filter((p) => p.type === 'ADL').length,
-    child: passengers.filter((p) => p.type === 'CHD').length,
-    infant: passengers.filter((p) => p.type === 'INF').length
-  }
+    if(!passengers.length)return
 
-  try {
-    await flightStore.refreshSelectedFlightsPricing(passengerCounts)
-  } catch (error) {
-    console.error('Error on refreshing fare:', error)
-    alert('استعلام قیمت پرواز با خطا مواجه شد. لطفاً دوباره تلاش کنید.')
-    return
-  }
+    bookingData.value.passengers=passengers
+    bookingData.value.contact=contact
 
-  const selectedFlights = Array.isArray(flightStore.selectedFlights)
-    ? flightStore.selectedFlights.filter(Boolean)
-    : [flightStore.selectedDepartureFlight, flightStore.selectedReturnFlight].filter(Boolean)
+    const passengerCounts={
+      adult:passengers.filter(p=>p.type==='ADL').length,
+      child:passengers.filter(p=>p.type==='CHD').length,
+      infant:passengers.filter(p=>p.type==='INF').length
+    }
 
-  const contractFlights = mapFlightsToPayload(selectedFlights)
-  const contractPassengers = mapPassengersToPayload(passengers, selectedFlights)
-const departureFlight =
-  flightStore.selectedDepartureFlight ||
-  selectedFlights[0] ||
-  null
-
-const returnFlight =
-  flightStore.selectedReturnFlight ||
-  selectedFlights[1] ||
-  null
-
-const totalPrice =
-  getFinalFlightPrice(
-    departureFlight
-  )
-
-const totalPrice2 =
-  returnFlight
-    ? getFinalFlightPrice(
-        returnFlight
+    try{
+      await flightStore.refreshSelectedFlightsPricing(
+        passengerCounts
       )
-    : 0
+    }catch(error){
+      console.error(
+        'Error on refreshing fare:',
+        error
+      )
 
-if (
-  !Number.isFinite(totalPrice) ||
-  totalPrice <= 0
-) {
-  alert(
-    'قیمت نهایی Fare پرواز رفت معتبر نیست.'
-  )
-  return
-}
+      alert(
+        'استعلام قیمت پرواز با خطا مواجه شد. لطفاً دوباره تلاش کنید.'
+      )
 
-if (
-  returnFlight &&
-  (
-    !Number.isFinite(totalPrice2) ||
-    totalPrice2 <= 0
-  )
-) {
-  alert(
-    'قیمت نهایی Fare پرواز برگشت معتبر نیست.'
-  )
-  return
-}
+      return
+    }
 
-if (
-  !Number.isFinite(totalPrice) ||
-  totalPrice <= 0
-) {
-  alert(
-    'قیمت نهایی قرارداد معتبر نیست.'
-  )
+    const selectedFlights=
+      Array.isArray(flightStore.selectedFlights)
+        ?flightStore.selectedFlights.filter(Boolean)
+        :[
+            flightStore.selectedDepartureFlight,
+            flightStore.selectedReturnFlight
+          ].filter(Boolean)
 
-  return
-}
-  const payload = {
-    id: 0,
-    userName: String(contact.phone || contact.mobile || '').trim(),
-    email: String(contact.email || '').trim(),
-    issueDate: getCurrentDate(),
-    issueTime: getCurrentTime(),
-    ipAddress: '0',
-    confirmStatus: 'temp',
-    contractType: 0,
-    contractingPartyType: 0,
-    cruise: false,
-    hotel: false,
-    insurance: false,
-    manualOrAutomatic: true,
-    other: false,
-    showDetail: false,
-    systemOrCharter: false,
-    taxType: 0,
-    ticket: true,
-    ticketStatus: 'temp-first',
-    tour: false,
-    travelVehicle: 'هواپیما',
-    visa: false,
-     totalPrice,
+    const contractFlights=
+      mapFlightsToPayload(
+        selectedFlights
+      )
 
-  // قیمت نهایی Fare پرواز برگشت
-  totalPrice2,
-    contractFlights,
-    contractPassengers
+    const contractPassengers=
+      mapPassengersToPayload(
+        passengers,
+        selectedFlights
+      )
+
+    const departureFlight=
+      flightStore.selectedDepartureFlight||
+      selectedFlights[0]||
+      null
+
+    const returnFlight=
+      flightStore.selectedReturnFlight||
+      selectedFlights[1]||
+      null
+
+    const totalPrice=
+      getFinalFlightPrice(
+        departureFlight
+      )
+
+    const totalPrice2=
+      returnFlight
+        ?getFinalFlightPrice(
+            returnFlight
+          )
+        :0
+
+    if(
+      !Number.isFinite(totalPrice)||
+      totalPrice<=0
+    ){
+      alert(
+        'قیمت نهایی Fare پرواز رفت معتبر نیست.'
+      )
+
+      return
+    }
+
+    if(
+      returnFlight&&
+      (
+        !Number.isFinite(totalPrice2)||
+        totalPrice2<=0
+      )
+    ){
+      alert(
+        'قیمت نهایی Fare پرواز برگشت معتبر نیست.'
+      )
+
+      return
+    }
+
+    const payload={
+      id:0,
+
+      userName:
+        String(
+          contact.phone||
+          contact.mobile||
+          ''
+        ).trim(),
+
+      email:
+        String(
+          contact.email||''
+        ).trim(),
+
+      issueDate:getCurrentDate(),
+      issueTime:getCurrentTime(),
+
+      ipAddress:'0',
+      confirmStatus:'temp',
+      contractType:0,
+      contractingPartyType:0,
+      cruise:false,
+      hotel:false,
+      insurance:false,
+      manualOrAutomatic:true,
+      other:false,
+      showDetail:false,
+      systemOrCharter:false,
+      taxType:0,
+      ticket:true,
+      ticketStatus:'temp-first',
+      tour:false,
+      travelVehicle:'هواپیما',
+      visa:false,
+
+      totalPrice,
+      totalPrice2,
+
+      contractFlights,
+      contractPassengers
+    }
+
+    const contractResponse=
+      await addContract(
+        payload
+      )
+
+    currentContractData.value={
+      addPayload:payload,
+      addResponse:contractResponse
+    }
+
+    console.log(
+      currentContractData.value.addResponse,
+      'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+    )
+
+    flightStore.setCurrentStep(
+      previewStep.value
+    )
+  }catch(error){
+    console.error(
+      'Continue shopping error:',
+      error
+    )
+
+    alert(
+      'ادامه فرایند با خطا مواجه شد. لطفاً دوباره تلاش کنید.'
+    )
+  }finally{
+    continueShoppingLoading.value=false
   }
-
-  const contractResponse = await addContract(payload)
-  
-  currentContractData.value = {
-    addPayload: payload,
-    addResponse: contractResponse
-  }
-console.log(currentContractData.value.addResponse , 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
-  flightStore.setCurrentStep(previewStep.value)
 }
 
 
@@ -2218,6 +2907,234 @@ function isNiraFlight(flight) {
 function isMahanFlight(flight) {
   return getFlightSupplier(flight) === 'MAHAN'
 }
+function isPartoFlight(flight){
+  return getFlightSupplier(flight)==='PARTO'
+}
+function hasPartoFlights(flights){
+  return(flights||[])
+    .some(isPartoFlight)
+}
+function getPartoFareSourceCode(flight){
+  return String(
+    flight?.fareSourceCode||
+    flight?.meta?.fareSourceCode||
+    flight?.meta?.raw?.fareSourceCode||
+    ''
+  ).trim()
+}
+
+function getPartoFareType(flight){
+  return Number(
+    flight?.meta?.fareType??
+    flight?.meta?.raw
+      ?.airItineraryPricingInfo
+      ?.fareType??
+    flight?.fareType
+  )
+}
+function getPartoPassengerType(
+  passenger
+){
+  const type=String(
+    passenger?.type||
+    passenger?.age||
+    'ADL'
+  )
+    .trim()
+    .toUpperCase()
+
+  if(type==='CHD')return 2
+  if(type==='INF')return 3
+
+  return 1
+}
+
+function getPartoGender(
+  passenger
+){
+  const value=String(
+    passenger?.gender??''
+  )
+    .trim()
+    .toLowerCase()
+
+  if(
+    passenger?.gender===true||
+    value==='male'||
+    value==='m'
+  ){
+    return 0
+  }
+
+  return 1
+}
+
+function getPartoPassengerTitle(
+  passenger
+){
+  const passengerType=
+    getPartoPassengerType(
+      passenger
+    )
+
+  const isMale=
+    getPartoGender(
+      passenger
+    )===0
+
+  if(
+    passengerType===2||
+    passengerType===3
+  ){
+    return isMale?4:3
+  }
+
+  return isMale?0:2
+}
+function mapPassengerToParto(
+  passenger
+){
+  const partoNationality=
+    passenger?.nationality==='IR'
+      ?'IR'
+      :String(
+          passenger?.countryCode||
+          passenger?.nationality||
+          ''
+        )
+          .trim()
+          .toUpperCase()
+
+  return{
+    dateOfBirth:
+      toIsoBirthDate(
+        passenger?.birthDate
+      ),
+
+    gender:
+      getPartoGender(
+        passenger
+      ),
+
+    passengerType:
+      getPartoPassengerType(
+        passenger
+      ),
+
+    passengerName:{
+      passengerFirstName:
+        passenger?.firstName||'',
+
+      passengerMiddleName:'',
+
+      passengerLastName:
+        passenger?.lastName||'',
+
+      passengerTitle:
+        getPartoPassengerTitle(
+          passenger
+        )
+    },
+
+    passport:{
+      country:
+        partoNationality,
+
+      expiryDate:
+        toIsoBirthDate(
+          passenger?.passportExpDate
+        )||null,
+
+      issueDate:
+        toIsoBirthDate(
+          passenger?.passportIssueDate
+        )||'',
+
+      passportNumber:
+        passenger?.passportNumber||''
+    },
+
+    nationalId:
+      partoNationality==='IR'
+        ?String(
+            passenger?.nationalCode||''
+          )
+        :'',
+
+    nationality:
+      partoNationality,
+
+    extraServiceId:[],
+    mealTypeServiceId:[],
+    seatServiceId:[],
+
+    frequentFlyerNumber:'',
+    seatPreference:0,
+    mealPreference:0,
+    wheelchair:false,
+    destinationAddress:''
+  }
+}
+
+async function checkPartoCredit(
+  flight
+){
+  const response=
+    await getParoCredit()
+
+  if(response?.success!==true){
+    throw new Error(
+      response?.error?.message||
+      'دریافت اعتبار Parto ناموفق بود'
+    )
+  }
+
+  const balance=
+    Number(
+      response?.balance
+    )
+
+  const requiredAmount=
+    Number(
+      flight?.priceFrom||
+      flight?.meta?.totalFare||
+      0
+    )
+
+  if(
+    !Number.isFinite(balance)
+  ){
+    throw new Error(
+      'موجودی Parto معتبر نیست'
+    )
+  }
+
+  if(
+    !Number.isFinite(requiredAmount)||
+    requiredAmount<=0
+  ){
+    throw new Error(
+      'مبلغ پرواز Parto معتبر نیست'
+    )
+  }
+
+  if(
+    balance<requiredAmount
+  ){
+    throw new Error(
+      'اعتبار Parto برای رزرو این پرواز کافی نیست'
+    )
+  }
+
+  return{
+    balance,
+    requiredAmount,
+    remainingBalance:
+      balance-requiredAmount,
+
+    raw:response
+  }
+}
 function getMahanRawFlight(flight) {
   return flight?.meta?.raw || {}
 }
@@ -2408,34 +3325,311 @@ async function reserveMahanFlight(flight, passengers, contactInfo) {
     reserveResponse: response
   }
 }
-async function reserveFlightByProvider(flight, passengers, contactInfo) {
-  const supplier = getFlightSupplier(flight)
+async function reservePartoFlight(
+  flight,
+  passengers,
+  contactInfo
+){
+  if(
+    !flight||
+    !isPartoFlight(flight)
+  ){
+    throw new Error(
+      'پرواز Parto معتبر نیست'
+    )
+  }
 
-  if (supplier === 'NIRA') {
-    const result = await reserveNiraFlight(flight, passengers, contactInfo)
+  const fareSourceCode=
+    getPartoFareSourceCode(
+      flight
+    )
 
-    return {
-      flightId: flight?.id || null,
-      supplier: 'NIRA',
-      airline: flight?.airline || '',
-      pnr: result?.pnr || '',
-      reserveResponse: result?.reserveResponse || result?.raw || result
+  if(!fareSourceCode){
+    throw new Error(
+      'FareSourceCode پرواز Parto موجود نیست'
+    )
+  }
+
+  /*
+   * 1. CREDIT
+   */
+  const credit=
+    await checkPartoCredit(
+      flight
+    )
+
+  /*
+   * 2. REVALIDATE
+   */
+  const revalidate=
+    await revalidateParoFlight(
+      fareSourceCode
+    )
+
+  const fareType=
+    Number(
+      revalidate
+        ?.pricedItinerary
+        ?.airItineraryPricingInfo
+        ?.fareType??
+      getPartoFareType(
+        flight
+      )
+    )
+
+  console.log(
+    'PARTO REVALIDATE:',
+    revalidate
+  )
+
+  console.log(
+    'PARTO FARE TYPE:',
+    fareType
+  )
+
+  /*
+   * 3. WEB FARE
+   *
+   * طبق Flow قدیمی:
+   * قبل از پرداخت Book نمی‌زنیم.
+   */
+  if(fareType===4){
+    return{
+      flightId:
+        flight?.id||null,
+
+      supplier:'PARTO',
+
+      airline:
+        flight?.airline||'',
+
+      pnr:'',
+      uniqueId:'',
+
+      fareType,
+
+      partoFlow:
+        'BOOK_AFTER_PAYMENT',
+
+      fareSourceCode,
+
+      creditResponse:
+        credit,
+
+      revalidateResponse:
+        revalidate,
+
+      reserveResponse:null
     }
   }
 
-  if (supplier === 'MAHAN') {
-    const result = await reserveMahanFlight(flight, passengers, contactInfo)
+  /*
+   * 4. NORMAL FARE
+   */
+  const airTravelers=
+    (passengers||[])
+      .map(
+        mapPassengerToParto
+      )
 
-    return {
-      flightId: flight?.id || null,
-      supplier: 'MAHAN',
-      airline: flight?.airline || 'W5',
-      pnr: result?.pnr || '',
-      reserveResponse: result?.reserveResponse || result?.raw || result
+  if(!airTravelers.length){
+    throw new Error(
+      'اطلاعات مسافران Parto موجود نیست'
+    )
+  }
+
+  const bookingPayload={
+    fareSourceCode,
+
+    clientUniqueId:
+      `AHUAN-${Date.now()}`,
+
+    markupForAdult:0,
+    markupForChild:0,
+    markupForInfant:0,
+
+    cancellationGuaranteeId:'',
+
+    travelerInfo:{
+      phoneNumber:
+        contactInfo?.mobile||
+        contactInfo?.phone||
+        '',
+
+      email:
+        contactInfo?.email||
+        '',
+
+      ownerPhoneNumber:
+        contactInfo?.mobile||
+        contactInfo?.phone||
+        '',
+
+      ownerEmail:
+        contactInfo?.email||
+        '',
+
+      airTravelers
+    },
+
+    payLaterServiceId:''
+  }
+
+  console.log(
+    'PARTO BOOK PAYLOAD:',
+    bookingPayload
+  )
+
+  /*
+   * 5. BOOK
+   */
+  const book=
+    await bookParoFlight(
+      bookingPayload
+    )
+
+  console.log(
+    'PARTO BOOK RESPONSE:',
+    book
+  )
+
+  if(
+    book?.success!==true
+  ){
+    throw new Error(
+      book?.error?.message||
+      'رزرو پرواز Parto ناموفق بود'
+    )
+  }
+
+  if(!book?.uniqueId){
+    throw new Error(
+      'UniqueId رزرو Parto دریافت نشد'
+    )
+  }
+
+  return{
+    flightId:
+      flight?.id||null,
+
+    supplier:'PARTO',
+
+    airline:
+      flight?.airline||'',
+
+    pnr:
+      book.uniqueId,
+
+    uniqueId:
+      book.uniqueId,
+
+    fareType,
+
+    fareSourceCode,
+
+    category:
+      book?.category,
+
+    status:
+      book?.status,
+
+    priceChange:
+      book?.priceChange===true,
+
+    warningMessage:
+      book?.warningMessage||[],
+
+    partoFlow:
+      'ISSUE_AFTER_PAYMENT',
+
+    creditResponse:
+      credit,
+
+    revalidateResponse:
+      revalidate,
+
+    reserveResponse:
+      book
+  }
+}
+async function reserveFlightByProvider(
+  flight,
+  passengers,
+  contactInfo
+){
+  const supplier=
+    getFlightSupplier(
+      flight
+    )
+
+  if(supplier==='NIRA'){
+    const result=
+      await reserveNiraFlight(
+        flight,
+        passengers,
+        contactInfo
+      )
+
+    return{
+      flightId:
+        flight?.id||null,
+
+      supplier:'NIRA',
+
+      airline:
+        flight?.airline||'',
+
+      pnr:
+        result?.pnr||'',
+
+      reserveResponse:
+        result?.reserveResponse||
+        result?.raw||
+        result
     }
   }
 
-  throw new Error(`تامین‌کننده پشتیبانی نمی‌شود: ${supplier || 'UNKNOWN'}`)
+  if(supplier==='MAHAN'){
+    const result=
+      await reserveMahanFlight(
+        flight,
+        passengers,
+        contactInfo
+      )
+
+    return{
+      flightId:
+        flight?.id||null,
+
+      supplier:'MAHAN',
+
+      airline:
+        flight?.airline||
+        'W5',
+
+      pnr:
+        result?.pnr||'',
+
+      reserveResponse:
+        result?.reserveResponse||
+        result?.raw||
+        result
+    }
+  }
+
+  if(supplier==='PARTO'){
+    return await reservePartoFlight(
+      flight,
+      passengers,
+      contactInfo
+    )
+  }
+
+  throw new Error(
+    `تامین‌کننده پشتیبانی نمی‌شود: ${
+      supplier||'UNKNOWN'
+    }`
+  )
 }
 async function reserveFlights(flights, passengers, contactInfo) {
   const safeFlights = Array.isArray(flights) ? flights.filter(Boolean) : []
@@ -2560,11 +3754,12 @@ async function handleFinalPayment() {
     /*
      * ۶. ذخیره در sessionStorage
      */
-    const paymentSession =
-      savePaymentSession({
-        contractId,
-        paymentData
-      })
+    const paymentSession=
+  savePaymentSession({
+    contractId,
+    paymentData,
+    reserveResults
+  })
 
     /*
      * ۷. ادامه مراحل براساس نوع پرداخت
@@ -2606,11 +3801,30 @@ function buildUpdateContractPayload({
     addResponse?.id ||
     addPayload?.id ||
     0
+const contractSourceFlights=
+  expandFlightsForContract(
+    selectedFlights
+  )
 
-  const contractFlights = (selectedFlights || []).map((flight) => {
-    const reserve = (reserveResults || []).find(
-      (item) => item?.flightId === flight?.id
-    )
+const contractFlights=
+  contractSourceFlights.map(
+    flight=>{
+
+      const sourceFlightId=
+        flight?.__sourceFlightId||
+        flight?.id
+
+      const reserve=
+        (reserveResults||[])
+          .find(
+            item=>
+              String(
+                item?.flightId||''
+              )===
+              String(
+                sourceFlightId||''
+              )
+          )
 
     return {
       contractId,
@@ -2653,13 +3867,46 @@ function buildUpdateContractPayload({
     }
   })
 
- const contractPassengers = mapPassengersToPayload(
-  passengers || [],
-  selectedFlights || []
-).map((passenger) => ({
-  ...passenger,
-  contractId
-}))
+const savedContract=
+  currentContractData?.addResponse?.data||
+  currentContractData?.addResponse||
+  {}
+
+const savedPassengers=
+  Array.isArray(savedContract?.contractPassengers)
+    ?savedContract.contractPassengers
+    :[]
+
+const mappedPassengers=
+  mapPassengersToPayload(
+    passengers||[],
+    selectedFlights||[]
+  )
+
+const contractPassengers=
+  mappedPassengers.map(
+    (passenger,index)=>{
+      const savedPassenger=
+        savedPassengers[index]
+
+      if(!savedPassenger){
+        throw new Error(
+          `مسافر شماره ${index+1} در خروجی Contract/add پیدا نشد`
+        )
+      }
+
+      return{
+        ...savedPassenger,
+        ...passenger,
+
+        id:Number(
+          savedPassenger.id
+        ),
+
+        contractId
+      }
+    }
+  )
 
   return {
     ...addPayload,
@@ -2848,8 +4095,9 @@ const travelCardNumber =
 }
 function savePaymentSession({
   contractId,
-  paymentData
-}) {
+  paymentData,
+  reserveResults=[]
+}){
   if (typeof window === 'undefined') {
     throw new Error(
       'sessionStorage در دسترس نیست'
@@ -2891,7 +4139,31 @@ function savePaymentSession({
 
   mobile: String(
     paymentData.mobile || ''
-  ).trim()
+  ).trim(),
+  providerResults:
+  reserveResults.map(
+    item=>({
+      flightId:
+        item?.flightId||null,
+
+      supplier:
+        item?.supplier||'',
+
+      pnr:
+        item?.pnr||'',
+
+      uniqueId:
+        item?.uniqueId||'',
+
+      fareType:
+        item?.fareType??null,
+
+      partoFlow:
+        item?.partoFlow||'',
+        fareSourceCode:
+      item?.fareSourceCode||''
+    })
+  )
   }
 
   sessionStorage.setItem(

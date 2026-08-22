@@ -4,7 +4,12 @@
       v-for="ticket in tickets"
       :key="ticket.key"
       class="ticket-sheet"
-    >
+    ><div
+  v-if="ticket.isCancelled"
+  class="cancel-stamp"
+>
+  کنسل شد
+</div>
     <article
     class="ticket-page overflow-hidden rounded-3xl border border-blue-900 bg-white shadow-lg"
     >
@@ -177,18 +182,25 @@
             class="flex items-start justify-between gap-4"
           >
             <div class="text-center">
-              <p
-                class="text-3xl font-black text-blue-900"
-              >
-                {{ ticket.origin }}
-              </p>
+  <p
+    class="text-3xl font-black text-blue-900"
+  >
+    {{ ticket.origin }}
+  </p>
 
-              <p
-                class="mt-2 text-sm font-semibold text-slate-700"
-              >
-                {{ ticket.originName }}
-              </p>
-            </div>
+  <p
+    class="mt-2 text-sm font-semibold text-slate-700"
+  >
+    {{ ticket.originName }}
+  </p>
+
+  <p
+    v-if="ticket.originAirportName"
+    class="mt-1 max-w-[180px] text-[10px] leading-4 text-slate-500"
+  >
+    {{ ticket.originAirportName }}
+  </p>
+</div>
 
             <div
               class="mt-4 flex flex-1 items-center px-2"
@@ -216,19 +228,26 @@
               ></span>
             </div>
 
-            <div class="text-center">
-              <p
-                class="text-3xl font-black text-blue-900"
-              >
-                {{ ticket.destination }}
-              </p>
+           <div class="text-center">
+  <p
+    class="text-3xl font-black text-blue-900"
+  >
+    {{ ticket.destination }}
+  </p>
 
-              <p
-                class="mt-2 text-sm font-semibold text-slate-700"
-              >
-                {{ ticket.destinationName }}
-              </p>
-            </div>
+  <p
+    class="mt-2 text-sm font-semibold text-slate-700"
+  >
+    {{ ticket.destinationName }}
+  </p>
+
+  <p
+    v-if="ticket.destinationAirportName"
+    class="mt-1 max-w-[180px] text-[10px] leading-4 text-slate-500"
+  >
+    {{ ticket.destinationAirportName }}
+  </p>
+</div>
           </div>
 
           <div
@@ -628,5 +647,26 @@ const getStatusTitle = (
   width: 100%;
   break-inside: avoid;
   page-break-inside: avoid;
+}
+.ticket-sheet{
+  position:relative;
+  width:100%;
+}
+
+.cancel-stamp{
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%) rotate(-20deg);
+  z-index:999;
+  padding:12px 40px;
+  border:4px solid #dc2626;
+  border-radius:14px;
+  color:#dc2626;
+  font-size:34px;
+  font-weight:900;
+  opacity:.7;
+  pointer-events:none;
+  white-space:nowrap;
 }
 </style>

@@ -308,7 +308,8 @@ export const useFlightStore = defineStore('flights', {
         orderId: 10
       }
     ],
-
+airportCache:{},
+airportLoading:{},
     airlines: [
       {
         code: 'I3',
@@ -321,6 +322,12 @@ export const useFlightStore = defineStore('flights', {
         name: 'کیش‌ایر',
         credentials: { username: 'THR100.WS', password: 'Ahuan1348' },
         logo: '/imgs/flight/airlines/kishair.png'
+      },
+      {
+        code: 'J1',
+        name: 'معراج',
+        credentials: { username: 'THR158.WS', password: 'THR158AH' },
+        logo: '/imgs/flight/airlines/meraj.png'
       },
       {
         code: 'QB',
@@ -409,12 +416,21 @@ airlineIdMap : {
   AVAAIR: 1076,
   H8: 1070
 },
+basicAirlines:[],
+basicAirlinesLoading:false,
+basicAirlinesLoaded:false,
+
+airportCache:{},
+airportLoading:{},
     flights: [],
+    countries:[],
+  countriesLoading:false,
+  countriesLoaded:false,
     loading: false,
     authLoading: false,
     backgroundLoading: false,
     searchFinished: false,
-
+    partoSessionId:null,
     selectedFlight: null,
     selectedDepartureFlight: null,
     selectedReturnFlight: null,
@@ -438,6 +454,51 @@ airlineIdMap : {
   }),
 
   getters: {
+    getAirportByCode:(state)=>(code)=>{
+  return state.airportCache[
+    String(code||'')
+      .trim()
+      .toUpperCase()
+  ]||null
+},
+
+getAirportCityName:(state)=>(code)=>{
+  const normalized=
+    String(code||'')
+      .trim()
+      .toUpperCase()
+
+  const airport=
+    state.airportCache[
+      normalized
+    ]
+
+  return String(
+    airport?.cityNicName||
+    airport?.cityName||
+    normalized||
+    ''
+  ).trim()
+},
+
+getAirportName:(state)=>(code)=>{
+  const normalized=
+    String(code||'')
+      .trim()
+      .toUpperCase()
+
+  const airport=
+    state.airportCache[
+      normalized
+    ]
+
+  return String(
+    airport?.nicName||
+    airport?.name||
+    normalized||
+    ''
+  ).trim()
+},
      isLoggedIn: (state) => {
       // اگر از قبل در استیت به عنوان لاگین‌شده علامت‌گذاری شده یا کوکی وجود دارد
       if (state.isUserLoggedIn) return true
@@ -445,14 +506,100 @@ airlineIdMap : {
       return !!token.value
     },
     userName: (state) => state.userData ? `${state.userData.firstName} ${state.userData.lastName}` : 'پنل کاربری',
-    getAirlineId: (state) => (stepfindip) => {
-      const code = String(stepfindip || '').trim().toUpperCase()
-      return state.airlineIdMap[code] || 0
-    },
-    getAirlineCode: (state) => (id) => {
-    const entry = Object.entries(state.airlineIdMap).find(([_, value]) => value === id)
-    return entry ? entry[0] : ''
-  },
+    getAirlineId:(state)=>(value)=>{
+  const code=
+    String(value||'')
+      .trim()
+      .toUpperCase()
+
+  const basicAirline=
+    state.basicAirlines.find(
+      item=>
+        String(item?.iataCode||'')
+          .trim()
+          .toUpperCase()===
+        code
+    )
+
+  if(
+    Number(basicAirline?.id)>0
+  ){
+    return Number(
+      basicAirline.id
+    )
+  }
+
+  return Number(
+    state.airlineIdMap[code]||0
+  )
+},
+getAirlineByCode:(state)=>(value)=>{
+  const code=
+    String(value||'')
+      .trim()
+      .toUpperCase()
+
+  if(!code){
+    return null
+  }
+
+  const basic=
+    state.basicAirlines.find(
+      item=>
+        String(
+          item?.iataCode||''
+        )
+          .trim()
+          .toUpperCase()===
+        code
+    )
+
+  if(basic){
+    return basic
+  }
+
+  return state.airlines.find(
+    item=>
+      String(
+        item?.code||''
+      )
+        .trim()
+        .toUpperCase()===
+      code
+  )||null
+},
+  getAirlineCode:(state)=>(id)=>{
+  const numericId=
+    Number(id)
+
+  const basicAirline=
+    state.basicAirlines.find(
+      item=>
+        Number(item?.id)===
+        numericId
+    )
+
+  if(basicAirline?.iataCode){
+    return String(
+      basicAirline.iataCode
+    )
+      .trim()
+      .toUpperCase()
+  }
+
+  const entry=
+    Object.entries(
+      state.airlineIdMap
+    ).find(
+      ([_,value])=>
+        Number(value)===
+        numericId
+    )
+
+  return entry
+    ?entry[0]
+    :''
+},
     pricedFlightsCount(state) {
       if (!state.flights) return 0
 
@@ -529,6 +676,52 @@ airlineIdMap : {
   },
 
   actions: {
+    async loadAirportByCode(code){
+  const normalized=
+    String(code||'')
+      .trim()
+      .toUpperCase()
+
+  if(!normalized)return null
+
+  if(this.airportCache[normalized]){
+    return this.airportCache[normalized]
+  }
+
+  if(this.airportLoading[normalized]){
+    return this.airportLoading[normalized]
+  }
+
+  const request=
+    $fetch(
+      `https://api.ahuan.ir/api/BasicInfo/airports/${encodeURIComponent(normalized)}`
+    )
+      .then(response=>{
+        const airport=
+          Array.isArray(response)
+            ?response[0]||null
+            :response?.data||
+              response||
+              null
+
+        if(airport){
+          this.airportCache[normalized]=
+            airport
+        }
+
+        return airport
+      })
+      .finally(()=>{
+        delete this.airportLoading[
+          normalized
+        ]
+      })
+
+  this.airportLoading[normalized]=
+    request
+
+  return request
+},
      openModal(action = null) {
       this.isAuthModalOpen = true
       this.authStep = 'mobile'
@@ -536,6 +729,108 @@ airlineIdMap : {
       this.error = ''
       this.successMessage = ''
     },
+    setPartoSessionId(sessionId){
+  this.partoSessionId=sessionId||null
+},
+async loadCountries(){
+  if(
+    this.countriesLoading||
+    this.countriesLoaded
+  ){
+    return this.countries
+  }
+
+  this.countriesLoading=true
+
+  try{
+    const response=
+      await $fetch(
+        'https://api.ahuan.ir/api/BasicInfo/countries'
+      )
+
+    const items=
+      Array.isArray(response)
+        ?response
+        :Array.isArray(response?.data)
+          ?response.data
+          :[]
+
+    this.countries=
+      items
+        .filter(item=>
+          /^[A-Z]{2}$/.test(
+            String(item?.code2||'')
+              .trim()
+              .toUpperCase()
+          )
+        )
+        .map(item=>({
+          label:
+            item?.nicName||
+            item?.name||
+            item?.code2,
+
+          value:
+            String(item.code2)
+              .trim()
+              .toUpperCase(),
+
+          name:
+            item?.name||'',
+
+          code3:
+            item?.code3||''
+        }))
+
+    this.countriesLoaded=true
+
+    return this.countries
+  }catch(error){
+    this.countries=[]
+    this.countriesLoaded=false
+
+    throw error
+  }finally{
+    this.countriesLoading=false
+  }
+},
+async loadBasicAirlines(){
+  if(
+    this.basicAirlinesLoaded||
+    this.basicAirlinesLoading
+  ){
+    return this.basicAirlines
+  }
+
+  this.basicAirlinesLoading=true
+
+  try{
+    const response=
+      await $fetch(
+        'https://api.ahuan.ir/api/BasicInfo/airlines'
+      )
+
+    this.basicAirlines=
+      Array.isArray(response)
+        ?response
+        :Array.isArray(response?.data)
+          ?response.data
+          :[]
+
+    this.basicAirlinesLoaded=true
+
+    return this.basicAirlines
+  }catch(error){
+    this.basicAirlines=[]
+    this.basicAirlinesLoaded=false
+    throw error
+  }finally{
+    this.basicAirlinesLoading=false
+  }
+},
+clearPartoSessionId(){
+  this.partoSessionId=null
+},
     closeModal() {
       this.isAuthModalOpen = false
       this.authStep = 'mobile' // بازنشانی مرحله مودال به اولین وضعیت

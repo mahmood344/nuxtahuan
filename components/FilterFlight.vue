@@ -53,25 +53,56 @@
       </h3>
 
       <div class="space-y-3">
-        <UiBaseCheckbox
-          v-model="economySelected"
-          label="اکونومی"
-          :disabled="!availableCabins.economy"
-        />
+  <UiBaseCheckbox
+    v-model="economySelected"
+    label="اکونومی"
+    :disabled="!availableCabins.economy"
+  />
 
-        <UiBaseCheckbox
-          v-model="businessSelected"
-          label="بیزینس"
-          :disabled="!availableCabins.business"
-        />
-      </div>
+  <UiBaseCheckbox
+    v-model="premiumEconomySelected"
+    label="پریمیوم اکونومی"
+    :disabled="!availableCabins.premiumEconomy"
+  />
+
+  <UiBaseCheckbox
+    v-model="businessSelected"
+    label="بیزینس"
+    :disabled="!availableCabins.business"
+  />
+
+  <UiBaseCheckbox
+    v-model="premiumBusinessSelected"
+    label="پریمیوم بیزینس"
+    :disabled="!availableCabins.premiumBusiness"
+  />
+
+  <UiBaseCheckbox
+    v-model="firstSelected"
+    label="فرست کلاس"
+    :disabled="!availableCabins.first"
+  />
+
+  <UiBaseCheckbox
+    v-model="premiumFirstSelected"
+    label="پریمیوم فرست کلاس"
+    :disabled="!availableCabins.premiumFirst"
+  />
+</div>
 
       <p
-        v-if="!economySelected&&!businessSelected"
-        class="mt-3 text-xs font-bold text-red-500"
-      >
-        حداقل یک نوع بلیت را انتخاب کنید.
-      </p>
+  v-if="
+    !economySelected&&
+    !premiumEconomySelected&&
+    !businessSelected&&
+    !premiumBusinessSelected&&
+    !firstSelected&&
+    !premiumFirstSelected
+  "
+  class="mt-3 text-xs font-bold text-red-500"
+>
+  حداقل یک نوع بلیت را انتخاب کنید.
+</p>
 
       <button
         v-if="isCabinFilterChanged"
@@ -157,45 +188,110 @@ function getAirlineCode(flight) {
     ''
   )
 }
-function getAirlineName(flight,code) {
-  const airlineFromStore =
+function getAirlineName(flight,code){
+  const oldAirline=
     flightStore?.airlines?.find(
-      (item) =>
+      item=>
         normalizeAirlineCode(
-          item?.code ||
-          item?.iataCode ||
+          item?.code||
+          item?.iataCode||
           item?.airlineCode
-        ) === code
+        )===code
+    )
+
+  const basicAirline=
+    flightStore?.basicAirlines?.find(
+      item=>
+        normalizeAirlineCode(
+          item?.iataCode
+        )===code
     )
 
   return String(
-    flight?.airlineNameFarsi ||
-    flight?.airlineName ||
-    flight?.meta?.raw?.AirlineNameFarsi ||
-    flight?.meta?.raw?.AirlineName ||
-    airlineFromStore?.nameFarsi ||
-    airlineFromStore?.name ||
+    flight?.airlineNameFarsi||
+    flight?.airlineName||
+    flight?.meta?.raw?.AirlineNameFarsi||
+    flight?.meta?.raw?.AirlineName||
+
+    oldAirline?.nameFarsi||
+    oldAirline?.name||
+    oldAirline?.nicName||
+
+    basicAirline?.nicName||
+    basicAirline?.name||
+
     code
   ).trim()
 }
-function getAirlineLogo(flight,code) {
-  const airlineFromStore =
+function getAirlineLogo(flight,code){
+  const oldAirline=
     flightStore?.airlines?.find(
-      (item) =>
+      item=>
         normalizeAirlineCode(
-          item?.code ||
-          item?.iataCode ||
+          item?.code||
+          item?.iataCode||
           item?.airlineCode
-        ) === code
+        )===code
     )
 
-  return String(
-    flight?.airlineLogo ||
-    flight?.logo ||
-    airlineFromStore?.logo ||
-    airlineFromStore?.image ||
+  const basicAirline=
+    flightStore?.basicAirlines?.find(
+      item=>
+        normalizeAirlineCode(
+          item?.iataCode
+        )===code
+    )
+
+  /*
+   * اول ساختار قدیمی ایرلاین‌های داخلی
+   */
+  const oldLogo=
+    flight?.airlineLogo||
+    flight?.logo||
+    oldAirline?.logo||
+    oldAirline?.image||
     ''
-  ).trim()
+
+  if(oldLogo){
+    const value=
+      String(oldLogo).trim()
+
+    if(
+      value.startsWith('http://')||
+      value.startsWith('https://')||
+      value.startsWith('/')
+    ){
+      return value
+    }
+
+    return `/imgs/flight/airlines/${value}`
+  }
+
+  /*
+   * اگر در اطلاعات قدیمی نبود،
+   * از BasicInfo استفاده کن.
+   */
+  const basicLogo=
+    basicAirline?.logo||
+    basicAirline?.image||
+    ''
+
+  if(!basicLogo){
+    return''
+  }
+
+  const value=
+    String(basicLogo).trim()
+
+  if(
+    value.startsWith('http://')||
+    value.startsWith('https://')||
+    value.startsWith('/')
+  ){
+    return value
+  }
+
+  return `/imgs/flight/airlines/${value}`
 }
 const availableAirlines = computed(() => {
   const airlineMap = new Map()
@@ -333,12 +429,195 @@ function toggleAirline(code,checked) {
       : nextAirlines
   })
 }
-function getFlightCabinType(flight){
-  const airlineCode=getFlightAirlineCode(flight)
-  const bookingClass=getFlightBookingClass(flight)
-  const config=flightClasses[airlineCode]
+function mapPartoCabinType(value){
+  const cabinType=Number(value)
 
-  if(config?.business?.includes(bookingClass)){
+  switch(cabinType){
+    case 1:return'economy'
+    case 2:return'premiumEconomy'
+    case 3:return'business'
+    case 4:return'premiumBusiness'
+    case 5:return'first'
+    case 6:return'premiumFirst'
+    default:return null
+  }
+}
+
+function mapPartoCabinCode(value){
+  const code=normalizeCode(value)
+
+  switch(code){
+    case'Y':return'economy'
+    case'S':return'premiumEconomy'
+    case'C':return'business'
+    case'J':return'premiumBusiness'
+    case'F':return'first'
+    case'P':return'premiumFirst'
+    default:return null
+  }
+}
+function getPartoFlightCabinTypes(flight){
+  const result=new Set()
+
+  /*
+   * تمام Segmentهای Map شده
+   */
+  const segments=Array.isArray(flight?.segments)
+    ?flight.segments
+    :[]
+
+  for(const segment of segments){
+    const type=
+      mapPartoCabinType(
+        segment?.cabinType
+      )||
+      mapPartoCabinCode(
+        segment?.bookingClass||
+        segment?.rbd
+      )
+
+    if(type){
+      result.add(type)
+    }
+  }
+
+  /*
+   * Segmentهای برگشت
+   */
+  const returnSegments=
+    Array.isArray(flight?.returnSegments)
+      ?flight.returnSegments
+      :[]
+
+  for(const segment of returnSegments){
+    const type=
+      mapPartoCabinType(
+        segment?.cabinType
+      )||
+      mapPartoCabinCode(
+        segment?.bookingClass||
+        segment?.rbd
+      )
+
+    if(type){
+      result.add(type)
+    }
+  }
+
+  /*
+   * fallback روی خود Flight
+   */
+  if(!result.size){
+    const type=
+      mapPartoCabinType(
+        flight?.cabinType
+      )||
+      mapPartoCabinCode(
+        flight?.bookingClass||
+        flight?.rbd
+      )
+
+    if(type){
+      result.add(type)
+    }
+  }
+
+  return[...result]
+}
+function getFlightCabinType(flight){
+  const provider=normalizeCode(
+    flight?.provider
+  )
+
+  /*
+   * PARTO
+   */
+  if(provider==='PARTO'){
+    const cabinType=Number(
+      flight?.cabinType??
+      flight?.segments?.[0]?.cabinType??
+      flight?.meta?.raw
+        ?.originDestinationOptions?.[0]
+        ?.flightSegments?.[0]
+        ?.cabinClassCode
+    )
+
+    if(cabinType===1){
+      return'economy'
+    }
+
+    if(cabinType===2){
+      return'premiumEconomy'
+    }
+
+    if(cabinType===3){
+      return'business'
+    }
+
+    if(cabinType===4){
+      return'premiumBusiness'
+    }
+
+    if(cabinType===5){
+      return'first'
+    }
+
+    if(cabinType===6){
+      return'premiumFirst'
+    }
+
+    /*
+     * fallback با Code
+     */
+    const cabinCode=normalizeCode(
+      flight?.bookingClass||
+      flight?.rbd
+    )
+
+    if(cabinCode==='Y'){
+      return'economy'
+    }
+
+    if(cabinCode==='S'){
+      return'premiumEconomy'
+    }
+
+    if(cabinCode==='C'){
+      return'business'
+    }
+
+    if(cabinCode==='J'){
+      return'premiumBusiness'
+    }
+
+    if(cabinCode==='F'){
+      return'first'
+    }
+
+    if(cabinCode==='P'){
+      return'premiumFirst'
+    }
+
+    return null
+  }
+
+  /*
+   * NIRA / MAHAN
+   * منطق داخلی قبلی
+   */
+  const airlineCode=
+    getFlightAirlineCode(flight)
+
+  const bookingClass=
+    getFlightBookingClass(flight)
+
+  const config=
+    flightClasses[airlineCode]
+
+  if(
+    config?.business
+      ?.includes(bookingClass)
+  ){
     return'business'
   }
 
@@ -350,7 +629,10 @@ function getFlightCabinType(flight){
     ''
   )
 
-  if(cabinName.includes('BUSINESS')||cabinName.includes('بیزینس')){
+  if(
+    cabinName.includes('BUSINESS')||
+    cabinName.includes('بیزینس')
+  ){
     return'business'
   }
 
@@ -360,7 +642,10 @@ function getFlightCabinType(flight){
     flight?.meta?.raw?.CabinType
   )
 
-  if(cabinType===2||cabinType===5){
+  if(
+    cabinType===2||
+    cabinType===5
+  ){
     return'business'
   }
 
@@ -368,11 +653,52 @@ function getFlightCabinType(flight){
 }
 
 const availableCabins=computed(()=>{
-  const types=props.allFlightsData.map(getFlightCabinType)
+  const types=[]
+
+  for(const flight of props.allFlightsData){
+    const provider=
+      normalizeCode(
+        flight?.provider
+      )
+
+    if(provider==='PARTO'){
+      types.push(
+        ...getPartoFlightCabinTypes(
+          flight
+        )
+      )
+
+      continue
+    }
+
+    const type=
+      getFlightCabinType(
+        flight
+      )
+
+    if(type){
+      types.push(type)
+    }
+  }
 
   return{
-    economy:types.includes('economy'),
-    business:types.includes('business')
+    economy:
+      types.includes('economy'),
+
+    premiumEconomy:
+      types.includes('premiumEconomy'),
+
+    business:
+      types.includes('business'),
+
+    premiumBusiness:
+      types.includes('premiumBusiness'),
+
+    first:
+      types.includes('first'),
+
+    premiumFirst:
+      types.includes('premiumFirst')
   }
 })
 
@@ -395,17 +721,72 @@ const businessSelected=computed({
     })
   }
 })
+const premiumEconomySelected=computed({
+  get:()=>props.filters?.premiumEconomy!==false,
 
+  set:value=>{
+    emit('update:filters',{
+      ...props.filters,
+      premiumEconomy:value
+    })
+  }
+})
+
+const premiumBusinessSelected=computed({
+  get:()=>props.filters?.premiumBusiness!==false,
+
+  set:value=>{
+    emit('update:filters',{
+      ...props.filters,
+      premiumBusiness:value
+    })
+  }
+})
+
+const firstSelected=computed({
+  get:()=>props.filters?.first!==false,
+
+  set:value=>{
+    emit('update:filters',{
+      ...props.filters,
+      first:value
+    })
+  }
+})
+
+const premiumFirstSelected=computed({
+  get:()=>props.filters?.premiumFirst!==false,
+
+  set:value=>{
+    emit('update:filters',{
+      ...props.filters,
+      premiumFirst:value
+    })
+  }
+})
 const isCabinFilterChanged=computed(()=>{
-  return economySelected.value!==true||
-    businessSelected.value!==true
+  return(
+    economySelected.value!==true||
+    premiumEconomySelected.value!==true||
+    businessSelected.value!==true||
+    premiumBusinessSelected.value!==true||
+    firstSelected.value!==true||
+    premiumFirstSelected.value!==true
+  )
 })
 
 function resetCabinFilters(){
   emit('update:filters',{
     ...props.filters,
+
     economy:true,
-    business:true
+    premiumEconomy:true,
+
+    business:true,
+    premiumBusiness:true,
+
+    first:true,
+    premiumFirst:true
   })
 }
 
