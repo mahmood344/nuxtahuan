@@ -188,45 +188,110 @@ function getAirlineCode(flight) {
     ''
   )
 }
-function getAirlineName(flight,code) {
-  const airlineFromStore =
+function getAirlineName(flight,code){
+  const oldAirline=
     flightStore?.airlines?.find(
-      (item) =>
+      item=>
         normalizeAirlineCode(
-          item?.code ||
-          item?.iataCode ||
+          item?.code||
+          item?.iataCode||
           item?.airlineCode
-        ) === code
+        )===code
+    )
+
+  const basicAirline=
+    flightStore?.basicAirlines?.find(
+      item=>
+        normalizeAirlineCode(
+          item?.iataCode
+        )===code
     )
 
   return String(
-    flight?.airlineNameFarsi ||
-    flight?.airlineName ||
-    flight?.meta?.raw?.AirlineNameFarsi ||
-    flight?.meta?.raw?.AirlineName ||
-    airlineFromStore?.nameFarsi ||
-    airlineFromStore?.name ||
+    flight?.airlineNameFarsi||
+    flight?.airlineName||
+    flight?.meta?.raw?.AirlineNameFarsi||
+    flight?.meta?.raw?.AirlineName||
+
+    oldAirline?.nameFarsi||
+    oldAirline?.name||
+    oldAirline?.nicName||
+
+    basicAirline?.nicName||
+    basicAirline?.name||
+
     code
   ).trim()
 }
-function getAirlineLogo(flight,code) {
-  const airlineFromStore =
+function getAirlineLogo(flight,code){
+  const oldAirline=
     flightStore?.airlines?.find(
-      (item) =>
+      item=>
         normalizeAirlineCode(
-          item?.code ||
-          item?.iataCode ||
+          item?.code||
+          item?.iataCode||
           item?.airlineCode
-        ) === code
+        )===code
     )
 
-  return String(
-    flight?.airlineLogo ||
-    flight?.logo ||
-    airlineFromStore?.logo ||
-    airlineFromStore?.image ||
+  const basicAirline=
+    flightStore?.basicAirlines?.find(
+      item=>
+        normalizeAirlineCode(
+          item?.iataCode
+        )===code
+    )
+
+  /*
+   * اول ساختار قدیمی ایرلاین‌های داخلی
+   */
+  const oldLogo=
+    flight?.airlineLogo||
+    flight?.logo||
+    oldAirline?.logo||
+    oldAirline?.image||
     ''
-  ).trim()
+
+  if(oldLogo){
+    const value=
+      String(oldLogo).trim()
+
+    if(
+      value.startsWith('http://')||
+      value.startsWith('https://')||
+      value.startsWith('/')
+    ){
+      return value
+    }
+
+    return `/imgs/flight/airlines/${value}`
+  }
+
+  /*
+   * اگر در اطلاعات قدیمی نبود،
+   * از BasicInfo استفاده کن.
+   */
+  const basicLogo=
+    basicAirline?.logo||
+    basicAirline?.image||
+    ''
+
+  if(!basicLogo){
+    return''
+  }
+
+  const value=
+    String(basicLogo).trim()
+
+  if(
+    value.startsWith('http://')||
+    value.startsWith('https://')||
+    value.startsWith('/')
+  ){
+    return value
+  }
+
+  return `/imgs/flight/airlines/${value}`
 }
 const availableAirlines = computed(() => {
   const airlineMap = new Map()
