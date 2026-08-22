@@ -95,14 +95,21 @@
 
       <div class="flex-[3] order-1 relative p-3 pb-12 flex flex-col">
         <div class="flex md:flex-col">
-          <div class="flex-1 flex justify-start py-4 items-start md:hidden">
+          <div class="flex-1 flex flex-col justify-start py-4 items-start md:hidden">
             <img
               v-if="airlineLogo"
               :src="airlineLogo"
-              class="w-[105px]"
+              class="w-[105px] max-h-[55px] object-contain"
               :alt="airlineName"
               @error="handleLogoError"
             >
+            <p
+            v-else
+              class="mt-2 text-[12px] font-bold text-gray-700"
+              dir="rtl"
+            >
+              {{ airlineName }}
+            </p>
           </div>
 
           <div class="flex-[1] text-end">
@@ -321,15 +328,22 @@
 
   <!-- لوگو -->
   <div
-    class="hidden md:flex md:flex-1 md:justify-end items-center"
+    class="hidden md:flex md:flex-1 md:flex-col md:justify-center md:items-end"
   >
     <img
       v-if="airlineLogo"
       :src="airlineLogo"
-      class="w-[150px]"
+      class="w-[150px] max-h-[70px] object-contain"
       :alt="airlineName"
       @error="handleLogoError"
     >
+    <p
+    v-else
+      class="mt-2 text-[13px] font-bold text-gray-700"
+      dir="rtl"
+    >
+      {{ airlineName }}
+    </p>
   </div>
 </div>
 
@@ -902,7 +916,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useFlightStore } from '~/stores/flights'
 import{
   getParoBaggages,
@@ -1030,34 +1044,127 @@ const partoPassengerPrices=computed(()=>{
 
   return result
 })
-const airlineFromStore = computed(() => {
-  if (!props.flight.airline) return null
-  return flightStore.airlines.find((a) => a.code === props.flight.airline) || null
+const airlineCode=computed(()=>{
+  return String(
+    props.flight?.airline||
+    props.flight?.airlineCode||
+    props.flight?.marketingAirlineCode||
+    props.flight?.carrierCode||
+    props.flight?.operatingAirline||
+    ''
+  )
+    .trim()
+    .toUpperCase()
 })
 
-const airlineName = computed(() => {
-  return (
-    props.airlineInfo?.name ||
-    airlineFromStore.value?.name ||
-    props.flight.airline ||
+/*
+ * ایرلاین‌های داخلی قدیمی Store اولویت دارند،
+ * چون نام و لوگوی محلی پروژه داخل همین لیست است.
+ */
+const oldAirline=computed(()=>{
+  if(!airlineCode.value)return null
+
+  return (flightStore.airlines||[]).find(
+    item=>
+      String(item?.code||'')
+        .trim()
+        .toUpperCase()===
+      airlineCode.value
+  )||null
+})
+
+/*
+ * BasicInfo مکمل لیست قدیمی است و مخصوصاً
+ * برای ایرلاین‌های خارجی Parto استفاده می‌شود.
+ */
+const basicAirline=computed(()=>{
+  if(!airlineCode.value)return null
+
+  return (flightStore.basicAirlines||[]).find(
+    item=>
+      String(item?.iataCode||'')
+        .trim()
+        .toUpperCase()===
+      airlineCode.value
+  )||null
+})
+
+const airlineFromStore=computed(()=>
+  oldAirline.value||
+  basicAirline.value||
+  null
+)
+
+const airlineName=computed(()=>{
+  return(
+    oldAirline.value?.name||
+    oldAirline.value?.nicName||
+    props.airlineInfo?.nicName||
+    props.airlineInfo?.name||
+    basicAirline.value?.nicName||
+    basicAirline.value?.name||
+    airlineCode.value||
     'ایرلاین'
   )
 })
 
-const airlineLogo = computed(() => {
-  if (logoFailed.value) return ''
+const normalizeAirlineLogo=logo=>{
+  const value=String(logo||'').trim()
+  if(!value)return''
 
-  if (isMahan.value) {
-    return '/imgs/flight/airlines/mahan.png'
+  if(
+    value.startsWith('http://')||
+    value.startsWith('https://')||
+    value.startsWith('/')
+  ){
+    return value
   }
 
-  return (
-    props.airlineInfo?.logo ||
-    props.airlineInfo?.image ||
-    airlineFromStore.value?.logo ||
+  return `/imgs/flight/airlines/${value}`
+}
+
+const airlineLogo=computed(()=>{
+  if(logoFailed.value)return''
+
+  if(isMahan.value){
+    return'/imgs/flight/airlines/mahan.png'
+  }
+
+  /*
+   * لوگوی Store قدیمی اولویت دارد.
+   * این باعث می‌شود کیش‌ایر، پارس‌ایر، نفت،
+   * وارش و سایر ایرلاین‌های داخلی لوگوی محلی
+   * خودشان را از دست ندهند.
+   */
+  const logo=
+    oldAirline.value?.logo||
+    oldAirline.value?.image||
+    props.airlineInfo?.logo||
+    props.airlineInfo?.image||
+    basicAirline.value?.logo||
+    basicAirline.value?.image||
     ''
-  )
+
+  return normalizeAirlineLogo(logo)
 })
+
+onMounted(async()=>{
+  try{
+    await flightStore.loadBasicAirlines()
+  }catch(error){
+    console.error(
+      'Load BasicInfo airlines error:',
+      error
+    )
+  }
+})
+
+watch(
+  airlineCode,
+  ()=>{
+    logoFailed.value=false
+  }
+)
 const fetchPartoRules=async()=>{
   if(
     !isParto.value||
@@ -1230,6 +1337,43 @@ const fetchPartoBaggages=async()=>{
     loadingBaggage.value=false
   }
 }
+function getPartoStopAirportCodes(){
+  if(!isParto.value){
+    return[]
+  }
+
+  return[
+    ...new Set([
+      ...outboundStopAirports.value,
+      ...returnStopAirports.value
+    ]
+      .filter(Boolean)
+      .map(
+        code=>
+          String(code)
+            .trim()
+            .toUpperCase()
+      )
+    )
+  ]
+}
+
+async function loadPartoStopAirports(){
+  const codes=
+    getPartoStopAirportCodes()
+
+  if(!codes.length){
+    return
+  }
+
+  await Promise.all(
+    codes.map(
+      code=>
+        flightStore
+          .loadAirportByCode(code)
+    )
+  )
+}
 const toggleTab=async tabName=>{
   if(activeTab.value===tabName){
     activeTab.value=null
@@ -1237,6 +1381,24 @@ const toggleTab=async tabName=>{
   }
 
   activeTab.value=tabName
+
+  /*
+   * اگر اطلاعات پرواز Parto باز شد،
+   * اطلاعات فرودگاه‌های توقف را بگیر.
+   */
+  if(
+    isParto.value&&
+    tabName==='info'
+  ){
+    try{
+      await loadPartoStopAirports()
+    }catch(error){
+      console.error(
+        'Load Parto stop airports error:',
+        error
+      )
+    }
+  }
 
   /*
    * NIRA
@@ -2246,16 +2408,98 @@ function formatFlightDateShort(value) {
   }).format(date)
 }
 
-function getCityLabel(code) {
-  const airport = findAirport(code)
-  return airport?.cityNicName || code || '-'
+function getCityLabel(code){
+  const normalized=
+    String(code||'')
+      .trim()
+      .toUpperCase()
+
+  if(!normalized){
+    return'-'
+  }
+
+  /*
+   * اول اطلاعاتی که از
+   * BasicInfo/airports/{code}
+   * گرفته‌ایم.
+   */
+  const apiAirport=
+    flightStore
+      .getAirportByCode(
+        normalized
+      )
+
+  if(apiAirport){
+    return(
+      apiAirport.cityNicName||
+      apiAirport.cityName||
+      normalized
+    )
+  }
+
+  /*
+   * fallback برای پروازهای داخلی
+   * و اطلاعات قدیمی Store.
+   */
+  const oldAirport=
+    findAirport(
+      normalized
+    )
+
+  return(
+    oldAirport?.cityNicName||
+    oldAirport?.cityName||
+    normalized
+  )
 }
 
-function getAirportLabel(code) {
-  const airport = findAirport(code)
-  if (!airport) return '-'
-  return `${airport.nicName || '-'} (${airport.name || code})`
+function getAirportLabel(code){
+  const normalized=
+    String(code||'')
+      .trim()
+      .toUpperCase()
+
+  if(!normalized){
+    return'-'
+  }
+
+  const apiAirport=
+    flightStore
+      .getAirportByCode(
+        normalized
+      )
+
+  if(apiAirport){
+    const faName=
+      apiAirport.nicName||
+      ''
+
+    const enName=
+      apiAirport.name||
+      normalized
+
+    return faName
+      ?`${faName} (${enName})`
+      :enName
+  }
+
+  const oldAirport=
+    findAirport(
+      normalized
+    )
+
+  if(!oldAirport){
+    return normalized
+  }
+
+  return `${
+    oldAirport.nicName||
+    oldAirport.name||
+    normalized
+  }`
 }
+
+
 
 function getRuleDescription(rule) {
   if (isNira.value) {

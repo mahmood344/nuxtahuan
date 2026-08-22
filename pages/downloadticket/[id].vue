@@ -147,7 +147,9 @@ import {
 import { useRoute } from '#app'
 import { useFlightStore } from '~/stores/flights'
 
-
+import{
+  getParoBooking
+}from'~/services/providers/paro'
 definePageMeta({
   name: 'downloadticket'
 })
@@ -254,8 +256,9 @@ export type PrintableTicket = {
   origin: string
   originName: string
   destination: string
+  originAirportName?:string
   destinationName: string
-
+destinationAirportName?:string
   departure: string
   departureDate: string
   departureTime: string
@@ -900,138 +903,204 @@ const getAirlineCode = (
     .toUpperCase()
 }
 
-const getAirlineName = (
-  airlineCode: string
-): string => {
-  const airline =
-    flightStore.airlines.find(
-      (item: any) =>
-        String(item?.code || '')
-          .trim()
-          .toUpperCase() ===
-        airlineCode
-    )
-
-  return String(
-    airline?.name ||
-    airlineCode ||
-    'ایرلاین'
-  ).trim()
-}
-
-const getCityName = (
-  cityCode: unknown
-): string => {
-  const code =
-    String(cityCode || '')
+const getAirlineName=(
+  airlineCode:string
+):string=>{
+  const code=
+    String(airlineCode||'')
       .trim()
       .toUpperCase()
 
-  const cities = [
+  const oldAirline=
+    flightStore.airlines?.find(
+      (item:any)=>
+        String(
+          item?.code||
+          item?.iataCode||
+          item?.airlineCode||
+          ''
+        )
+          .trim()
+          .toUpperCase()===
+        code
+    )
+
+  const basicAirline=
+    flightStore.basicAirlines?.find(
+      (item:any)=>
+        String(
+          item?.iataCode||
+          ''
+        )
+          .trim()
+          .toUpperCase()===
+        code
+    )
+
+  return String(
+    oldAirline?.name||
+    oldAirline?.nicName||
+    basicAirline?.nicName||
+    basicAirline?.name||
+    code||
+    'ایرلاین'
+  ).trim()
+}
+const getAirportByCode=(
+  airportCode:unknown
+):any=>{
+  const code=
+    String(airportCode||'')
+      .trim()
+      .toUpperCase()
+
+  if(!code){
+    return null
+  }
+
+  if(
+    typeof flightStore.getAirportByCode===
+    'function'
+  ){
+    const airport=
+      flightStore.getAirportByCode(
+        code
+      )
+
+    if(airport){
+      return airport
+    }
+  }
+
+  const oldAirports=[
     ...(
       Array.isArray(
         flightStore.popularCities
       )
-        ? flightStore.popularCities
-        : []
+        ?flightStore.popularCities
+        :[]
     ),
     ...(
       Array.isArray(
         flightStore.iranAirports
       )
-        ? flightStore.iranAirports
-        : []
+        ?flightStore.iranAirports
+        :[]
     )
   ]
 
-  const city =
-    cities.find(
-      (item: any) => {
-        const cityCodeValue =
-          String(
-            item?.cityCode || ''
-          )
-            .trim()
-            .toUpperCase()
+  return oldAirports.find(
+    (item:any)=>
+      String(
+        item?.iataCode||
+        item?.cityCode||
+        ''
+      )
+        .trim()
+        .toUpperCase()===
+      code
+  )||null
+}
+const getCityName=(
+  cityCode:unknown
+):string=>{
+  const code=
+    String(cityCode||'')
+      .trim()
+      .toUpperCase()
 
-        const iataCodeValue =
-          String(
-            item?.iataCode || ''
-          )
-            .trim()
-            .toUpperCase()
-
-        return (
-          cityCodeValue === code ||
-          iataCodeValue === code
-        )
-      }
+  const airport=
+    getAirportByCode(
+      code
     )
 
   return String(
-    city?.cityNicName ||
-    city?.nicName ||
-    city?.name ||
+    airport?.cityNicName||
+    airport?.cityName||
+    airport?.nicName||
+    airport?.name||
     code
   ).trim()
 }
-
-const parseDeparture = (
-  departureValue: unknown
-) => {
-  const value =
-    String(departureValue || '')
+const getAirportName=(
+  airportCode:unknown
+):string=>{
+  const code=
+    String(airportCode||'')
       .trim()
+      .toUpperCase()
 
-  if (!value) {
-    return {
-      date:
-        '-',
+  const airport=
+    getAirportByCode(
+      code
+    )
 
-      time:
-        '-',
+  return String(
+    airport?.nicName||
+    airport?.name||
+    code
+  ).trim()
+}
+const parseDeparture=(
+  departureValue:unknown
+)=>{
+  const value=
+    String(
+      departureValue||''
+    ).trim()
 
-      persianDate:
-        '-'
+  if(!value){
+    return{
+      date:'-',
+      time:'-',
+      persianDate:'-'
     }
   }
 
-  const normalizedValue =
+  const normalizedValue=
     value.replace(
       ' ',
       'T'
     )
 
-  const date =
-    new Date(normalizedValue)
+  const parts=
+    normalizedValue.split('T')
 
-  const values =
-    value.split(' ')
+  const datePart=
+    String(
+      parts[0]||''
+    ).trim()
 
-  return {
+  const timePart=
+    String(
+      parts[1]||''
+    )
+      .trim()
+      .slice(0,5)
+
+  const date=
+    new Date(
+      normalizedValue
+    )
+
+  return{
     date:
-      values[0] || '-',
+      datePart||'-',
 
     time:
-      values[1]?.slice(0, 5) ||
-      '-',
+      timePart||'-',
 
     persianDate:
       Number.isNaN(
         date.getTime()
       )
-        ? values[0] || '-'
-        : date.toLocaleDateString(
+        ?datePart||'-'
+        :date.toLocaleDateString(
             'fa-IR',
             {
-              year:
-                'numeric',
-
-              month:
-                '2-digit',
-
-              day:
-                '2-digit'
+              year:'numeric',
+              month:'2-digit',
+              day:'2-digit'
             }
           )
   }
@@ -1103,13 +1172,43 @@ const mapEtrToPrintableTicket = (
       ticketNo
     )
 
-  const cancellationStatus=String(
-    cancellation?.status||''
-  )
-    .trim()
-    .toLowerCase()
+ const cancellationStatus=String(
+  cancellation?.status||''
+)
+  .trim()
+  .toLowerCase()
 
-  const cancelled=[
+const couponStatuses=
+  Array.isArray(etr?.COUPONS)
+    ?etr.COUPONS.map(
+        item=>
+          String(item?.Status||'')
+            .trim()
+            .toUpperCase()
+      )
+    :[]
+
+const historyStatuses=
+  Array.isArray(etr?.History)
+    ?etr.History.map(
+        item=>
+          String(item?.Status||'')
+            .trim()
+            .toUpperCase()
+      )
+    :[]
+
+const providerCancelled=
+  couponStatuses.some(
+    status=>
+      status==='VOIDED'||
+      status==='REFUNDED'
+  )||
+  historyStatuses.includes('R')
+
+const cancelled=
+  providerCancelled||
+  [
     'success',
     'provider-cancelled',
     'settlement-pending',
@@ -1131,10 +1230,19 @@ const mapEtrToPrintableTicket = (
       ),
 
     isCancelled:cancelled,
-    cancellationStatus,
-    cancellationTitle:cancelled
-      ?'این بلیت کنسل شده است'
-      :'بلیت فعال است',
+
+cancellationStatus:
+  cancellationStatus||
+  (
+    providerCancelled
+      ?'provider-cancelled'
+      :''
+  ),
+
+cancellationTitle:
+  cancelled
+    ?'این بلیت کنسل شده است'
+    :'بلیت فعال است',
     cancellation,
 
     passengerFullName:
@@ -1728,15 +1836,669 @@ const fetchMahanPrintableTickets = async (
       )
   )
 }
+type PartoETicket={
+  eTicketNumber?:string
+  eticketStatus?:number
+  isRefunded?:boolean
+  dateOfIssue?:string
+  airlinePnr?:string
+  totalRefund?:number
+}
 
-const fetchFlightPrintableTickets = async (
-  contract: any,
-  flight: any
-): Promise<PrintableTicket[]> => {
-  const supplier =
+type PartoCustomerInfo={
+  customer?:{
+    gender?:number
+    passengerType?:number
+    passportNumber?:string
+    nationalId?:string
+    nationality?:string
+    passportExpireDate?:string
+    passportIssueCountry?:string
+    passportIssueDate?:string
+    dateOfBirth?:string
+    paxName?:{
+      passengerFirstName?:string
+      passengerMiddleName?:string
+      passengerLastName?:string
+      passengerTitle?:number
+    }
+  }
+  eTicketNumbers?:PartoETicket[]
+  eTickets?:string
+}
+
+type PartoReservationItem={
+  airEquipmentType?:string
+  airlinePnr?:string
+  arrivalAirportLocationCode?:string
+  arrivalDateTime?:string
+  departureAirportLocationCode?:string
+  departureDateTime?:string
+  flightNumber?:string
+  isReturn?:boolean
+  marketingAirlineCode?:string
+  operatingAirlineCode?:string
+  cabinClassCode?:number
+  baggage?:string
+  journeyDuration?:string
+}
+
+// const fetchPartoGetBooking=async(
+//   uniqueId:string,
+//   sessionId:string
+// ):Promise<any>=>{
+//   const response=
+//     await $fetch<any>(
+//       'https://api.ahuan.ir/api/PartoAir/getBooking',
+//       {
+//         method:'POST',
+//         body:{
+//           clientUniqueId:'',
+//           sessionId,
+//           uniqueId
+//         },
+//         headers:{
+//           Accept:'application/json',
+//           'Content-Type':'application/json'
+//         }
+//       }
+//     )
+
+//   const value=
+//     response?.data!==undefined
+//       ?response.data
+//       :response
+
+//   if(!value){
+//     throw new Error(
+//       'پاسخ GetBooking پارتو خالی است.'
+//     )
+//   }
+
+//   if(value?.success===false){
+//     throw new Error(
+//       value?.error?.message||
+//       'دریافت اطلاعات بلیت پارتو ناموفق بود.'
+//     )
+//   }
+
+//   return value
+// }
+
+const getPartoPassengerType=(
+  value:unknown
+):string=>{
+  switch(Number(value)){
+    case 2:
+      return 'CHD'
+
+    case 3:
+      return 'INF'
+
+    default:
+      return 'ADL'
+  }
+}
+
+const getPartoFlightClass=(
+  value:unknown
+):string=>{
+  switch(Number(value)){
+    case 2:
+      return 'BUS'
+
+    case 3:
+      return 'FIRST'
+
+    default:
+      return 'ECO'
+  }
+}
+
+const findPartoContractPassenger=(
+  contract:any,
+  customer:any
+):any=>{
+  const passengers=
+    Array.isArray(contract?.contractPassengers)
+      ?contract.contractPassengers
+      :[]
+
+  const passportNumber=String(
+    customer?.passportNumber||''
+  ).trim()
+
+  const nationalId=String(
+    customer?.nationalId||''
+  ).trim()
+
+  if(passportNumber){
+    const passenger=passengers.find(
+      (item:any)=>
+        String(
+          item?.passportNo||
+          item?.passportNumber||
+          ''
+        ).trim()===passportNumber
+    )
+
+    if(passenger){
+      return passenger
+    }
+  }
+
+  if(nationalId){
+    const passenger=passengers.find(
+      (item:any)=>
+        String(
+          item?.codeMelli||
+          item?.nationalCode||
+          ''
+        ).trim()===nationalId
+    )
+
+    if(passenger){
+      return passenger
+    }
+  }
+
+  const firstName=
+    normalizePassengerNamePart(
+      customer?.paxName?.passengerFirstName
+    )
+
+  const lastName=
+    normalizePassengerNamePart(
+      customer?.paxName?.passengerLastName
+    )
+
+  return passengers.find(
+    (item:any)=>
+      normalizePassengerNamePart(
+        item?.fName
+      )===firstName&&
+      normalizePassengerNamePart(
+        item?.lName
+      )===lastName
+  )||null
+}
+
+const mapPartoToPrintableTicket=(
+  contract:any,
+  flight:any,
+  booking:any,
+  customerInfo:PartoCustomerInfo,
+  ticket:PartoETicket,
+  reservation:PartoReservationItem
+):PrintableTicket=>{
+  const customer=
+    customerInfo?.customer||{}
+
+  const passenger=
+    findPartoContractPassenger(
+      contract,
+      customer
+    )
+
+  const airlineCode=String(
+    reservation?.marketingAirlineCode||
+    reservation?.operatingAirlineCode||
+    booking?.validatingAirlineCode||
+    getAirlineCode(flight)||
+    ''
+  )
+    .trim()
+    .toUpperCase()
+
+  const origin=String(
+    reservation?.departureAirportLocationCode||
+    flight?.origin||
+    ''
+  )
+    .trim()
+    .toUpperCase()
+
+  const destination=String(
+    reservation?.arrivalAirportLocationCode||
+    flight?.destination||
+    ''
+  )
+    .trim()
+    .toUpperCase()
+
+  const departureValue=String(
+    reservation?.departureDateTime||
+    ''
+  ).trim()
+
+  const departure=
+    parseDeparture(departureValue)
+
+  const ticketNo=String(
+    ticket?.eTicketNumber||
+    ''
+  ).trim()
+
+  const pnr=String(
+    ticket?.airlinePnr||
+    reservation?.airlinePnr||
+    flight?.pnr||
+    booking?.uniqueId||
+    ''
+  ).trim()
+
+  const cancellation=
+    getTicketCancellation(
+      flight,
+      ticketNo
+    )
+
+  const cancellationStatus=String(
+    cancellation?.status||''
+  )
+    .trim()
+    .toLowerCase()
+
+  const cancelled=
+    ticket?.isRefunded===true||
+    [
+      'success',
+      'provider-cancelled',
+      'settlement-pending',
+      'manual-review'
+    ].includes(cancellationStatus)
+
+  const passengerType=
+    getPartoPassengerType(
+      customer?.passengerType
+    )
+
+  const firstName=String(
+    passenger?.fName||
+    customer?.paxName?.passengerFirstName||
+    ''
+  ).trim()
+
+  const lastName=String(
+    passenger?.lName||
+    customer?.paxName?.passengerLastName||
+    ''
+  ).trim()
+
+  const gender=
+    customer?.gender===0
+      ?false
+      :customer?.gender===1
+        ?true
+        :typeof passenger?.gender==='boolean'
+          ?passenger.gender
+          :null
+
+  const pricing=
+    booking?.travelItinerary
+      ?.itineraryInfo
+      ?.itineraryPricing||{}
+
+  return{
+    key:
+      `PARTO-${booking?.uniqueId}-${ticketNo}-${reservation?.flightNumber}`,
+
+    contractId:
+      Number(contract?.id||0),
+
+    airlineCode,
+
+    airlineName:
+      getAirlineName(airlineCode),
+
+    isCancelled:
+      cancelled,
+
+    cancellationStatus,
+
+    cancellationTitle:
+      cancelled
+        ?'این بلیت کنسل شده است'
+        :'بلیت فعال است',
+
+    cancellation,
+
+    passengerFullName:
+      `${lastName}/${firstName}`,
+
+    passengerFirstName:
+      firstName,
+
+    passengerLastName:
+      lastName,
+
+    passengerType,
+
+    passengerTypeTitle:
+      getPassengerTypeTitle(
+        passengerType
+      ),
+
+    nationalCode:
+      String(
+        customer?.nationalId||
+        customer?.passportNumber||
+        passenger?.codeMelli||
+        passenger?.passportNo||
+        '-'
+      ).trim(),
+
+    nationality:
+      String(
+        customer?.nationality||
+        passenger?.nationality||
+        '-'
+      ).trim(),
+
+    gender,
+
+    genderTitle:
+      gender===true
+        ?'آقا'
+        :gender===false
+          ?'خانم'
+          :'-',
+
+    ticketNo,
+
+    pnr,
+
+    flightNo:
+      String(
+        reservation?.flightNumber||
+        flight?.flightNumber||
+        ''
+      ).trim(),
+
+    flightClass:
+      getPartoFlightClass(
+        reservation?.cabinClassCode
+      ),
+
+    journeyType:
+      reservation?.isReturn
+        ?'RETURN'
+        :'DEPARTURE',
+
+    origin,
+
+    originName:
+      getCityName(origin),
+originAirportName:
+  getAirportName(origin),
+    destination,
+
+    destinationName:
+      getCityName(destination),
+destinationAirportName:
+  getAirportName(destination),
+    departure:
+      departureValue,
+
+    departureDate:
+      departure.date,
+
+    departureTime:
+      departure.time,
+
+    departurePersianDate:
+      departure.persianDate,
+
+    totalPrice:
+      toNumber(
+        pricing?.totalFare
+      ),
+
+    fare:
+      toNumber(
+        pricing?.baseFare
+      ),
+
+    commission:
+      toNumber(
+        pricing?.totalCommission
+      ),
+
+    taxes:[
+      {
+        TaxCode:'TAX',
+        TaxAmount:toNumber(
+          pricing?.totalTax
+        )
+      },
+      {
+        TaxCode:'SERVICE',
+        TaxAmount:toNumber(
+          pricing?.serviceTax
+        )
+      }
+    ].filter(
+      item=>Number(item.TaxAmount)>0
+    ),
+
+    status:
+      cancelled
+        ?'CANCELLED'
+        :ticket?.eticketStatus===1
+          ?'OPEN FOR USE'
+          :'ISSUED',
+
+    flight,
+
+    passenger,
+
+    etr:{
+      PassengerFullName:
+        `${lastName}/${firstName}`,
+
+      PAX:
+        passengerType,
+
+      TotalPrice:
+        String(
+          pricing?.totalFare||0
+        ),
+
+      TAXES:[],
+
+      TicketNo:
+        ticketNo,
+
+      Comission:
+        String(
+          pricing?.totalCommission||0
+        ),
+
+      History:[],
+
+      COUPONS:[],
+
+      Fare:
+        String(
+          pricing?.baseFare||0
+        )
+    }
+  }
+}
+const fetchPartoPrintableTickets=async(
+  contract:any,
+  flight:any
+):Promise<PrintableTicket[]>=>{
+  const uniqueId=
+    String(
+      flight?.pnr||
+      ''
+    ).trim()
+
+  if(!uniqueId){
+    throw new Error(
+      'UniqueId پارتو داخل PNR قرارداد وجود ندارد.'
+    )
+  }
+
+  // const partoSessionCookie=
+  //   useCookie<string|null>(
+  //     'parto_session_id'
+  //   )
+
+  // const sessionId=
+  //   String(
+  //     partoSessionCookie.value||
+  //     ''
+  //   ).trim()
+
+  // if(!sessionId){
+  //   throw new Error(
+  //     'SessionId پارتو در کوکی پیدا نشد.'
+  //   )
+  // }
+
+  // const booking=
+  //   await fetchPartoGetBooking(
+  //     uniqueId,
+  //     sessionId
+  //   )
+const bookingResponse=
+  await getParoBooking(
+    uniqueId
+  )
+
+const booking=
+  bookingResponse?.data!==undefined
+    ?bookingResponse.data
+    :bookingResponse
+
+  const itineraryInfo=
+    booking?.travelItinerary
+      ?.itineraryInfo
+
+  if(!itineraryInfo){
+    throw new Error(
+      'اطلاعات سفر در GetBooking پارتو وجود ندارد.'
+    )
+  }
+
+  const customers=
+    Array.isArray(
+      itineraryInfo?.customerInfoes
+    )
+      ?itineraryInfo.customerInfoes
+      :[]
+
+const reservations=
+  Array.isArray(
+    itineraryInfo?.reservationItems
+  )
+    ?itineraryInfo.reservationItems
+    :[]
+
+if(!reservations.length){
+  throw new Error(
+    'اطلاعات پروازها در GetBooking پارتو وجود ندارد.'
+  )
+}
+
+await flightStore.loadBasicAirlines()
+
+const airportCodes=[
+  ...new Set(
+    reservations
+      .flatMap(
+        (item:any)=>[
+          item?.departureAirportLocationCode,
+          item?.arrivalAirportLocationCode
+        ]
+      )
+      .filter(Boolean)
+      .map(
+        (code:any)=>
+          String(code)
+            .trim()
+            .toUpperCase()
+      )
+  )
+]
+
+await Promise.all(
+  airportCodes.map(
+    code=>
+      flightStore.loadAirportByCode(
+        code
+      )
+  )
+)
+
+await Promise.all(
+  airportCodes.map(
+    code=>
+      flightStore.loadAirportByCode(
+        code
+      )
+  )
+)
+  if(!customers.length){
+    throw new Error(
+      'اطلاعات مسافران در GetBooking پارتو وجود ندارد.'
+    )
+  }
+
+  if(!reservations.length){
+    throw new Error(
+      'اطلاعات پروازها در GetBooking پارتو وجود ندارد.'
+    )
+  }
+
+  const result:PrintableTicket[]=[]
+
+  for(const customerInfo of customers){
+    const ticketNumbers=
+      Array.isArray(
+        customerInfo?.eTicketNumbers
+      )
+        ?customerInfo.eTicketNumbers
+        :[]
+
+    if(!ticketNumbers.length){
+      continue
+    }
+
+    for(const ticket of ticketNumbers){
+      for(const reservation of reservations){
+        result.push(
+          mapPartoToPrintableTicket(
+            contract,
+            flight,
+            booking,
+            customerInfo,
+            ticket,
+            reservation
+          )
+        )
+      }
+    }
+  }
+
+  if(!result.length){
+    throw new Error(
+      'شماره بلیت صادرشده‌ای در GetBooking پارتو پیدا نشد.'
+    )
+  }
+
+  return result
+}
+const fetchFlightPrintableTickets=async(
+  contract:any,
+  flight:any
+):Promise<PrintableTicket[]>=>{
+  const supplier=
     getFlightSupplier(flight)
 
-  switch (supplier) {
+  switch(supplier){
     case 'NIRA':
       return await fetchNiraPrintableTickets(
         contract,
@@ -1749,61 +2511,99 @@ const fetchFlightPrintableTickets = async (
         flight
       )
 
+    case 'PARTO':
+    case 'PARTOAIR':
+    case 'PARO':
+      return await fetchPartoPrintableTickets(
+        contract,
+        flight
+      )
+
     default:
       throw new Error(
-        `دریافت اطلاعات بلیت برای تامین‌کننده ${supplier || 'نامشخص'} پیاده‌سازی نشده است.`
+        `دریافت اطلاعات بلیت برای تامین‌کننده ${supplier||'نامشخص'} پیاده‌سازی نشده است.`
       )
   }
 }
 
-const processContractTickets = async (
-  contract: any
-) => {
-  const flights =
+const processContractTickets=async(
+  contract:any
+)=>{
+  const flights=
     Array.isArray(
       contract?.contractFlights
     )
-      ? contract.contractFlights
-      : []
+      ?contract.contractFlights
+      :[]
 
-  if (!flights.length) {
+  if(!flights.length){
     throw new Error(
       'هیچ پروازی داخل قرارداد وجود ندارد.'
     )
   }
 
-  /*
-   * برای هر پرواز، Provider همان پرواز تشخیص داده
-   * می‌شود. بنابراین قرارداد رفت و برگشت می‌تواند
-   * شامل دو Provider متفاوت هم باشد.
-   */
-  const results =
-    await Promise.allSettled(
-      flights.map(
-        (flight: any) =>
-          fetchFlightPrintableTickets(
-            contract,
-            flight
-          )
+  const processedPartoPnrs=
+    new Set<string>()
+
+  const requests:
+    Promise<PrintableTicket[]>[]=[]
+
+  for(const flight of flights){
+    const supplier=
+      getFlightSupplier(flight)
+
+    if(
+      supplier==='PARTO'||
+      supplier==='PARTOAIR'||
+      supplier==='PARO'
+    ){
+      const pnr=String(
+        flight?.pnr||''
+      )
+        .trim()
+        .toUpperCase()
+
+      if(
+        pnr&&
+        processedPartoPnrs.has(pnr)
+      ){
+        continue
+      }
+
+      if(pnr){
+        processedPartoPnrs.add(pnr)
+      }
+    }
+
+    requests.push(
+      fetchFlightPrintableTickets(
+        contract,
+        flight
       )
     )
+  }
 
-  const successfulTickets =
+  const results=
+    await Promise.allSettled(
+      requests
+    )
+
+  const successfulTickets=
     results
       .filter(
         (
           result
-        ): result is PromiseFulfilledResult<PrintableTicket[]> =>
-          result.status === 'fulfilled'
+        ):result is PromiseFulfilledResult<PrintableTicket[]>=>
+          result.status==='fulfilled'
       )
       .flatMap(
-        (result) => result.value
+        result=>result.value
       )
 
-  const failedResults =
+  const failedResults=
     results.filter(
-      (result) =>
-        result.status === 'rejected'
+      result=>
+        result.status==='rejected'
     ) as PromiseRejectedResult[]
 
   console.log(
@@ -1816,21 +2616,20 @@ const processContractTickets = async (
     failedResults
   )
 
-  if (!successfulTickets.length) {
+  if(!successfulTickets.length){
     throw new Error(
-      failedResults[0]?.reason?.message ||
+      failedResults[0]?.reason?.message||
       'دریافت اطلاعات تمام بلیت‌ها ناموفق بود.'
     )
   }
 
-  /*
-   * اگر یک Provider خطا کند ولی Provider دیگر موفق
-   * باشد، بلیت‌های موفق نمایش داده می‌شوند و Flow
-   * کامل صفحه متوقف نمی‌شود.
-   */
-  tickets.value = successfulTickets
+  tickets.value=
+    successfulTickets
 }
-
+const partoSessionCookie=
+  useCookie<string|null>(
+    'parto_session_id'
+  )
 const printTickets = async () => {
   if (typeof window === 'undefined') return
 

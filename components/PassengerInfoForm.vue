@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import {computed,ref,watch,nextTick} from 'vue'
 import { useRoute } from '#app'
 import moment from 'moment-jalaali'
 import { useFlightStore } from '~/stores/flights'
@@ -909,6 +909,63 @@ function validateBirthDate(passenger) {
 
   return errors
 }
+function validatePassportIssueDate(passenger){
+  const errors={}
+
+  if(!shouldShowPassport(passenger)){
+    return errors
+  }
+
+  const{
+    day,
+    month,
+    year
+  }=passenger.passportIssueDate
+
+  if(!day){
+    errors.passportIssueDay=
+      'روز صدور الزامی است'
+  }
+
+  if(!month){
+    errors.passportIssueMonth=
+      'ماه صدور الزامی است'
+  }
+
+  if(!year){
+    errors.passportIssueYear=
+      'سال صدور الزامی است'
+  }
+
+  if(
+    errors.passportIssueDay||
+    errors.passportIssueMonth||
+    errors.passportIssueYear
+  ){
+    return errors
+  }
+
+  const issueDate=
+    moment(
+      `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`,
+      'YYYY-MM-DD',
+      true
+    )
+
+  if(!issueDate.isValid()){
+    errors.passportIssueDay=
+      'تاریخ صدور نامعتبر است'
+
+    return errors
+  }
+
+  if(issueDate.isAfter(moment(),'day')){
+    errors.passportIssueYear=
+      'تاریخ صدور نمی‌تواند در آینده باشد'
+  }
+
+  return errors
+}
 function validatePassportExpireDate(
   passenger
 ){
@@ -1025,6 +1082,12 @@ if(
       errors.passportNumber = 'شماره پاسپورت معتبر نیست'
     }
   }
+  Object.assign(
+  errors,
+  validatePassportIssueDate(
+    passenger
+  )
+)
 Object.assign(
   errors,
   validatePassportExpireDate(
@@ -1037,12 +1100,32 @@ Object.assign(
   return Object.keys(errors).length === 0
 }
 
-function validateAll() {
-  let isValid = true
+async function validateAll(){
+  let isValid=true
+  let firstInvalidIndex=-1
 
-  passengers.value.forEach((passenger) => {
-    if (!validatePassenger(passenger)) isValid = false
+  passengers.value.forEach((passenger,index)=>{
+    if(!validatePassenger(passenger)){
+      isValid=false
+
+      if(firstInvalidIndex===-1){
+        firstInvalidIndex=index
+      }
+    }
   })
+
+  if(!isValid){
+    await nextTick()
+
+    document
+      .querySelector(
+        `[data-passenger-index="${firstInvalidIndex}"]`
+      )
+      ?.scrollIntoView({
+        behavior:'smooth',
+        block:'center'
+      })
+  }
 
   return isValid
 }
@@ -1233,6 +1316,7 @@ defineExpose({
     <div
       v-for="(passenger, index) in passengers"
       :key="`${passenger.type}-${index}`"
+      :data-passenger-index="index"
       class="relative overflow-visible rounded-[24px] border border-gray-100 bg-white p-6 shadow-sm"
     >
       <div class="flex flex-col gap-6 md:flex-row">

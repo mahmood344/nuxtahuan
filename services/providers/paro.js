@@ -26,7 +26,99 @@ function savePartoSessionId(sessionId){
     sessionId||''
   ).trim()
 }
+export async function issueParoFlight(
+  uniqueId
+){
+  const normalizedUniqueId=
+    String(
+      uniqueId||''
+    ).trim()
 
+  if(!normalizedUniqueId){
+    throw new Error(
+      'UniqueId رزرو Parto مشخص نیست'
+    )
+  }
+
+  const response=
+    await executeParoRequest(
+      async sessionId=>{
+        return await $fetch(
+          `${BASE_URL}/PartoAir/issue`,
+          {
+            method:'POST',
+            body:{
+              sessionId,
+              uniqueId:
+                normalizedUniqueId,
+              clientUniqueId:''
+            }
+          }
+        )
+      }
+    )
+
+  if(
+    response?.success===false&&
+    !isParoSessionResponseError(
+      response
+    )
+  ){
+    throw new Error(
+      response?.error?.message||
+      'صدور بلیت Parto ناموفق بود'
+    )
+  }
+
+  return response
+}
+
+export async function getParoBooking(
+  uniqueId
+){
+  const normalizedUniqueId=
+    String(
+      uniqueId||''
+    ).trim()
+
+  if(!normalizedUniqueId){
+    throw new Error(
+      'UniqueId رزرو Parto مشخص نیست'
+    )
+  }
+
+  const response=
+    await executeParoRequest(
+      async sessionId=>{
+        return await $fetch(
+          `${BASE_URL}/PartoAir/getBooking`,
+          {
+            method:'POST',
+            body:{
+              sessionId,
+              uniqueId:
+                normalizedUniqueId,
+              clientUniqueId:''
+            }
+          }
+        )
+      }
+    )
+
+  if(
+    response?.success===false&&
+    !isParoSessionResponseError(
+      response
+    )
+  ){
+    throw new Error(
+      response?.error?.message||
+      'دریافت وضعیت رزرو Parto ناموفق بود'
+    )
+  }
+
+  return response
+}
 function clearPartoSessionId(){
   const cookie=getPartoSessionCookie()
   cookie.value=null
@@ -350,9 +442,19 @@ export function buildParoAvailabilityPayload(
   }
 }
 function isParoSessionResponseError(response){
+  const value=
+    response?.data!==undefined
+      ?response.data
+      :response
+
+  const error=
+    value?.error||
+    value||
+    {}
+
   const errorId=
     String(
-      response?.error?.id||
+      error?.id||
       ''
     )
       .trim()
@@ -360,7 +462,7 @@ function isParoSessionResponseError(response){
 
   const message=
     String(
-      response?.error?.message||
+      error?.message||
       ''
     )
       .trim()
@@ -370,6 +472,7 @@ function isParoSessionResponseError(response){
     errorId==='err0102008'||
     message.includes('invalid sessionid')||
     message.includes('invalid session id')||
+    message.includes('invalid session')||
     message.includes('session expired')
   )
 }
