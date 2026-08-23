@@ -202,7 +202,7 @@ const props = defineProps({
     default: "domestic"
   }
 })
-
+const toast=useToast()
 const emit = defineEmits([
   'update:mabda',
   'update:maghsad',
@@ -251,13 +251,35 @@ const popularCities = computed(() => {
 /* -----------------------
 پرتردد خارجی
 ----------------------- */
-const fetchInternationalPopular = async () => {
-  try {
-    const res = await $fetch(`https://api.ahuan.ir/api/BasicInfo/default-airports`)
-    console.log(res , 'res');
-    internationalPopularCities.value = res || []
-  } catch (err) {
-    console.error("popular airports error", err)
+const fetchInternationalPopular=async()=>{
+  try{
+    const res=
+      await $fetch(
+        'https://api.ahuan.ir/api/BasicInfo/default-airports'
+      )
+
+    if(
+      !Array.isArray(res)||
+      !res.length
+    ){
+      throw new Error(
+        'اطلاعاتی دریافت نشد'
+      )
+    }
+
+    internationalPopularCities.value=
+      res
+  }catch(err){
+    console.error(
+      'popular airports error:',
+      err
+    )
+
+    internationalPopularCities.value=[]
+
+    toast.error(
+      'خطا در دریافت اطلاعات'
+    )
   }
 }
 
