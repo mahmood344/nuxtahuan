@@ -260,6 +260,7 @@ import{
   getParoBooking
 }from'~/services/providers/paro'
 const flightStore = useFlightStore()
+const toast=useToast()
 definePageMeta({
   name: 'verify'
 })
@@ -3398,6 +3399,10 @@ try{
     }
 
     statusStep.value='SUCCESS'
+
+    toast.success(
+      'خرید و صدور بلیت با موفقیت انجام شد.'
+    )
   }catch(err:any){
     if(statusStep.value==='PENDING'){
       statusStep.value='ISSUE_FAILED'
@@ -3407,6 +3412,16 @@ try{
       err?.data?.message||
       err?.message||
       'خطای غیرمنتظره‌ای رخ داده است.'
+
+    if(statusStep.value==='BANK_FAILED'){
+      toast.error(
+        errorMessage.value
+      )
+    }else if(statusStep.value==='ISSUE_FAILED'){
+      toast.error(
+        errorMessage.value
+      )
+    }
   }finally{
     loading.value=false
   }

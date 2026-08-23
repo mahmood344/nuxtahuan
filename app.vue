@@ -5,6 +5,7 @@
         <NuxtPage></NuxtPage>
     </div>
 </NuxtLayout>
+<AppToast/>
 </template>
 <script setup>
 // const searchStore = stateManegment()

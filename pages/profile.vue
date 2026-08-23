@@ -817,7 +817,7 @@
                 type="button"
                 class="rounded-full bg-[#e9b978] px-5 py-2 text-xs font-bold text-white"
                 :disabled="deletingPassengerId === passenger.id"
-                @click="deletePassenger(passenger)"
+                @click="openDeletePassengerModal(passenger)"
               >
                 {{
                   deletingPassengerId === passenger.id
@@ -2236,7 +2236,77 @@
     </div>
   </Transition>
 </Teleport>
+<Teleport to="body">
+  <Transition name="passenger-modal">
+    <div
+      v-if="deletePassengerModalOpen"
+      dir="rtl"
+      class="fixed inset-0 z-[4000] flex items-center justify-center bg-black/40 p-4"
+      @click.self="closeDeletePassengerModal"
+    >
+      <div
+        class="w-full max-w-[420px] rounded-2xl bg-white p-6 shadow-2xl"
+      >
+        <div class="text-center">
+          <div
+            class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-50 text-2xl text-red-600"
+          >
+            !
+          </div>
 
+          <h2
+            class="mt-4 text-lg font-black text-gray-800"
+          >
+            حذف مسافر
+          </h2>
+
+          <p
+            class="mt-3 text-sm leading-7 text-gray-500"
+          >
+            آیا از حذف
+            <strong class="text-gray-800">
+              {{passengerToDelete?.fName}}
+              {{passengerToDelete?.lName}}
+            </strong>
+            مطمئن هستید؟
+          </p>
+
+          <p
+            class="mt-1 text-xs text-red-500"
+          >
+            این عملیات قابل بازگشت نیست.
+          </p>
+        </div>
+
+        <div
+          class="mt-6 flex items-center justify-center gap-3"
+        >
+          <button
+            type="button"
+            class="min-w-[120px] rounded-full border border-gray-300 bg-white px-5 py-2.5 text-sm font-bold text-gray-600 transition hover:bg-gray-50"
+            :disabled="!!deletingPassengerId"
+            @click="closeDeletePassengerModal"
+          >
+            انصراف
+          </button>
+
+          <button
+            type="button"
+            class="min-w-[120px] rounded-full bg-red-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+            :disabled="!!deletingPassengerId"
+            @click="confirmDeletePassenger"
+          >
+            {{
+              deletingPassengerId
+                ?'در حال حذف...'
+                :'حذف مسافر'
+            }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </Transition>
+</Teleport>
 </template>
 
 <script setup>
@@ -2251,7 +2321,7 @@ import {
 } from 'jalaali-js'
 const detailsModalOpen = ref(false)
 const selectedContract = ref(null)
-
+const toast=useToast()
 const cancelModalOpen=ref(false)
 const cancelModalStep=ref('confirm')
 const selectedCancelRow=ref(null)
@@ -3516,7 +3586,37 @@ async function cancelNiraSeat(row){
     response:data
   }
 }
+function openDeletePassengerModal(passenger){
+  passengerToDelete.value=passenger
+  deletePassengerModalOpen.value=true
 
+  if(import.meta.client){
+    document.body.style.overflow='hidden'
+  }
+}
+
+function closeDeletePassengerModal(){
+  if(deletingPassengerId.value){
+    return
+  }
+
+  deletePassengerModalOpen.value=false
+  passengerToDelete.value=null
+
+  if(import.meta.client){
+    document.body.style.overflow=''
+  }
+}
+
+async function confirmDeletePassenger(){
+  if(!passengerToDelete.value){
+    return
+  }
+
+  await deletePassenger(
+    passengerToDelete.value
+  )
+}
 async function executeNiraEtRefund(
   row,
   etr,
@@ -5519,7 +5619,8 @@ const passengerFormMode = ref('add')
 const passengerSubmitting = ref(false)
 const passengerFormError = ref('')
 const deletingPassengerId = ref(null)
-
+const deletePassengerModalOpen=ref(false)
+const passengerToDelete=ref(null)
 const createEmptyPassengerForm=()=>({
   id:0,
   fName:'',
@@ -5935,90 +6036,90 @@ function validatePassengerForm(payload) {
 
   return ''
 }
-async function submitPassenger() {
-  if (passengerSubmitting.value) return
 
-  passengerFormError.value = ''
+async function submitPassenger(){
+  if(passengerSubmitting.value)return
 
-  try {
-    passengerSubmitting.value = true
+  passengerFormError.value=''
 
-    if (!customerId.value) {
+  try{
+    passengerSubmitting.value=true
+
+    if(!customerId.value){
       await fetchCustomerInfo()
     }
 
-    const payload = buildPassengerPayload()
+    const payload=buildPassengerPayload()
 
-    const validationError =
+    const validationError=
       validatePassengerForm(payload)
 
-    if (validationError) {
-      passengerFormError.value =
+    if(validationError){
+      passengerFormError.value=
         validationError
 
       return
     }
 
-    const isEdit =
-      passengerFormMode.value === 'edit'
+    const isEdit=
+      passengerFormMode.value==='edit'
 
     await $fetch(
       isEdit
-        ? 'https://api.ahuan.ir/api/Customer/update-passenger'
-        : 'https://api.ahuan.ir/api/Customer/add-passenger',
+        ?'https://api.ahuan.ir/api/Customer/update-passenger'
+        :'https://api.ahuan.ir/api/Customer/add-passenger',
       {
-        method: isEdit
-          ? 'PUT'
-          : 'POST',
+        method:isEdit
+          ?'PUT'
+          :'POST',
 
-        body: payload,
+        body:payload,
 
-        headers: {
-          'Content-Type': 'application/json'
+        headers:{
+          'Content-Type':'application/json'
         }
       }
     )
 
-    passengerSubmitting.value = false
+    passengerSubmitting.value=false
 
     closePassengerModal()
 
+    toast.success(
+      isEdit
+        ?'اطلاعات مسافر با موفقیت ویرایش شد.'
+        :'مسافر با موفقیت اضافه شد.'
+    )
+
     await fetchPassengers()
-  } catch (error) {
+  }catch(error){
     console.error(
       'Submit passenger error:',
       error
     )
 
-    passengerFormError.value =
-      error?.data?.message ||
-      error?.response?._data?.message ||
-      error?.message ||
+    const message=
+      error?.data?.message||
+      error?.response?._data?.message||
+      error?.message||
       'ثبت اطلاعات مسافر با خطا مواجه شد.'
-  } finally {
-    passengerSubmitting.value = false
+
+    passengerFormError.value=message
+
+    toast.error(message)
+  }finally{
+    passengerSubmitting.value=false
   }
 }
-async function deletePassenger(passenger) {
-  const passengerId =
-    Number(passenger?.id || 0)
+async function deletePassenger(passenger){
+  const passengerId=Number(passenger?.id||0)
 
-  if (!passengerId) {
+  if(!passengerId){
     return
   }
 
-  const confirmed =
-    window.confirm(
-      `آیا از حذف ${passenger?.fName || ''} ${passenger?.lName || ''} مطمئن هستید؟`
-    )
-
-  if (!confirmed) {
-    return
-  }
-
-  try {
-    deletingPassengerId.value =
-      passengerId
+  try{
+    deletingPassengerId.value=passengerId
 
     await $fetch(
       'https://api.ahuan.ir/api/Customer/delete-passenger',
@@ -6030,22 +6131,32 @@ async function deletePassenger(passenger) {
       }
     )
 
+    deletePassengerModalOpen.value=false
+    passengerToDelete.value=null
+
+    if(import.meta.client){
+      document.body.style.overflow=''
+    }
+
+    toast.success(
+      'مسافر با موفقیت حذف شد.'
+    )
+
     await fetchPassengers()
-  } catch (error) {
+  }catch(error){
     console.error(
       'Delete passenger error:',
       error
     )
 
-    alert(
-      error?.data?.message ||
-      error?.response?._data?.message ||
-      error?.message ||
+    toast.error(
+      error?.data?.message||
+      error?.response?._data?.message||
+      error?.message||
       'حذف مسافر با خطا مواجه شد.'
     )
-  } finally {
-    deletingPassengerId.value =
-      null
+  }finally{
+    deletingPassengerId.value=null
   }
 }
 function closePassengerModal() {

@@ -311,7 +311,7 @@ const router = useRouter()
 const flightStore = useFlightStore()
 
 console.log(flightStore.finalBookingPrice, 'flightStore.finalBookingPrice')
-
+const toast=useToast()
 const selectedDate = ref('')
 const activeTab = ref('ارزان‌ترین')
 const searchStarted = ref(false)
@@ -363,6 +363,22 @@ const flightSteps = computed(() => {
     { icon: '🎫', label: 'دریافت بلیط' }
   ]
 })
+function getErrorMessage(
+  error,
+  fallback='خطایی رخ داده است'
+){
+  return String(
+    error?.response?._data?.error?.message||
+    error?.response?._data?.message||
+    error?.response?.data?.error?.message||
+    error?.response?.data?.message||
+    error?.data?.error?.message||
+    error?.data?.message||
+    error?.error?.message||
+    error?.message||
+    fallback
+  )
+}
 const getContractFlightClass=(flight)=>{
   const provider=
     String(
@@ -2041,20 +2057,27 @@ function mapFlightsToPayload(
     }
   )
 }
-async function addContract(payload) {
-  try {
-    const response = await $fetch('https://api.ahuan.ir/api/Contract/add', {
-      method: 'POST',
-      body: payload,
-      headers: {
-        'Content-Type': 'application/json'
+async function addContract(payload){
+  try{
+    return await $fetch(
+      'https://api.ahuan.ir/api/Contract/add',
+      {
+        method:'POST',
+        body:payload,
+        headers:{
+          'Content-Type':'application/json'
+        }
       }
-    })
+    )
+  }catch(error){
+    console.error(
+      'Contract add error:',
+      error
+    )
 
-    return response
-  } catch (error) {
-    console.warn('Contract add failed (non-blocking):', error)
-    return null
+    throw new Error(
+      'اطلاعات به دیتابیس اضافه نشد.'
+    )
   }
 }
 
@@ -2107,9 +2130,11 @@ async function onContinueShopping(){
         error
       )
 
-      alert(
-        'استعلام قیمت پرواز با خطا مواجه شد. لطفاً دوباره تلاش کنید.'
-      )
+      
+
+toast.error(
+  'دریافت اطلاعات بلیت ناموفق بود'
+)
 
       return
     }
@@ -2159,9 +2184,9 @@ async function onContinueShopping(){
       !Number.isFinite(totalPrice)||
       totalPrice<=0
     ){
-      alert(
-        'قیمت نهایی Fare پرواز رفت معتبر نیست.'
-      )
+     toast.error(
+  'دریافت اطلاعات بلیت ناموفق بود'
+)
 
       return
     }
@@ -2173,9 +2198,10 @@ async function onContinueShopping(){
         totalPrice2<=0
       )
     ){
-      alert(
-        'قیمت نهایی Fare پرواز برگشت معتبر نیست.'
-      )
+    
+      toast.error(
+        'قیمت نهایی  پرواز برگشت معتبر نیست.'
+)
 
       return
     }
@@ -2241,16 +2267,21 @@ async function onContinueShopping(){
     flightStore.setCurrentStep(
       previewStep.value
     )
-  }catch(error){
-    console.error(
-      'Continue shopping error:',
-      error
-    )
+  }
+  catch(error){
+  console.error(
+    'Continue shopping error:',
+    error
+  )
 
-    alert(
-      'ادامه فرایند با خطا مواجه شد. لطفاً دوباره تلاش کنید.'
+  toast.error(
+    getErrorMessage(
+      error,
+      'ادامه فرایند با خطا مواجه شد.'
     )
-  }finally{
+  )
+}
+  finally{
     continueShoppingLoading.value=false
   }
 }
@@ -2480,77 +2511,188 @@ function buildNiraContact(contact) {
 
   return [mobile, '', email].filter((item, index) => item || index !== 1).join('|')
 }
-async function reserveNiraFlight(flight, passengers, contact) {
-  const params = new URLSearchParams()
-console.log(flight , 'sdsdsdsd');
-  params.set('AirLine', getNiraAirlineCode(flight))
-  params.set('cbSource', String(flight?.origin || '').trim())
-  params.set('cbTarget', String(flight?.destination || '').trim())
-  params.set('FlightClass', String(flight?.cabinClass || 'E').trim())
-  params.set('FlightNo', String(flight?.flightNumber || '').trim())
-  params.set('Day', getJalaliDayMonth(flight?.departure).day)
-  params.set('Month', getJalaliDayMonth(flight?.departure).month)
-  params.set('DepartureDate', formatFlightDate(flight?.departure))
-  params.set('No', String(passengers.length))
-  params.set('edtContact', buildNiraContact(contact))
+async function reserveNiraFlight(
+  flight,
+  passengers,
+  contact
+){
+  try{
+    const params=
+      new URLSearchParams()
 
-  const passengersInfo = passengers
-    .map((passenger, index) => {
-      const n = index + 1
-      return [
-        `edtName${n}=${encodeURIComponent(
-          `${String(passenger?.firstName || '').trim()}${getPassengerGenderTitle(passenger)}`
-        )}`,
-        `edtLast${n}=${encodeURIComponent(
-          String(passenger?.lastName || '').trim()
-        )}`,
-        `edtAge${n}=${encodeURIComponent(
-          getPassengerAgeForNira(passenger)
-        )}`,
-        `edtID${n}=${encodeURIComponent(
-          buildNiraEdtId(passenger, flightType.value)
-        )}`
-      ].join('&')
-    })
-    .join('&')
+    params.set(
+      'AirLine',
+      getNiraAirlineCode(flight)
+    )
 
-  params.set('PassengersInfo', passengersInfo)
-  // console.log(passenger , 'passengersInfo');
-  const url = `https://api.ahuan.ir/api/Nira/GetReserve?${params.toString()}`
-  const response = await $fetch(url, { method: 'GET' })
-let parsedResponse = response
+    params.set(
+      'cbSource',
+      String(
+        flight?.origin||''
+      ).trim()
+    )
 
-if (typeof parsedResponse === 'string') {
-  try {
-    parsedResponse = JSON.parse(parsedResponse)
-  } catch (e) {
-    throw new Error('پاسخ رزرو نیرا قابل پردازش نیست')
+    params.set(
+      'cbTarget',
+      String(
+        flight?.destination||''
+      ).trim()
+    )
+
+    params.set(
+      'FlightClass',
+      String(
+        flight?.cabinClass||'E'
+      ).trim()
+    )
+
+    params.set(
+      'FlightNo',
+      String(
+        flight?.flightNumber||''
+      ).trim()
+    )
+
+    params.set(
+      'Day',
+      getJalaliDayMonth(
+        flight?.departure
+      ).day
+    )
+
+    params.set(
+      'Month',
+      getJalaliDayMonth(
+        flight?.departure
+      ).month
+    )
+
+    params.set(
+      'DepartureDate',
+      formatFlightDate(
+        flight?.departure
+      )
+    )
+
+    params.set(
+      'No',
+      String(passengers.length)
+    )
+
+    params.set(
+      'edtContact',
+      buildNiraContact(contact)
+    )
+
+    const passengersInfo=
+      passengers
+        .map(
+          (passenger,index)=>{
+            const n=index+1
+
+            return[
+              `edtName${n}=${encodeURIComponent(
+                `${String(
+                  passenger?.firstName||''
+                ).trim()}${getPassengerGenderTitle(passenger)}`
+              )}`,
+
+              `edtLast${n}=${encodeURIComponent(
+                String(
+                  passenger?.lastName||''
+                ).trim()
+              )}`,
+
+              `edtAge${n}=${encodeURIComponent(
+                getPassengerAgeForNira(
+                  passenger
+                )
+              )}`,
+
+              `edtID${n}=${encodeURIComponent(
+                buildNiraEdtId(
+                  passenger,
+                  flightType.value
+                )
+              )}`
+            ].join('&')
+          }
+        )
+        .join('&')
+
+    params.set(
+      'PassengersInfo',
+      passengersInfo
+    )
+
+    const url=
+      `https://api.ahuan.ir/api/Nira/GetReserve?${params.toString()}`
+
+    const response=
+      await $fetch(
+        url,
+        {
+          method:'GET'
+        }
+      )
+
+    let parsedResponse=response
+
+    if(
+      typeof parsedResponse==='string'
+    ){
+      parsedResponse=
+        JSON.parse(parsedResponse)
+    }
+
+    const result=
+      parsedResponse?.AirReserve?.[0]
+
+    if(!result){
+      throw new Error()
+    }
+
+    const errorText=
+      String(
+        result?.Error||''
+      ).trim()
+
+    const pnr=
+      String(
+        result?.PNR||''
+      ).trim()
+
+    if(
+      errorText&&
+      errorText!=='Success'&&
+      errorText!=='No Err'
+    ){
+      console.error(
+        'Nira reserve provider error:',
+        errorText
+      )
+
+      throw new Error()
+    }
+
+    if(!pnr){
+      throw new Error()
+    }
+
+    return{
+      pnr,
+      raw:parsedResponse
+    }
+  }catch(error){
+    console.error(
+      'Nira reserve error:',
+      error
+    )
+
+    throw new Error(
+      'رزرو پرواز با موفقیت انجام نشد.'
+    )
   }
-}
-
-const result = parsedResponse?.AirReserve?.[0]
-
-if (!result) {
-  throw new Error('پاسخ رزرو نیرا معتبر نیست')
-}
-
-const errorText = String(result?.Error || '').trim()
-const pnr = String(result?.PNR || '').trim()
-
-if (errorText && errorText !== 'Success' && errorText !== 'No Err') {
-  throw new Error(errorText || 'رزرو نیرا انجام نشد')
-}
-
-if (!pnr) {
-  throw new Error('PNR از نیرا دریافت نشد')
-}
-
-return {
-  pnr,
-  raw: parsedResponse
-}
-
-
 }
 
 async function reserveNiraFlights(selectedFlights, passengers, contact) {
@@ -2573,15 +2715,30 @@ async function reserveNiraFlights(selectedFlights, passengers, contact) {
   return results
 }
 
-async function saveOrUpdateContract(payload) {
-  console.log(payload , 'aasdasdasdasdasdasdasdasd');
-  return await $fetch('https://api.ahuan.ir/api/Contract/update', {
-    method: 'PUT',
-    body: payload,
-    headers: {
-      'Content-Type': 'application/json'
-    }
-  })
+async function saveOrUpdateContract(
+  payload
+){
+  try{
+    return await $fetch(
+      'https://api.ahuan.ir/api/Contract/update',
+      {
+        method:'PUT',
+        body:payload,
+        headers:{
+          'Content-Type':'application/json'
+        }
+      }
+    )
+  }catch(error){
+    console.error(
+      'Contract update error:',
+      error
+    )
+
+    throw new Error(
+      'افزودن اطلاعات به دیتابیس موفقیت‌آمیز نبود.'
+    )
+  }
 }
 
 
@@ -2759,70 +2916,59 @@ async function checkNiraCredit(selectedFlights) {
   /*
    * برای هر ایرلاین فقط یک درخواست CRD
    */
-  for (const group of airlineGroups.values()) {
-    const response = await $fetch(
-      'https://api.ahuan.ir/api/Nira/Command',
-      {
-        method: 'GET',
+for(const group of airlineGroups.values()){
+  try{
+    const response=
+      await $fetch(
+        'https://api.ahuan.ir/api/Nira/Command',
+        {
+          method:'GET',
 
-        query: {
-          AirLine:
-            group.airlineCode,
+          query:{
+            AirLine:
+              group.airlineCode,
 
-          Command:
-            'CRD'
+            Command:'CRD'
+          }
         }
-      }
-    )
+      )
 
-    const responseText =
-      typeof response === 'string'
-        ? response
-        : String(
-            response?.AirNRSCommand
-              ?.Response || ''
+    const responseText=
+      typeof response==='string'
+        ?response
+        :String(
+            response
+              ?.AirNRSCommand
+              ?.Response||
+            ''
           )
 
-    const creditMatch =
+    const creditMatch=
       responseText.match(
         /CREDIT\s*:\s*([\d,]+)\s*IRR/i
       )
 
-    if (!creditMatch) {
-      console.error(
-        'Invalid Nira credit response:',
-        {
-          airlineCode:
-            group.airlineCode,
-          response
-        }
-      )
-
-      throw new Error(
-        `مبلغ اعتبار ایرلاین ${group.airlineCode} دریافت نشد`
-      )
+    if(!creditMatch){
+      throw new Error()
     }
 
-    const credit = Number(
-      creditMatch[1].replace(/,/g, '')
-    )
-
-    if (!Number.isFinite(credit)) {
-      throw new Error(
-        `مبلغ اعتبار ایرلاین ${group.airlineCode} معتبر نیست`
+    const credit=
+      Number(
+        creditMatch[1]
+          .replace(/,/g,'')
       )
+
+    if(
+      !Number.isFinite(credit)
+    ){
+      throw new Error()
     }
 
-    /*
-     * اعتبار کمتر از مجموع قیمت پروازهای
-     * همان ایرلاین باشد، ادامه متوقف می‌شود.
-     */
-    if (credit < group.requiredAmount) {
-      throw new Error(
-        `اعتبار ایرلاین ${group.airlineCode} کافی نیست. ` +
-        `اعتبار موجود: ${credit.toLocaleString('en-US')} ریال، ` +
-        `مبلغ موردنیاز: ${group.requiredAmount.toLocaleString('en-US')} ریال`
-      )
+    if(
+      credit<
+      group.requiredAmount
+    ){
+      throw new Error()
     }
 
     results.push({
@@ -2835,7 +2981,7 @@ async function checkNiraCredit(selectedFlights) {
         group.requiredAmount,
 
       remainingCredit:
-        credit -
+        credit-
         group.requiredAmount,
 
       flights:
@@ -2844,7 +2990,17 @@ async function checkNiraCredit(selectedFlights) {
       raw:
         response
     })
+  }catch(error){
+    console.error(
+      'Nira credit error:',
+      error
+    )
+
+    throw new Error(
+      'پرواز فاقد اعتبار است.'
+    )
   }
+}
 
   return results
 }
@@ -3269,60 +3425,96 @@ function buildMahanReservePayload({
     
   }
 }
-async function reserveMahanFlight(flight, passengers, contactInfo) {
-  if (!flight || !isMahanFlight(flight)) {
-    throw new Error('پرواز ماهان برای رزرو معتبر نیست')
-  }
-
-  const payload = buildMahanReservePayload({
-    flight,
-    passengers,
-    contactInfo,
-    credentials: {
-       userName: 'APIAHOVAN',
-        password: 'AHVN@3298',
-        baseUrl:
-          'https://reservations.mahanair.co.ir/webservices/services/AAResWebServices',
-        agancyName: 'Ahuan'
+async function reserveMahanFlight(
+  flight,
+  passengers,
+  contactInfo
+){
+  try{
+    if(
+      !flight||
+      !isMahanFlight(flight)
+    ){
+      throw new Error()
     }
-  })
 
-  const response = await $fetch('https://api.ahuan.ir/api/Mahan/Reserve', {
-    method: 'POST',
-    body: payload,
-    headers: {
-      'Content-Type': 'application/json'
+    const payload=
+      buildMahanReservePayload({
+        flight,
+        passengers,
+        contactInfo,
+
+        credentials:{
+          userName:'APIAHOVAN',
+          password:'AHVN@3298',
+
+          baseUrl:
+            'https://reservations.mahanair.co.ir/webservices/services/AAResWebServices',
+
+          agancyName:'Ahuan'
+        }
+      })
+
+    const response=
+      await $fetch(
+        'https://api.ahuan.ir/api/Mahan/Reserve',
+        {
+          method:'POST',
+          body:payload,
+
+          headers:{
+            'Content-Type':
+              'application/json'
+          }
+        }
+      )
+
+    const reserveInfo=
+      Array.isArray(
+        response?.reserveInfos
+      )
+        ?response.reserveInfos[0]
+        :null
+
+    if(!reserveInfo){
+      throw new Error()
     }
-  })
 
-  const reserveInfo = Array.isArray(response?.reserveInfos)
-    ? response.reserveInfos[0]
-    : null
+    if(
+      reserveInfo?.error?.code&&
+      reserveInfo.error.code!==0
+    ){
+      console.error(
+        'Mahan provider error:',
+        reserveInfo?.error
+      )
 
-  if (!reserveInfo) {
-    throw new Error('پاسخ رزرو ماهان خالی است')
-  }
+      throw new Error()
+    }
 
-  if (reserveInfo?.error?.code && reserveInfo.error.code !== 0) {
-    throw new Error(
-      reserveInfo?.error?.message ||
-      'رزرو ماهان با خطا مواجه شد'
+    const pnr=
+      reserveInfo?.airlinePnr||
+      reserveInfo?.providerPnr||
+      reserveInfo?.pnr||
+      ''
+
+    if(!pnr){
+      throw new Error()
+    }
+
+    return{
+      pnr,
+      reserveResponse:response
+    }
+  }catch(error){
+    console.error(
+      'Mahan reserve error:',
+      error
     )
-  }
 
-  const pnr =
-    reserveInfo?.airlinePnr ||
-    reserveInfo?.providerPnr ||
-    reserveInfo?.pnr ||
-    ''
-
-  if (!pnr) {
-    throw new Error('PNR رزرو ماهان دریافت نشد')
-  }
-
-  return {
-    pnr,
-    reserveResponse: response
+    throw new Error(
+      'رزرو ماهان موفقیت‌آمیز نبود.'
+    )
   }
 }
 async function reservePartoFlight(
@@ -3330,70 +3522,192 @@ async function reservePartoFlight(
   passengers,
   contactInfo
 ){
-  if(
-    !flight||
-    !isPartoFlight(flight)
-  ){
-    throw new Error(
-      'پرواز Parto معتبر نیست'
-    )
-  }
+  try{
+    if(
+      !flight||
+      !isPartoFlight(flight)
+    ){
+      throw new Error(
+        'پرواز خارجی معتبر نیست.'
+      )
+    }
 
-  const fareSourceCode=
-    getPartoFareSourceCode(
-      flight
-    )
-
-  if(!fareSourceCode){
-    throw new Error(
-      'FareSourceCode پرواز Parto موجود نیست'
-    )
-  }
-
-  /*
-   * 1. CREDIT
-   */
-  const credit=
-    await checkPartoCredit(
-      flight
-    )
-
-  /*
-   * 2. REVALIDATE
-   */
-  const revalidate=
-    await revalidateParoFlight(
-      fareSourceCode
-    )
-
-  const fareType=
-    Number(
-      revalidate
-        ?.pricedItinerary
-        ?.airItineraryPricingInfo
-        ?.fareType??
-      getPartoFareType(
+    const fareSourceCode=
+      getPartoFareSourceCode(
         flight
       )
+
+    if(!fareSourceCode){
+      throw new Error(
+        'اطلاعات پرواز خارجی کامل نیست.'
+      )
+    }
+
+    /*
+     * 1. CREDIT
+     */
+    const credit=
+      await checkPartoCredit(
+        flight
+      )
+
+    /*
+     * 2. REVALIDATE
+     */
+    const revalidate=
+      await revalidateParoFlight(
+        fareSourceCode
+      )
+
+    if(
+      !revalidate
+    ){
+      throw new Error(
+        'تأیید اطلاعات پرواز خارجی ناموفق بود.'
+      )
+    }
+
+    const fareType=
+      Number(
+        revalidate
+          ?.pricedItinerary
+          ?.airItineraryPricingInfo
+          ?.fareType??
+        getPartoFareType(
+          flight
+        )
+      )
+
+    console.log(
+      'PARTO REVALIDATE:',
+      revalidate
     )
 
-  console.log(
-    'PARTO REVALIDATE:',
-    revalidate
-  )
+    console.log(
+      'PARTO FARE TYPE:',
+      fareType
+    )
 
-  console.log(
-    'PARTO FARE TYPE:',
-    fareType
-  )
+    /*
+     * WEB FARE
+     *
+     * قبل از پرداخت Book انجام نمی‌شود.
+     */
+    if(fareType===4){
+      return{
+        flightId:
+          flight?.id||null,
 
-  /*
-   * 3. WEB FARE
-   *
-   * طبق Flow قدیمی:
-   * قبل از پرداخت Book نمی‌زنیم.
-   */
-  if(fareType===4){
+        supplier:'PARTO',
+
+        airline:
+          flight?.airline||'',
+
+        pnr:'',
+        uniqueId:'',
+
+        fareType,
+
+        partoFlow:
+          'BOOK_AFTER_PAYMENT',
+
+        fareSourceCode,
+
+        creditResponse:
+          credit,
+
+        revalidateResponse:
+          revalidate,
+
+        reserveResponse:null
+      }
+    }
+
+    /*
+     * NORMAL FARE
+     */
+    const airTravelers=
+      (passengers||[])
+        .map(
+          mapPassengerToParto
+        )
+
+    if(!airTravelers.length){
+      throw new Error(
+        'اطلاعات مسافران پرواز خارجی موجود نیست.'
+      )
+    }
+
+    const bookingPayload={
+      fareSourceCode,
+
+      clientUniqueId:
+        `AHUAN-${Date.now()}`,
+
+      markupForAdult:0,
+      markupForChild:0,
+      markupForInfant:0,
+
+      cancellationGuaranteeId:'',
+
+      travelerInfo:{
+        phoneNumber:
+          contactInfo?.mobile||
+          contactInfo?.phone||
+          '',
+
+        email:
+          contactInfo?.email||
+          '',
+
+        ownerPhoneNumber:
+          contactInfo?.mobile||
+          contactInfo?.phone||
+          '',
+
+        ownerEmail:
+          contactInfo?.email||
+          '',
+
+        airTravelers
+      },
+
+      payLaterServiceId:''
+    }
+
+    console.log(
+      'PARTO BOOK PAYLOAD:',
+      bookingPayload
+    )
+
+    /*
+     * BOOK
+     */
+    const book=
+      await bookParoFlight(
+        bookingPayload
+      )
+
+    console.log(
+      'PARTO BOOK RESPONSE:',
+      book
+    )
+
+    if(
+      !book||
+      book?.success!==true
+    ){
+      throw new Error(
+        'رزرو پرواز خارجی موفقیت‌آمیز نبود.'
+      )
+    }
+
+    if(!book?.uniqueId){
+      throw new Error(
+        'شناسه رزرو پرواز خارجی دریافت نشد.'
+      )
+    }
+
     return{
       flightId:
         flight?.id||null,
@@ -3403,15 +3717,30 @@ async function reservePartoFlight(
       airline:
         flight?.airline||'',
 
-      pnr:'',
-      uniqueId:'',
+      pnr:
+        book.uniqueId,
+
+      uniqueId:
+        book.uniqueId,
 
       fareType,
 
-      partoFlow:
-        'BOOK_AFTER_PAYMENT',
-
       fareSourceCode,
+
+      category:
+        book?.category,
+
+      status:
+        book?.status,
+
+      priceChange:
+        book?.priceChange===true,
+
+      warningMessage:
+        book?.warningMessage||[],
+
+      partoFlow:
+        'ISSUE_AFTER_PAYMENT',
 
       creditResponse:
         credit,
@@ -3419,137 +3748,41 @@ async function reservePartoFlight(
       revalidateResponse:
         revalidate,
 
-      reserveResponse:null
+      reserveResponse:
+        book
     }
-  }
+  }catch(error){
+    console.error(
+      'Foreign flight reserve error:',
+      error
+    )
 
-  /*
-   * 4. NORMAL FARE
-   */
-  const airTravelers=
-    (passengers||[])
-      .map(
-        mapPassengerToParto
+    const message=
+      String(
+        error?.response?._data?.message||
+        error?.data?.message||
+        error?.message||
+        ''
       )
 
-  if(!airTravelers.length){
+    /*
+     * خطاهای مشخص خودمان را حفظ می‌کنیم.
+     */
+    if(
+      message.includes('پرواز خارجی')||
+      message.includes('مسافران')
+    ){
+      throw new Error(
+        message
+      )
+    }
+
+    /*
+     * هیچ نام فنی Parto به کاربر نمایش داده نشود.
+     */
     throw new Error(
-      'اطلاعات مسافران Parto موجود نیست'
+      'رزرو پرواز خارجی موفقیت‌آمیز نبود.'
     )
-  }
-
-  const bookingPayload={
-    fareSourceCode,
-
-    clientUniqueId:
-      `AHUAN-${Date.now()}`,
-
-    markupForAdult:0,
-    markupForChild:0,
-    markupForInfant:0,
-
-    cancellationGuaranteeId:'',
-
-    travelerInfo:{
-      phoneNumber:
-        contactInfo?.mobile||
-        contactInfo?.phone||
-        '',
-
-      email:
-        contactInfo?.email||
-        '',
-
-      ownerPhoneNumber:
-        contactInfo?.mobile||
-        contactInfo?.phone||
-        '',
-
-      ownerEmail:
-        contactInfo?.email||
-        '',
-
-      airTravelers
-    },
-
-    payLaterServiceId:''
-  }
-
-  console.log(
-    'PARTO BOOK PAYLOAD:',
-    bookingPayload
-  )
-
-  /*
-   * 5. BOOK
-   */
-  const book=
-    await bookParoFlight(
-      bookingPayload
-    )
-
-  console.log(
-    'PARTO BOOK RESPONSE:',
-    book
-  )
-
-  if(
-    book?.success!==true
-  ){
-    throw new Error(
-      book?.error?.message||
-      'رزرو پرواز Parto ناموفق بود'
-    )
-  }
-
-  if(!book?.uniqueId){
-    throw new Error(
-      'UniqueId رزرو Parto دریافت نشد'
-    )
-  }
-
-  return{
-    flightId:
-      flight?.id||null,
-
-    supplier:'PARTO',
-
-    airline:
-      flight?.airline||'',
-
-    pnr:
-      book.uniqueId,
-
-    uniqueId:
-      book.uniqueId,
-
-    fareType,
-
-    fareSourceCode,
-
-    category:
-      book?.category,
-
-    status:
-      book?.status,
-
-    priceChange:
-      book?.priceChange===true,
-
-    warningMessage:
-      book?.warningMessage||[],
-
-    partoFlow:
-      'ISSUE_AFTER_PAYMENT',
-
-    creditResponse:
-      credit,
-
-    revalidateResponse:
-      revalidate,
-
-    reserveResponse:
-      book
   }
 }
 async function reserveFlightByProvider(
@@ -3631,19 +3864,59 @@ async function reserveFlightByProvider(
     }`
   )
 }
-async function reserveFlights(flights, passengers, contactInfo) {
-  const safeFlights = Array.isArray(flights) ? flights.filter(Boolean) : []
+async function reserveFlights(
+  flights,
+  passengers,
+  contactInfo
+){
+  const safeFlights=
+    Array.isArray(flights)
+      ?flights.filter(Boolean)
+      :[]
 
-  const results = []
+  const results=[]
 
-  for (const flight of safeFlights) {
-    const result = await reserveFlightByProvider(
-      flight,
-      passengers,
-      contactInfo
-    )
+  for(const flight of safeFlights){
+    const supplier=
+      getFlightSupplier(
+        flight
+      )
+
+    const result=
+      await reserveFlightByProvider(
+        flight,
+        passengers,
+        contactInfo
+      )
 
     results.push(result)
+
+    if(supplier==='NIRA'){
+      toast.success(
+        'رزرو پرواز با موفقیت انجام شد.'
+      )
+    }
+
+    if(supplier==='MAHAN'){
+      toast.success(
+        'رزرو ماهان با موفقیت انجام شد.'
+      )
+    }
+
+    if(supplier==='PARTO'){
+      if(
+        result?.partoFlow===
+        'BOOK_AFTER_PAYMENT'
+      ){
+        toast.success(
+          'اطلاعات پرواز خارجی با موفقیت تأیید شد.'
+        )
+      }else{
+        toast.success(
+          'رزرو پرواز خارجی با موفقیت انجام شد.'
+        )
+      }
+    }
   }
 
   return results
@@ -3767,22 +4040,25 @@ async function handleFinalPayment() {
     await continuePaymentAfterUpdate(
       paymentSession
     )
-  } catch (error) {
-    console.error(
-      'handleFinalPayment error:',
-      error
+  } 
+  catch(error){
+  console.error(
+    'handleFinalPayment error:',
+    error
+  )
+
+  paymentError.value=
+    getErrorMessage(
+      error,
+      'خطا در رزرو و پرداخت'
     )
 
-    paymentError.value =
-      error?.response?.data?.message ||
-      error?.data?.message ||
-      error?.message ||
-      'خطا در رزرو و پرداخت'
-
-    alert(paymentError.value)
-  } finally {
-    paymentLoading.value = false
-  }
+  toast.error(
+    paymentError.value
+  )
+}finally{
+  paymentLoading.value=false
+}
 }
 
 function buildUpdateContractPayload({
@@ -4204,58 +4480,62 @@ function extractContractIdFromUpdate(
 async function requestBankToken({
   amount,
   contractId
-}) {
-  const bankAmount = Number(amount)
+}){
+  try{
+    const bankAmount=
+      Number(amount)
 
-  if (
-    !Number.isFinite(bankAmount) ||
-    bankAmount <= 0
-  ) {
-    throw new Error(
-      'مبلغ ارسالی به درگاه معتبر نیست'
-    )
-  }
-
-  const revertUrl =
-    `${window.location.origin}/verify` +
-    `?responseData=${encodeURIComponent(contractId)}&`
-
-  const response = await $fetch(
-    'https://test.ahuan.ir/api/Tejarat/BankToken',
-    {
-      method: 'POST',
-
-      body: {
-        amount: bankAmount,
-        revertUrl
-      }
+    if(
+      !Number.isFinite(bankAmount)||
+      bankAmount<=0
+    ){
+      throw new Error()
     }
-  )
 
-  const bankToken =
-    typeof response === 'string'
-      ? response
-      : response?.data?.tokenIdentity ||
-        response?.data?.bankToken ||
-        response?.data?.token ||
-        response?.tokenIdentity ||
-        response?.bankToken ||
-        response?.token ||
-        response?.data ||
-        ''
+    const revertUrl=
+      `${window.location.origin}/verify`+
+      `?responseData=${encodeURIComponent(contractId)}&`
 
-  if (!bankToken) {
+    const response=
+      await $fetch(
+        'https://test.ahuan.ir/api/Tejarat/BankToken',
+        {
+          method:'POST',
+
+          body:{
+            amount:bankAmount,
+            revertUrl
+          }
+        }
+      )
+
+    const bankToken=
+      typeof response==='string'
+        ?response
+        :response?.data?.tokenIdentity||
+          response?.data?.bankToken||
+          response?.data?.token||
+          response?.tokenIdentity||
+          response?.bankToken||
+          response?.token||
+          response?.data||
+          ''
+
+    if(!bankToken){
+      throw new Error()
+    }
+
+    return String(bankToken)
+  }catch(error){
     console.error(
-      'Invalid BankToken response:',
-      response
+      'BankToken error:',
+      error
     )
 
     throw new Error(
-      'توکن درگاه بانکی دریافت نشد'
+      'ارسال به بانک موفقیت‌آمیز نبود.'
     )
   }
-
-  return String(bankToken)
 }
 async function submitShaparakForm(
   bankToken
