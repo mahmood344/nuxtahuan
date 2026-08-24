@@ -2307,6 +2307,64 @@
     </div>
   </Transition>
 </Teleport>
+<Teleport to="body">
+  <Transition name="contract-modal">
+    <div
+      v-if="ticketDownloadModalOpen"
+      dir="rtl"
+      class="fixed inset-0 z-[5000] flex items-center justify-center bg-black/40 p-4 backdrop-blur-[1px]"
+      @click.self="closeTicketDownloadModal"
+    >
+      <div
+        class="w-full max-w-[420px] rounded-2xl bg-white p-6 shadow-2xl"
+      >
+        <div
+          class="flex items-center justify-between border-b border-gray-200 pb-4"
+        >
+          <h2
+            class="text-base font-black text-gray-800"
+          >
+            دریافت بلیط
+          </h2>
+
+          <button
+            type="button"
+            class="flex h-8 w-8 items-center justify-center rounded-full text-2xl text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
+            @click="closeTicketDownloadModal"
+          >
+            ×
+          </button>
+        </div>
+
+        <p
+          class="mt-5 text-center text-sm text-gray-500"
+        >
+          نحوه دریافت بلیط را انتخاب کنید.
+        </p>
+
+        <div
+          class="mt-6 flex flex-col gap-3"
+        >
+          <button
+            type="button"
+            class="w-full rounded-xl bg-[#14179e] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#0d107e]"
+            @click="downloadAhuanTicket"
+          >
+            دانلود بلیط آهوان
+          </button>
+
+          <button
+            type="button"
+            class="w-full rounded-xl border border-[#14179e] bg-white px-5 py-3.5 text-sm font-bold text-[#14179e] transition hover:bg-blue-50"
+            @click="downloadAirlineTicket"
+          >
+            دانلود بلیط ایرلاین
+          </button>
+        </div>
+      </div>
+    </div>
+  </Transition>
+</Teleport>
 </template>
 
 <script setup>
@@ -2323,6 +2381,9 @@ import {
 const detailsModalOpen = ref(false)
 const selectedContract = ref(null)
 const toast=useToast()
+const flightStore=useFlightStore()
+const ticketDownloadModalOpen=ref(false)
+const selectedDownloadRow=ref(null)
 const cancelModalOpen=ref(false)
 const cancelModalStep=ref('confirm')
 const selectedCancelRow=ref(null)
@@ -3306,18 +3367,138 @@ function getCancelButtonClass(row){
     :'cursor-not-allowed border-gray-300 bg-gray-50 text-gray-300'
 }
 
+// function downloadContractTicket(row){
+//   const contractId=
+//     selectedContract.value?.id
+
+//   if(!contractId) return
+
+//   if(row?.ticketUrl){
+//     window.open(
+//       row.ticketUrl,
+//       '_blank'
+//     )
+
+//     return
+//   }
+
+//   const encodedContractId=
+//     window.btoa(
+//       String(contractId)
+//     )
+
+//   navigateTo(
+//     `/downloadticket/${encodedContractId}`
+//   )
+// }
+function isDomesticTicket(row){
+
+  const provider=
+    normalizeFlightProvider(
+      row?.provider||
+      row?.flight?.flightSupplier
+    )
+
+  if(provider==='PARTO'){
+    return false
+  }
+
+  if(
+    [
+      'NIRA',
+      'MAHAN',
+      'SEPEHRAN',
+      'AIRTOUR'
+    ].includes(provider)
+  ){
+    return true
+  }
+
+  const domesticCodes=
+    new Set(
+      [
+        ...(flightStore.iranAirports||[]),
+        ...(flightStore.popularCities||[])
+      ]
+        .flatMap(item=>[
+          item?.cityCode,
+          item?.iataCode
+        ])
+        .filter(Boolean)
+        .map(item=>
+          String(item)
+            .trim()
+            .toUpperCase()
+        )
+    )
+
+  const origin=
+    String(
+      row?.origin||
+      row?.flight?.origin||
+      ''
+    )
+      .trim()
+      .toUpperCase()
+
+  const destination=
+    String(
+      row?.destination||
+      row?.flight?.destination||
+      ''
+    )
+      .trim()
+      .toUpperCase()
+
+  return(
+    domesticCodes.has(origin)&&
+    domesticCodes.has(destination)
+  )
+}
+
 function downloadContractTicket(row){
+
   const contractId=
     selectedContract.value?.id
 
-  if(!contractId) return
-
-  if(row?.ticketUrl){
-    window.open(
-      row.ticketUrl,
-      '_blank'
+  if(!contractId){
+    toast.error(
+      'شناسه قرارداد یافت نشد.'
     )
+    return
+  }
 
+  /*
+   * پرواز خارجی:
+   * فقط بلیط آهوان
+   */
+  if(!isDomesticTicket(row)){
+    downloadAhuanTicket()
+    return
+  }
+
+  /*
+   * پرواز داخلی:
+   * مدال دو گزینه‌ای
+   */
+  selectedDownloadRow.value=row
+  ticketDownloadModalOpen.value=true
+}
+
+function closeTicketDownloadModal(){
+  ticketDownloadModalOpen.value=false
+  selectedDownloadRow.value=null
+}
+
+function downloadAhuanTicket(){
+
+  const contractId=
+    selectedContract.value?.id
+
+  if(!contractId){
+    toast.error(
+      'شناسه قرارداد یافت نشد.'
+    )
     return
   }
 
@@ -3326,11 +3507,124 @@ function downloadContractTicket(row){
       String(contractId)
     )
 
+  closeTicketDownloadModal()
+
   navigateTo(
     `/downloadticket/${encodedContractId}`
   )
 }
 
+function downloadAirlineTicket(){
+
+  const row=
+    selectedDownloadRow.value
+
+  if(!row){
+    toast.error(
+      'اطلاعات بلیط یافت نشد.'
+    )
+    return
+  }
+
+  const airlineCode=
+    String(
+      row?.airlineCode||
+      row?.flight?.airlineIataCode||
+      ''
+    )
+      .trim()
+      .toUpperCase()
+
+  const airline=
+    (flightStore.airlines||[])
+      .find(item=>
+        String(item?.code||'')
+          .trim()
+          .toUpperCase()===
+        airlineCode
+      )
+
+  if(!airline){
+    toast.error(
+      'اطلاعات ایرلاین یافت نشد.'
+    )
+    return
+  }
+
+  const website=
+    String(
+      airline?.website||''
+    )
+      .trim()
+      .replace(/\/+$/,'')
+
+  if(!website){
+    toast.error(
+      'آدرس سایت ایرلاین تعریف نشده است.'
+    )
+    return
+  }
+
+  const pnr=
+    String(
+      row?.pnr||
+      row?.flight?.pnr||
+      ''
+    )
+      .trim()
+
+  if(!pnr){
+    toast.error(
+      'PNR بلیط یافت نشد.'
+    )
+    return
+  }
+
+  const ticketNo=
+    String(
+      row?.ticketNumber||
+      ''
+    )
+      .trim()
+
+  if(!ticketNo){
+    toast.error(
+      'شماره بلیط یافت نشد.'
+    )
+    return
+  }
+
+ 
+
+ const oc=
+  String(
+    airline?.credentials?.username||
+    ''
+  )
+    .trim()
+    .split('.')[0]
+
+  if(!oc){
+    toast.error(
+      'کد دفتر ایرلاین تعریف نشده است.'
+    )
+    return
+  }
+
+  const url=
+    `${website}/TicketPrint.aspx`+
+    `?PNR=${encodeURIComponent(pnr)}`+
+    `&TicketNo=${encodeURIComponent(ticketNo)}`+
+    `&OC=${encodeURIComponent(oc)}`+
+    `&lang=FA`
+
+  closeTicketDownloadModal()
+
+  window.open(
+    url,
+    '_blank'
+  )
+}
 function unwrapApiResponse(response){
   let value=response
 
