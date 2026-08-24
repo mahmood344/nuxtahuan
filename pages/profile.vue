@@ -2319,6 +2319,7 @@ import {
 import {
   toGregorian
 } from 'jalaali-js'
+
 const detailsModalOpen = ref(false)
 const selectedContract = ref(null)
 const toast=useToast()
