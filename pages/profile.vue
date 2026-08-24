@@ -2342,25 +2342,29 @@
           نحوه دریافت بلیط را انتخاب کنید.
         </p>
 
-        <div
-          class="mt-6 flex flex-col gap-3"
-        >
-          <button
-            type="button"
-            class="w-full rounded-xl bg-[#14179e] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#0d107e]"
-            @click="downloadAhuanTicket"
-          >
-            دانلود بلیط آهوان
-          </button>
+       <div class="mt-6 flex flex-col gap-3">
 
-          <button
-            type="button"
-            class="w-full rounded-xl border border-[#14179e] bg-white px-5 py-3.5 text-sm font-bold text-[#14179e] transition hover:bg-blue-50"
-            @click="downloadAirlineTicket"
-          >
-            دانلود بلیط ایرلاین
-          </button>
-        </div>
+  <!-- PARTO -->
+  <button
+    v-if="normalizeFlightProvider(selectedDownloadRow?.provider)==='PARTO'"
+    type="button"
+    class="w-full rounded-xl bg-[#14179e] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#0d107e]"
+    @click="downloadAhuanTicket"
+  >
+    دانلود بلیط آهوان
+  </button>
+
+  <!-- پرواز داخلی -->
+  <button
+    v-else
+    type="button"
+    class="w-full rounded-xl bg-[#14179e] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#0d107e]"
+    @click="downloadAirlineTicket"
+  >
+    دانلود بلیط ایرلاین
+  </button>
+
+</div>
       </div>
     </div>
   </Transition>
@@ -3457,30 +3461,11 @@ function isDomesticTicket(row){
 }
 
 function downloadContractTicket(row){
-
-  const contractId=
-    selectedContract.value?.id
-
-  if(!contractId){
-    toast.error(
-      'شناسه قرارداد یافت نشد.'
-    )
+  if(!selectedContract.value?.id){
+    toast.error('شناسه قرارداد یافت نشد.')
     return
   }
 
-  /*
-   * پرواز خارجی:
-   * فقط بلیط آهوان
-   */
-  if(!isDomesticTicket(row)){
-    downloadAhuanTicket()
-    return
-  }
-
-  /*
-   * پرواز داخلی:
-   * مدال دو گزینه‌ای
-   */
   selectedDownloadRow.value=row
   ticketDownloadModalOpen.value=true
 }
