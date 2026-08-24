@@ -24,7 +24,13 @@
             v-else
             class="bi bi-chevron-down text-gray-400 text-xs"
           ></i>
-          <span v-if="mabda" class="mr-2">{{ mabda.cityNicName }}</span>
+          <span v-if="mabda" class="mr-2 truncate text-[11px]">
+  {{
+    sendFlightType==='international'
+      ?mabda.nicName||mabda.cityNicName
+      :mabda.cityNicName
+  }}
+</span>
           <span v-else class="text-gray-400 font-bold text-[10px] mr-2">انتخاب مبدا</span>
         </div>
 
@@ -52,13 +58,36 @@
 
           <!-- لیست شهرها -->
           <div 
-            v-for="city in (searchMabda ? dropdownCities : popularCities)"
-            :key="city.id || city.cityCode || city.iataCode"
-            @click="selectMabda(city)"
-            class="city-item"
-          >
-            {{ city.cityNicName }}
-          </div>
+  v-for="city in (searchMabda ? dropdownCities : popularCities)"
+  :key="city.id || city.iataCode"
+  @click="selectMabda(city)"
+  class="city-item"
+>
+  <template v-if="sendFlightType==='international'">
+    <div class="flex items-center justify-between gap-3">
+      <div class="flex flex-col">
+        <span class="font-bold text-gray-700 text-[11px]">
+          {{ city.nicName || city.cityNicName }}
+        </span>
+
+        <span class="mt-1 text-[11px] text-gray-400">
+          {{ city.cityNicName }} - {{ city.countryNicName }}
+        </span>
+      </div>
+
+      <span
+        dir="ltr"
+        class="shrink-0 rounded-md text-[9px] bg-gray-100 px-2 py-1 text-xs font-bold text-gray-600"
+      >
+        {{ city.iataCode }}
+      </span>
+    </div>
+  </template>
+
+  <template v-else>
+    {{ city.cityNicName }}
+  </template>
+</div>
         </div>
       </div>
 
@@ -95,12 +124,18 @@
             v-else
             class="bi bi-chevron-down text-gray-400 text-xs"
           ></i>
-          <span v-if="maghsad" class="mr-2">{{ maghsad.cityNicName }}</span>
+          <span v-if="maghsad" class="mr-2 truncate text-[11px]">
+  {{
+    sendFlightType==='international'
+      ?maghsad.nicName||maghsad.cityNicName
+      :maghsad.cityNicName
+  }}
+</span>
           <span v-else class="text-gray-400 font-bold text-[10px] mr-2">انتخاب مقصد</span>
         </div>
 
         <!-- لیست شهرهای مقصد -->
-        <div v-if="isMaghsadOpen" class="custom-dropdown">
+        <div v-if="isMaghsadOpen" class="custom-dropdown ">
           <!-- input سرچ -->
           <div class="relative w-full">
             <input
@@ -121,13 +156,36 @@
           </div>
 
           <div 
-            v-for="city in (searchMaghsad ? dropdownCities : popularCities)"
-            :key="city.id || city.cityCode || city.iataCode"
-            @click="selectMaghsad(city)"
-            class="city-item"
-          >
-            {{ city.cityNicName }}
-          </div>
+  v-for="city in (searchMaghsad ? dropdownCities : popularCities)"
+  :key="city.id || city.iataCode"
+  @click="selectMaghsad(city)"
+  class="city-item"
+>
+  <template v-if="sendFlightType==='international'">
+    <div class="flex items-center justify-between gap-3">
+      <div class="flex flex-col">
+        <span class="font-bold text-gray-700 text-[11px]">
+          {{ city.nicName || city.cityNicName }}
+        </span>
+
+        <span class="mt-1 text-[11px] text-gray-400">
+          {{ city.cityNicName }} - {{ city.countryNicName }}
+        </span>
+      </div>
+
+      <span
+        dir="ltr"
+        class="shrink-0 rounded-md bg-gray-100 px-2 py-1 text-xs font-bold text-[10px] text-gray-600"
+      >
+        {{ city.iataCode }}
+      </span>
+    </div>
+  </template>
+
+  <template v-else>
+    {{ city.cityNicName }}
+  </template>
+</div>
         </div>
       </div>
     </div>
@@ -144,7 +202,7 @@ const props = defineProps({
     default: "domestic"
   }
 })
-
+const toast=useToast()
 const emit = defineEmits([
   'update:mabda',
   'update:maghsad',
@@ -193,13 +251,35 @@ const popularCities = computed(() => {
 /* -----------------------
 پرتردد خارجی
 ----------------------- */
-const fetchInternationalPopular = async () => {
-  try {
-    const res = await $fetch(`https://api.ahuan.ir/api/BasicInfo/default-airports`)
-    console.log(res , 'res');
-    internationalPopularCities.value = res || []
-  } catch (err) {
-    console.error("popular airports error", err)
+const fetchInternationalPopular=async()=>{
+  try{
+    const res=
+      await $fetch(
+        'https://api.ahuan.ir/api/BasicInfo/default-airports'
+      )
+
+    if(
+      !Array.isArray(res)||
+      !res.length
+    ){
+      throw new Error(
+        'اطلاعاتی دریافت نشد'
+      )
+    }
+
+    internationalPopularCities.value=
+      res
+  }catch(err){
+    console.error(
+      'popular airports error:',
+      err
+    )
+
+    internationalPopularCities.value=[]
+
+    toast.error(
+      'خطا در دریافت اطلاعات'
+    )
   }
 }
 

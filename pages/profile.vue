@@ -817,7 +817,7 @@
                 type="button"
                 class="rounded-full bg-[#e9b978] px-5 py-2 text-xs font-bold text-white"
                 :disabled="deletingPassengerId === passenger.id"
-                @click="deletePassenger(passenger)"
+                @click="openDeletePassengerModal(passenger)"
               >
                 {{
                   deletingPassengerId === passenger.id
@@ -1900,47 +1900,110 @@
               </label>
             </div>
           </div>
+<div class="mt-6">
+  <p class="mb-3 text-xs font-bold text-gray-700">
+    تاریخ صدور پاسپورت
+  </p>
 
-          <div class="mt-6">
-            <p class="mb-3 text-xs font-bold text-gray-700">
-              تاریخ انقضای پاسپورت
-            </p>
+  <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <UiBaseAutocomplete
+      :model-value="passengerForm.passportIssueDay"
+      :items="dayOptions"
+      item-text="label"
+      item-value="value"
+      label="روز"
+      placeholder="روز"
+      :rtl="true"
+      :menu-props="scrollableMenuProps"
+      @update:model-value="
+        passengerForm.passportIssueDay=
+          extractValue($event)
+      "
+    />
 
-            <div class="grid grid-cols-3 gap-3">
-              <label class="profile-edit-field">
-                <span>روز</span>
+    <UiBaseAutocomplete
+      :model-value="passengerForm.passportIssueMonth"
+      :items="gregorianMonthOptions"
+      item-text="label"
+      item-value="value"
+      label="ماه"
+      placeholder="ماه"
+      :rtl="true"
+      :menu-props="scrollableMenuProps"
+      @update:model-value="
+        passengerForm.passportIssueMonth=
+          extractValue($event)
+      "
+    />
 
-                <input
-                  v-model="passengerForm.passportExpDay"
-                  type="number"
-                  min="1"
-                  max="31"
-                >
-              </label>
+    <UiBaseAutocomplete
+      :model-value="passengerForm.passportIssueYear"
+      :items="passportIssueYearOptions"
+      item-text="label"
+      item-value="value"
+      label="سال"
+      placeholder="سال میلادی"
+      :rtl="true"
+      :menu-props="scrollableMenuProps"
+      @update:model-value="
+        passengerForm.passportIssueYear=
+          extractValue($event)
+      "
+    />
+  </div>
+</div>
+         <div class="mt-6">
+  <p class="mb-3 text-xs font-bold text-gray-700">
+    تاریخ انقضای پاسپورت
+  </p>
 
-              <label class="profile-edit-field">
-                <span>ماه</span>
+  <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <UiBaseAutocomplete
+      :model-value="passengerForm.passportExpDay"
+      :items="dayOptions"
+      item-text="label"
+      item-value="value"
+      label="روز"
+      placeholder="روز"
+      :rtl="true"
+      :menu-props="scrollableMenuProps"
+      @update:model-value="
+        passengerForm.passportExpDay=
+          extractValue($event)
+      "
+    />
 
-                <input
-                  v-model="passengerForm.passportExpMonth"
-                  type="number"
-                  min="1"
-                  max="12"
-                >
-              </label>
+    <UiBaseAutocomplete
+      :model-value="passengerForm.passportExpMonth"
+      :items="gregorianMonthOptions"
+      item-text="label"
+      item-value="value"
+      label="ماه"
+      placeholder="ماه"
+      :rtl="true"
+      :menu-props="scrollableMenuProps"
+      @update:model-value="
+        passengerForm.passportExpMonth=
+          extractValue($event)
+      "
+    />
 
-              <label class="profile-edit-field">
-                <span>سال</span>
-
-                <input
-                  v-model="passengerForm.passportExpYear"
-                  type="number"
-                  min="1400"
-                  max="1600"
-                >
-              </label>
-            </div>
-          </div>
+    <UiBaseAutocomplete
+      :model-value="passengerForm.passportExpYear"
+      :items="passportExpireYearOptions"
+      item-text="label"
+      item-value="value"
+      label="سال"
+      placeholder="سال میلادی"
+      :rtl="true"
+      :menu-props="scrollableMenuProps"
+      @update:model-value="
+        passengerForm.passportExpYear=
+          extractValue($event)
+      "
+    />
+  </div>
+</div>
 
           <p
             v-if="passengerFormError"
@@ -2173,7 +2236,135 @@
     </div>
   </Transition>
 </Teleport>
+<Teleport to="body">
+  <Transition name="passenger-modal">
+    <div
+      v-if="deletePassengerModalOpen"
+      dir="rtl"
+      class="fixed inset-0 z-[4000] flex items-center justify-center bg-black/40 p-4"
+      @click.self="closeDeletePassengerModal"
+    >
+      <div
+        class="w-full max-w-[420px] rounded-2xl bg-white p-6 shadow-2xl"
+      >
+        <div class="text-center">
+          <div
+            class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-50 text-2xl text-red-600"
+          >
+            !
+          </div>
 
+          <h2
+            class="mt-4 text-lg font-black text-gray-800"
+          >
+            حذف مسافر
+          </h2>
+
+          <p
+            class="mt-3 text-sm leading-7 text-gray-500"
+          >
+            آیا از حذف
+            <strong class="text-gray-800">
+              {{passengerToDelete?.fName}}
+              {{passengerToDelete?.lName}}
+            </strong>
+            مطمئن هستید؟
+          </p>
+
+          <p
+            class="mt-1 text-xs text-red-500"
+          >
+            این عملیات قابل بازگشت نیست.
+          </p>
+        </div>
+
+        <div
+          class="mt-6 flex items-center justify-center gap-3"
+        >
+          <button
+            type="button"
+            class="min-w-[120px] rounded-full border border-gray-300 bg-white px-5 py-2.5 text-sm font-bold text-gray-600 transition hover:bg-gray-50"
+            :disabled="!!deletingPassengerId"
+            @click="closeDeletePassengerModal"
+          >
+            انصراف
+          </button>
+
+          <button
+            type="button"
+            class="min-w-[120px] rounded-full bg-red-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+            :disabled="!!deletingPassengerId"
+            @click="confirmDeletePassenger"
+          >
+            {{
+              deletingPassengerId
+                ?'در حال حذف...'
+                :'حذف مسافر'
+            }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </Transition>
+</Teleport>
+<Teleport to="body">
+  <Transition name="contract-modal">
+    <div
+      v-if="ticketDownloadModalOpen"
+      dir="rtl"
+      class="fixed inset-0 z-[5000] flex items-center justify-center bg-black/40 p-4 backdrop-blur-[1px]"
+      @click.self="closeTicketDownloadModal"
+    >
+      <div
+        class="w-full max-w-[420px] rounded-2xl bg-white p-6 shadow-2xl"
+      >
+        <div
+          class="flex items-center justify-between border-b border-gray-200 pb-4"
+        >
+          <h2
+            class="text-base font-black text-gray-800"
+          >
+            دریافت بلیط
+          </h2>
+
+          <button
+            type="button"
+            class="flex h-8 w-8 items-center justify-center rounded-full text-2xl text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
+            @click="closeTicketDownloadModal"
+          >
+            ×
+          </button>
+        </div>
+
+        <p
+          class="mt-5 text-center text-sm text-gray-500"
+        >
+          نحوه دریافت بلیط را انتخاب کنید.
+        </p>
+
+        <div
+          class="mt-6 flex flex-col gap-3"
+        >
+          <button
+            type="button"
+            class="w-full rounded-xl bg-[#14179e] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#0d107e]"
+            @click="downloadAhuanTicket"
+          >
+            دانلود بلیط آهوان
+          </button>
+
+          <button
+            type="button"
+            class="w-full rounded-xl border border-[#14179e] bg-white px-5 py-3.5 text-sm font-bold text-[#14179e] transition hover:bg-blue-50"
+            @click="downloadAirlineTicket"
+          >
+            دانلود بلیط ایرلاین
+          </button>
+        </div>
+      </div>
+    </div>
+  </Transition>
+</Teleport>
 </template>
 
 <script setup>
@@ -2186,9 +2377,13 @@ import {
 import {
   toGregorian
 } from 'jalaali-js'
+
 const detailsModalOpen = ref(false)
 const selectedContract = ref(null)
-
+const toast=useToast()
+const flightStore=useFlightStore()
+const ticketDownloadModalOpen=ref(false)
+const selectedDownloadRow=ref(null)
 const cancelModalOpen=ref(false)
 const cancelModalStep=ref('confirm')
 const selectedCancelRow=ref(null)
@@ -2199,7 +2394,75 @@ const cancelPenalty=ref(0)
 const cancelRefundAmount=ref(0)
 const cancelInitialPreview=ref(null)
 const cancelResult=ref(null)
+const gregorianMonthOptions=[
+  {label:'January',value:'1'},
+  {label:'February',value:'2'},
+  {label:'March',value:'3'},
+  {label:'April',value:'4'},
+  {label:'May',value:'5'},
+  {label:'June',value:'6'},
+  {label:'July',value:'7'},
+  {label:'August',value:'8'},
+  {label:'September',value:'9'},
+  {label:'October',value:'10'},
+  {label:'November',value:'11'},
+  {label:'December',value:'12'}
+]
 
+const scrollableMenuProps={
+  maxHeight:'220px',
+  overflowY:'auto'
+}
+
+const dayOptions=Array.from(
+  {length:31},
+  (_,i)=>({
+    label:String(i+1),
+    value:String(i+1)
+  })
+)
+
+function getPassportIssueYearOptions(){
+  const years=[]
+  const currentYear=new Date().getFullYear()
+
+  for(
+    let year=currentYear;
+    year>=1920;
+    year--
+  ){
+    years.push({
+      label:String(year),
+      value:String(year)
+    })
+  }
+
+  return years
+}
+
+function getPassportExpireYearOptions(){
+  const years=[]
+  const currentYear=new Date().getFullYear()
+
+  for(
+    let year=currentYear;
+    year<=currentYear+15;
+    year++
+  ){
+    years.push({
+      label:String(year),
+      value:String(year)
+    })
+  }
+
+  return years
+}
+
+const passportIssueYearOptions=
+  getPassportIssueYearOptions()
+
+const passportExpireYearOptions=
+  getPassportExpireYearOptions()
 const BANK_REFUND_API='https://panel.ahuan.ir/api/Refund'
 const SAFAR_CARD_RESTORE_API=''
 
@@ -2723,7 +2986,40 @@ function getPassengerTicketNumber(
     ''
   ).trim()
 }
+function buildPassportDate({
+  year,
+  month,
+  day
+}){
+  const y=Number(year)
+  const m=Number(month)
+  const d=Number(day)
 
+  if(!y||!m||!d){
+    return null
+  }
+
+  const date=new Date(
+    y,
+    m-1,
+    d
+  )
+
+  if(
+    Number.isNaN(date.getTime())||
+    date.getFullYear()!==y||
+    date.getMonth()!==m-1||
+    date.getDate()!==d
+  ){
+    return null
+  }
+
+  return[
+    String(y).padStart(4,'0'),
+    String(m).padStart(2,'0'),
+    String(d).padStart(2,'0')
+  ].join('-')
+}
 function normalizeFlightProvider(value){
   const provider=String(value||'')
     .trim()
@@ -2746,7 +3042,27 @@ function normalizePaymentType(value){
     ?'agency'
     :type
 }
+function extractValue(payload){
+  if(payload==null)return''
 
+  if(typeof payload==='object'){
+    if(
+      'target' in payload&&
+      payload.target?.value!=null
+    ){
+      return payload.target.value
+    }
+
+    if(
+      'value' in payload&&
+      payload.value!=null
+    ){
+      return payload.value
+    }
+  }
+
+  return payload
+}
 function getCancellationList(documentValue){
   return Array.isArray(
     documentValue?.cancellations
@@ -3051,18 +3367,138 @@ function getCancelButtonClass(row){
     :'cursor-not-allowed border-gray-300 bg-gray-50 text-gray-300'
 }
 
+// function downloadContractTicket(row){
+//   const contractId=
+//     selectedContract.value?.id
+
+//   if(!contractId) return
+
+//   if(row?.ticketUrl){
+//     window.open(
+//       row.ticketUrl,
+//       '_blank'
+//     )
+
+//     return
+//   }
+
+//   const encodedContractId=
+//     window.btoa(
+//       String(contractId)
+//     )
+
+//   navigateTo(
+//     `/downloadticket/${encodedContractId}`
+//   )
+// }
+function isDomesticTicket(row){
+
+  const provider=
+    normalizeFlightProvider(
+      row?.provider||
+      row?.flight?.flightSupplier
+    )
+
+  if(provider==='PARTO'){
+    return false
+  }
+
+  if(
+    [
+      'NIRA',
+      'MAHAN',
+      'SEPEHRAN',
+      'AIRTOUR'
+    ].includes(provider)
+  ){
+    return true
+  }
+
+  const domesticCodes=
+    new Set(
+      [
+        ...(flightStore.iranAirports||[]),
+        ...(flightStore.popularCities||[])
+      ]
+        .flatMap(item=>[
+          item?.cityCode,
+          item?.iataCode
+        ])
+        .filter(Boolean)
+        .map(item=>
+          String(item)
+            .trim()
+            .toUpperCase()
+        )
+    )
+
+  const origin=
+    String(
+      row?.origin||
+      row?.flight?.origin||
+      ''
+    )
+      .trim()
+      .toUpperCase()
+
+  const destination=
+    String(
+      row?.destination||
+      row?.flight?.destination||
+      ''
+    )
+      .trim()
+      .toUpperCase()
+
+  return(
+    domesticCodes.has(origin)&&
+    domesticCodes.has(destination)
+  )
+}
+
 function downloadContractTicket(row){
+
   const contractId=
     selectedContract.value?.id
 
-  if(!contractId) return
-
-  if(row?.ticketUrl){
-    window.open(
-      row.ticketUrl,
-      '_blank'
+  if(!contractId){
+    toast.error(
+      'شناسه قرارداد یافت نشد.'
     )
+    return
+  }
 
+  /*
+   * پرواز خارجی:
+   * فقط بلیط آهوان
+   */
+  if(!isDomesticTicket(row)){
+    downloadAhuanTicket()
+    return
+  }
+
+  /*
+   * پرواز داخلی:
+   * مدال دو گزینه‌ای
+   */
+  selectedDownloadRow.value=row
+  ticketDownloadModalOpen.value=true
+}
+
+function closeTicketDownloadModal(){
+  ticketDownloadModalOpen.value=false
+  selectedDownloadRow.value=null
+}
+
+function downloadAhuanTicket(){
+
+  const contractId=
+    selectedContract.value?.id
+
+  if(!contractId){
+    toast.error(
+      'شناسه قرارداد یافت نشد.'
+    )
     return
   }
 
@@ -3071,11 +3507,124 @@ function downloadContractTicket(row){
       String(contractId)
     )
 
+  closeTicketDownloadModal()
+
   navigateTo(
     `/downloadticket/${encodedContractId}`
   )
 }
 
+function downloadAirlineTicket(){
+
+  const row=
+    selectedDownloadRow.value
+
+  if(!row){
+    toast.error(
+      'اطلاعات بلیط یافت نشد.'
+    )
+    return
+  }
+
+  const airlineCode=
+    String(
+      row?.airlineCode||
+      row?.flight?.airlineIataCode||
+      ''
+    )
+      .trim()
+      .toUpperCase()
+
+  const airline=
+    (flightStore.airlines||[])
+      .find(item=>
+        String(item?.code||'')
+          .trim()
+          .toUpperCase()===
+        airlineCode
+      )
+
+  if(!airline){
+    toast.error(
+      'اطلاعات ایرلاین یافت نشد.'
+    )
+    return
+  }
+
+  const website=
+    String(
+      airline?.website||''
+    )
+      .trim()
+      .replace(/\/+$/,'')
+
+  if(!website){
+    toast.error(
+      'آدرس سایت ایرلاین تعریف نشده است.'
+    )
+    return
+  }
+
+  const pnr=
+    String(
+      row?.pnr||
+      row?.flight?.pnr||
+      ''
+    )
+      .trim()
+
+  if(!pnr){
+    toast.error(
+      'PNR بلیط یافت نشد.'
+    )
+    return
+  }
+
+  const ticketNo=
+    String(
+      row?.ticketNumber||
+      ''
+    )
+      .trim()
+
+  if(!ticketNo){
+    toast.error(
+      'شماره بلیط یافت نشد.'
+    )
+    return
+  }
+
+ 
+
+ const oc=
+  String(
+    airline?.credentials?.username||
+    ''
+  )
+    .trim()
+    .split('.')[0]
+
+  if(!oc){
+    toast.error(
+      'کد دفتر ایرلاین تعریف نشده است.'
+    )
+    return
+  }
+
+  const url=
+    `${website}/TicketPrint.aspx`+
+    `?PNR=${encodeURIComponent(pnr)}`+
+    `&TicketNo=${encodeURIComponent(ticketNo)}`+
+    `&OC=${encodeURIComponent(oc)}`+
+    `&lang=FA`
+
+  closeTicketDownloadModal()
+
+  window.open(
+    url,
+    '_blank'
+  )
+}
 function unwrapApiResponse(response){
   let value=response
 
@@ -3332,7 +3881,37 @@ async function cancelNiraSeat(row){
     response:data
   }
 }
+function openDeletePassengerModal(passenger){
+  passengerToDelete.value=passenger
+  deletePassengerModalOpen.value=true
 
+  if(import.meta.client){
+    document.body.style.overflow='hidden'
+  }
+}
+
+function closeDeletePassengerModal(){
+  if(deletingPassengerId.value){
+    return
+  }
+
+  deletePassengerModalOpen.value=false
+  passengerToDelete.value=null
+
+  if(import.meta.client){
+    document.body.style.overflow=''
+  }
+}
+
+async function confirmDeletePassenger(){
+  if(!passengerToDelete.value){
+    return
+  }
+
+  await deletePassenger(
+    passengerToDelete.value
+  )
+}
 async function executeNiraEtRefund(
   row,
   etr,
@@ -5335,8 +5914,9 @@ const passengerFormMode = ref('add')
 const passengerSubmitting = ref(false)
 const passengerFormError = ref('')
 const deletingPassengerId = ref(null)
-
-const createEmptyPassengerForm = () => ({
+const deletePassengerModalOpen=ref(false)
+const passengerToDelete=ref(null)
+const createEmptyPassengerForm=()=>({
   id:0,
   fName:'',
   lName:'',
@@ -5345,9 +5925,15 @@ const createEmptyPassengerForm = () => ({
   nationality:'ایرانی',
   gender:true,
   age:'-',
+
   birthDay:'',
   birthMonth:'',
   birthYear:'',
+
+  passportIssueDay:'',
+  passportIssueMonth:'',
+  passportIssueYear:'',
+
   passportExpDay:'',
   passportExpMonth:'',
   passportExpYear:''
@@ -5356,6 +5942,7 @@ const createEmptyPassengerForm = () => ({
 const passengerForm = ref(
   createEmptyPassengerForm()
 )
+
 async function fetchCustomerInfo() {
   const cookieData =
     getUserCookieData()
@@ -5460,26 +6047,51 @@ function openAddPassengerModal() {
       'hidden'
   }
 }
-function getPersianDateParts(value) {
-  if (!value) {
-    return {
+function getGregorianDateParts(value){
+  if(!value){
+    return{
       year:'',
       month:'',
       day:''
     }
   }
 
-  const date = new Date(value)
+  const date=new Date(value)
 
-  if (Number.isNaN(date.getTime())) {
-    return {
+  if(Number.isNaN(date.getTime())){
+    return{
       year:'',
       month:'',
       day:''
     }
   }
 
-  const formatter =
+  return{
+    year:String(date.getFullYear()),
+    month:String(date.getMonth()+1),
+    day:String(date.getDate())
+  }
+}
+function getPersianDateParts(value){
+  if(!value){
+    return{
+      year:'',
+      month:'',
+      day:''
+    }
+  }
+
+  const date=new Date(value)
+
+  if(Number.isNaN(date.getTime())){
+    return{
+      year:'',
+      month:'',
+      day:''
+    }
+  }
+
+  const formatter=
     new Intl.DateTimeFormat(
       'en-US-u-ca-persian',
       {
@@ -5489,70 +6101,84 @@ function getPersianDateParts(value) {
       }
     )
 
-  const parts =
+  const parts=
     formatter.formatToParts(date)
 
-  const result = {}
+  const result={}
 
-  parts.forEach((part) => {
-    if (
-      part.type === 'year' ||
-      part.type === 'month' ||
-      part.type === 'day'
-    ) {
-      result[part.type] =
-        part.value
+  parts.forEach(part=>{
+    if(
+      part.type==='year'||
+      part.type==='month'||
+      part.type==='day'
+    ){
+      result[part.type]=part.value
     }
   })
 
-  return {
-    year:result.year || '',
-    month:result.month || '',
-    day:result.day || ''
+  return{
+    year:result.year||'',
+    month:result.month||'',
+    day:result.day||''
   }
 }
-
-function openEditPassengerModal(passenger) {
-  const birthDate =
+function openEditPassengerModal(passenger){
+  const birthDate=
     getPersianDateParts(
       passenger?.birthDate
     )
 
-  const passportExpDate =
-    getPersianDateParts(
+  const passportIssueDate=
+    getGregorianDateParts(
+      passenger?.passportIssueDate
+    )
+
+  const passportExpDate=
+    getGregorianDateParts(
       passenger?.passportExpDate
     )
 
-  passengerFormMode.value = 'edit'
-  passengerFormError.value = ''
+  passengerFormMode.value='edit'
+  passengerFormError.value=''
 
-  passengerForm.value = {
-    id:Number(passenger?.id || 0),
-    fName:String(passenger?.fName || ''),
-    lName:String(passenger?.lName || ''),
-    codeMelli:String(passenger?.codeMelli || ''),
-    passportNo:String(passenger?.passportNo || ''),
+  passengerForm.value={
+    id:Number(passenger?.id||0),
+    fName:String(passenger?.fName||''),
+    lName:String(passenger?.lName||''),
+    codeMelli:String(passenger?.codeMelli||''),
+    passportNo:String(passenger?.passportNo||''),
+
     nationality:String(
-      passenger?.nationality || 'ایرانی'
+      passenger?.nationality||
+      'ایرانی'
     ),
+
     gender:
-      passenger?.gender === false
-        ? false
-        : true,
-    age:String(passenger?.age || '-'),
+      passenger?.gender===false
+        ?false
+        :true,
+
+    age:String(
+      passenger?.age||'-'
+    ),
+
     birthDay:birthDate.day,
     birthMonth:birthDate.month,
     birthYear:birthDate.year,
-    passportExpDay:passportExpDate.day,
-    passportExpMonth:passportExpDate.month,
-    passportExpYear:passportExpDate.year
+    passportIssueDay:passportIssueDate.day,
+passportIssueMonth:passportIssueDate.month,
+passportIssueYear:passportIssueDate.year,
+
+passportExpDay:passportExpDate.day,
+passportExpMonth:passportExpDate.month,
+passportExpYear:passportExpDate.year
+    
   }
 
-  passengerModalOpen.value = true
+  passengerModalOpen.value=true
 
-  if (typeof document !== 'undefined') {
-    document.body.style.overflow =
-      'hidden'
+  if(typeof document!=='undefined'){
+    document.body.style.overflow='hidden'
   }
 }
 function buildGregorianDate({
@@ -5585,66 +6211,101 @@ function buildGregorianDate({
     return null
   }
 }
-function buildPassengerPayload() {
-  const form =
+function buildPassengerPayload(){
+  const form=
     passengerForm.value
 
-  const birthDate =
+  /*
+   * تاریخ تولد شمسی است و به میلادی
+   * تبدیل می‌شود.
+   */
+  const birthDate=
     buildGregorianDate({
       year:form.birthYear,
       month:form.birthMonth,
       day:form.birthDay
     })
 
-  const hasPassportExpDate =
-    form.passportExpYear &&
-    form.passportExpMonth &&
+  /*
+   * تاریخ صدور پاسپورت از ابتدا میلادی است.
+   */
+  const hasPassportIssueDate=
+    form.passportIssueYear&&
+    form.passportIssueMonth&&
+    form.passportIssueDay
+
+  const passportIssueDate=
+    hasPassportIssueDate
+      ?buildPassportDate({
+          year:form.passportIssueYear,
+          month:form.passportIssueMonth,
+          day:form.passportIssueDay
+        })
+      :null
+
+  /*
+   * تاریخ انقضا هم میلادی است.
+   */
+  const hasPassportExpDate=
+    form.passportExpYear&&
+    form.passportExpMonth&&
     form.passportExpDay
 
-  const passportExpDate =
+  const passportExpDate=
     hasPassportExpDate
-      ? buildGregorianDate({
+      ?buildPassportDate({
           year:form.passportExpYear,
           month:form.passportExpMonth,
           day:form.passportExpDay
         })
-      : null
+      :null
 
-  return {
+  return{
     id:
-      passengerFormMode.value === 'edit'
-        ? Number(form.id)
-        : 0,
+      passengerFormMode.value==='edit'
+        ?Number(form.id)
+        :0,
 
     customerId:
       Number(customerId.value),
 
     gender:
-      form.gender === true,
+      form.gender===true,
 
     fName:
-      String(form.fName || '').trim(),
+      String(
+        form.fName||''
+      ).trim(),
 
     lName:
-      String(form.lName || '').trim(),
+      String(
+        form.lName||''
+      ).trim(),
 
     age:
-      String(form.age || '-'),
+      String(
+        form.age||'-'
+      ),
 
-    codeMelli: String(form.codeMelli || '').trim(),
+    codeMelli:
+      String(
+        form.codeMelli||''
+      ).trim(),
 
     nationality:
       String(
-        form.nationality || 'ایرانی'
+        form.nationality||
+        'ایرانی'
       ).trim(),
 
     birthDate,
 
     passportNo:
       String(
-        form.passportNo || ''
-      ).trim() || null,
+        form.passportNo||''
+      ).trim()||null,
 
+    passportIssueDate,
     passportExpDate
   }
 }
@@ -5670,90 +6331,90 @@ function validatePassengerForm(payload) {
 
   return ''
 }
-async function submitPassenger() {
-  if (passengerSubmitting.value) return
 
-  passengerFormError.value = ''
+async function submitPassenger(){
+  if(passengerSubmitting.value)return
 
-  try {
-    passengerSubmitting.value = true
+  passengerFormError.value=''
 
-    if (!customerId.value) {
+  try{
+    passengerSubmitting.value=true
+
+    if(!customerId.value){
       await fetchCustomerInfo()
     }
 
-    const payload = buildPassengerPayload()
+    const payload=buildPassengerPayload()
 
-    const validationError =
+    const validationError=
       validatePassengerForm(payload)
 
-    if (validationError) {
-      passengerFormError.value =
+    if(validationError){
+      passengerFormError.value=
         validationError
 
       return
     }
 
-    const isEdit =
-      passengerFormMode.value === 'edit'
+    const isEdit=
+      passengerFormMode.value==='edit'
 
     await $fetch(
       isEdit
-        ? 'https://api.ahuan.ir/api/Customer/update-passenger'
-        : 'https://api.ahuan.ir/api/Customer/add-passenger',
+        ?'https://api.ahuan.ir/api/Customer/update-passenger'
+        :'https://api.ahuan.ir/api/Customer/add-passenger',
       {
-        method: isEdit
-          ? 'PUT'
-          : 'POST',
+        method:isEdit
+          ?'PUT'
+          :'POST',
 
-        body: payload,
+        body:payload,
 
-        headers: {
-          'Content-Type': 'application/json'
+        headers:{
+          'Content-Type':'application/json'
         }
       }
     )
 
-    passengerSubmitting.value = false
+    passengerSubmitting.value=false
 
     closePassengerModal()
 
+    toast.success(
+      isEdit
+        ?'اطلاعات مسافر با موفقیت ویرایش شد.'
+        :'مسافر با موفقیت اضافه شد.'
+    )
+
     await fetchPassengers()
-  } catch (error) {
+  }catch(error){
     console.error(
       'Submit passenger error:',
       error
     )
 
-    passengerFormError.value =
-      error?.data?.message ||
-      error?.response?._data?.message ||
-      error?.message ||
+    const message=
+      error?.data?.message||
+      error?.response?._data?.message||
+      error?.message||
       'ثبت اطلاعات مسافر با خطا مواجه شد.'
-  } finally {
-    passengerSubmitting.value = false
+
+    passengerFormError.value=message
+
+    toast.error(message)
+  }finally{
+    passengerSubmitting.value=false
   }
 }
-async function deletePassenger(passenger) {
-  const passengerId =
-    Number(passenger?.id || 0)
+async function deletePassenger(passenger){
+  const passengerId=Number(passenger?.id||0)
 
-  if (!passengerId) {
+  if(!passengerId){
     return
   }
 
-  const confirmed =
-    window.confirm(
-      `آیا از حذف ${passenger?.fName || ''} ${passenger?.lName || ''} مطمئن هستید؟`
-    )
-
-  if (!confirmed) {
-    return
-  }
-
-  try {
-    deletingPassengerId.value =
-      passengerId
+  try{
+    deletingPassengerId.value=passengerId
 
     await $fetch(
       'https://api.ahuan.ir/api/Customer/delete-passenger',
@@ -5765,22 +6426,32 @@ async function deletePassenger(passenger) {
       }
     )
 
+    deletePassengerModalOpen.value=false
+    passengerToDelete.value=null
+
+    if(import.meta.client){
+      document.body.style.overflow=''
+    }
+
+    toast.success(
+      'مسافر با موفقیت حذف شد.'
+    )
+
     await fetchPassengers()
-  } catch (error) {
+  }catch(error){
     console.error(
       'Delete passenger error:',
       error
     )
 
-    alert(
-      error?.data?.message ||
-      error?.response?._data?.message ||
-      error?.message ||
+    toast.error(
+      error?.data?.message||
+      error?.response?._data?.message||
+      error?.message||
       'حذف مسافر با خطا مواجه شد.'
     )
-  } finally {
-    deletingPassengerId.value =
-      null
+  }finally{
+    deletingPassengerId.value=null
   }
 }
 function closePassengerModal() {

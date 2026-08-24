@@ -39,10 +39,25 @@
           ></div>
 
           <p class="text-lg font-medium text-gray-700">
-            در حال بررسی وضعیت پرداخت و صدور بلیت...
+            {{
+              partoWaiting
+                ? 'صدور بلیت در حال انجام است...'
+                : 'در حال بررسی وضعیت پرداخت و صدور بلیت...'
+            }}
           </p>
 
-          <p class="mt-2 text-sm text-gray-400">
+          <p
+            v-if="partoWaiting"
+            class="mt-2 text-sm leading-7 text-orange-600"
+          >
+            صدور بلیت Parto ممکن است تا ۶ دقیقه زمان ببرد.
+            لطفاً تا پایان فرآیند صفحه را نبندید یا بارگذاری مجدد نکنید.
+          </p>
+
+          <p
+            v-else
+            class="mt-2 text-sm text-gray-400"
+          >
             لطفاً صفحه را نبندید یا بارگذاری مجدد نکنید.
           </p>
         </div>
@@ -110,7 +125,7 @@
               v-if="isBankPayment"
               class="font-semibold leading-relaxed text-orange-800"
             >
-              توجه: پرداخت شما با موفقیت انجام شده است اما در فرآیند صدور بلیت خطایی رخ داد. جهت پیگیری با پشتیبانی تماس بگیرید.
+              پرداخت شما با موفقیت انجام شده است اما صدور بلیت ناموفق بود. در صورت وجود مبلغ قابل استرداد، نتیجه استرداد در پیام بالا نمایش داده می‌شود.
             </p>
 
             <p
@@ -239,7 +254,13 @@
 import { useFlightStore } from '~/stores/flights'
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from '#app'
+import{
+  bookParoFlight,
+  issueParoFlight,
+  getParoBooking
+}from'~/services/providers/paro'
 const flightStore = useFlightStore()
+const toast=useToast()
 definePageMeta({
   name: 'verify'
 })
@@ -257,6 +278,15 @@ type PaymentSession = {
   email?: string
   mobile?: string
   travelType?: string
+  providerResults?: Array<{
+    flightId:number|string|null
+    supplier:string
+    pnr:string
+    uniqueId:string
+    fareType:number|null
+    partoFlow:string
+    fareSourceCode?:string
+  }>
 }
 const travelType = computed(() => {
   const value = String(
@@ -299,6 +329,10 @@ const loading = ref(true)
 const errorMessage = ref('')
 const paymentInfo = ref<PaymentSession | null>(null)
 const contractData = ref<any>(null)
+const partoWaiting=ref(false)
+const partoRetryNumber=ref(0)
+const PARTO_RETRY_INTERVAL=2*60*1000
+const PARTO_MAX_RETRIES=3
 
 const statusStep = ref<'PENDING' | 'BANK_FAILED' | 'ISSUE_FAILED' | 'SUCCESS'>('PENDING')
 const PAYMENT_SESSION_KEY = 'flight_payment_session'
@@ -411,53 +445,186 @@ const getPersianFlightTime = (
     `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`
   )
 }
-const getCityNameFromStore = (cityCode: unknown): string => {
-  const code = String(cityCode || '').trim().toUpperCase()
+const getCityNameFromStore=(
+  cityCode:unknown
+):string=>{
+  const code=
+    String(cityCode||'')
+      .trim()
+      .toUpperCase()
 
-  if (!code) return '-'
-
-  const cities = [
-    ...(Array.isArray(flightStore.popularCities) ? flightStore.popularCities : []),
-    ...(Array.isArray(flightStore.iranAirports) ? flightStore.iranAirports : [])
-  ]
-
-  const city = cities.find((item: any) => {
-    const itemCityCode = String(item?.cityCode || '').trim().toUpperCase()
-    const itemIataCode = String(item?.iataCode || '').trim().toUpperCase()
-
-    return itemCityCode === code || itemIataCode === code
-  })
-
-  return String(city?.cityNicName || city?.nicName || code).trim()
-}
-const getAirlineNameFromStore = (
-  airlineCode: unknown
-): string => {
-  const code = String(
-    airlineCode || ''
-  )
-    .trim()
-    .toUpperCase()
-
-  if (!code) {
-    return ''
+  if(!code){
+    return'-'
   }
 
-  const airlines =
-    Array.isArray(flightStore.airlines)
-      ? flightStore.airlines
-      : []
+  const basicAirport=
+    typeof flightStore.getAirportByCode===
+      'function'
+      ?flightStore.getAirportByCode(code)
+      :null
 
-  const airline =
-    airlines.find(
-      (item: any) =>
-        String(item?.code || '')
-          .trim()
-          .toUpperCase() === code
+  if(basicAirport){
+    return String(
+      basicAirport?.cityNicName||
+      basicAirport?.cityName||
+      basicAirport?.nicName||
+      code
+    ).trim()
+  }
+
+  const cities=[
+    ...(
+      Array.isArray(
+        flightStore.popularCities
+      )
+        ?flightStore.popularCities
+        :[]
+    ),
+    ...(
+      Array.isArray(
+        flightStore.iranAirports
+      )
+        ?flightStore.iranAirports
+        :[]
+    )
+  ]
+
+  const city=
+    cities.find(
+      (item:any)=>{
+        const cityCodeValue=
+          String(
+            item?.cityCode||''
+          )
+            .trim()
+            .toUpperCase()
+
+        const iataCodeValue=
+          String(
+            item?.iataCode||''
+          )
+            .trim()
+            .toUpperCase()
+
+        return(
+          cityCodeValue===code||
+          iataCodeValue===code
+        )
+      }
     )
 
   return String(
-    airline?.name || ''
+    city?.cityNicName||
+    city?.cityName||
+    city?.nicName||
+    code
+  ).trim()
+}
+const loadContractAirports=async(
+  contract:any
+)=>{
+  const flights=
+    Array.isArray(
+      contract?.contractFlights
+    )
+      ?contract.contractFlights
+      :[]
+
+  const partoFlights=
+    flights.filter(
+      (flight:any)=>
+        String(
+          flight?.flightSupplier||''
+        )
+          .trim()
+          .toUpperCase()==='PARTO'
+    )
+
+  if(!partoFlights.length){
+    return
+  }
+
+  const codes=[
+    ...new Set(
+      partoFlights
+        .flatMap(
+          (flight:any)=>[
+            flight?.origin,
+            flight?.destination
+          ]
+        )
+        .filter(Boolean)
+        .map(
+          (code:any)=>
+            String(code)
+              .trim()
+              .toUpperCase()
+        )
+    )
+  ]
+
+  await Promise.all(
+    codes.map(
+      code=>
+        flightStore.loadAirportByCode(
+          code
+        )
+    )
+  )
+}
+const getAirlineNameFromStore=(
+  airlineCode:unknown
+):string=>{
+  const code=
+    String(
+      airlineCode||''
+    )
+      .trim()
+      .toUpperCase()
+
+  if(!code){
+    return''
+  }
+
+  const oldAirline=
+    Array.isArray(
+      flightStore.airlines
+    )
+      ?flightStore.airlines.find(
+          (item:any)=>
+            String(
+              item?.code||
+              item?.iataCode||
+              ''
+            )
+              .trim()
+              .toUpperCase()===
+            code
+        )
+      :null
+
+  const basicAirline=
+    Array.isArray(
+      flightStore.basicAirlines
+    )
+      ?flightStore.basicAirlines.find(
+          (item:any)=>
+            String(
+              item?.iataCode||
+              ''
+            )
+              .trim()
+              .toUpperCase()===
+            code
+        )
+      :null
+
+  return String(
+    oldAirline?.name||
+    oldAirline?.nicName||
+    basicAirline?.nicName||
+    basicAirline?.name||
+    code
   ).trim()
 }
 const getPersianFlightDate = (
@@ -595,6 +762,26 @@ const buildFlightSmsText = (
   const ticketUrl =
     `https://ahuan.ir/downloadticket/${encodedContractId}`
 
+  const supplier=String(
+    flight?.flightSupplier||''
+  ).trim().toUpperCase()
+
+  if(
+    supplier==='PARTO'&&
+    issueSucceeded
+  ){
+    return `مسافر گرامی،
+احتراماً به اطلاع می‌رساند که بلیت شما در مسیر ${origin} به ${destination} با موفقیت صادر گردید.
+
+کد رزرو: ${pnr}
+
+لینک دریافت بلیت:
+${ticketUrl}
+
+با آرزوی سفری خوش
+شرکت خدمات مسافرتی آهوان`
+  }
+
   if (issueSucceeded) {
     return `مسافر گرامی،
 احتراماً به اطلاع می‌رساند که ${ticketWord} شما در پرواز هواپیمایی ${airlineName} به شماره ${flightNumber} مورخ ${flightDate} ساعت ${flightTime} از ${origin} به ${destination} صادر گردید.
@@ -637,9 +824,28 @@ const sendContractFlightsSms = async (
     throw new Error('شماره موبایل قرارداد مشخص نیست.')
   }
 
+  const partoFlights=flights.filter(
+    (flight:any)=>
+      String(
+        flight?.flightSupplier||''
+      ).trim().toUpperCase()==='PARTO'
+  )
+
+  const nonPartoFlights=flights.filter(
+    (flight:any)=>
+      String(
+        flight?.flightSupplier||''
+      ).trim().toUpperCase()!=='PARTO'
+  )
+
+  const smsFlights=[
+    ...nonPartoFlights,
+    ...(partoFlights.length?[partoFlights[0]]:[])
+  ]
+
   const results: FlightSmsResult[] = []
 
-  for (const flight of flights) {
+  for (const flight of smsFlights) {
     const matchedStatus = flightIssueStatuses.find(
       (item) => String(item?.flightId) === String(flight?.id)
     )
@@ -798,6 +1004,373 @@ const applyPaymentToFlightJson=(
     writeFlightDocument(flight,document)
   }
 }
+type PartoState='SUCCESS'|'WAITING'|'FAILED'
+
+const delay=(ms:number)=>
+  new Promise<void>(resolve=>
+    setTimeout(resolve,ms)
+  )
+
+const getPartoState=(
+  category:number,
+  status:number
+):PartoState=>{
+  if([21,22,23].includes(status)){
+    return'SUCCESS'
+  }
+
+  if([10,11,12,20].includes(status)){
+    return'WAITING'
+  }
+
+  if([24,25,30,40,41,42].includes(status)){
+    return'FAILED'
+  }
+
+  if(
+    category===21&&
+    [21,22,23].includes(status)
+  ){
+    return'SUCCESS'
+  }
+
+  if(
+    (category===10&&[10,11,12].includes(status))||
+    (category===20&&status===20)
+  ){
+    return'WAITING'
+  }
+
+  if(
+    (category===21&&[24,25].includes(status))||
+    (category===30&&status===30)||
+    (category===40&&[40,41,42].includes(status))
+  ){
+    return'FAILED'
+  }
+
+  return'WAITING'
+}
+
+const waitForPartoBooking=async(
+  uniqueId:string
+)=>{
+  partoWaiting.value=true
+  partoRetryNumber.value=0
+
+  try{
+    let response=await getParoBooking(uniqueId)
+    let category=Number(response?.category||0)
+    let status=Number(response?.status||0)
+    let state=getPartoState(category,status)
+
+    if(state!=='WAITING'){
+      return{
+        state,
+        category,
+        status,
+        response,
+        timeout:false
+      }
+    }
+
+    for(
+      let attempt=1;
+      attempt<=PARTO_MAX_RETRIES;
+      attempt++
+    ){
+      partoRetryNumber.value=attempt
+      await delay(PARTO_RETRY_INTERVAL)
+
+      response=await getParoBooking(uniqueId)
+      category=Number(response?.category||0)
+      status=Number(response?.status||0)
+      state=getPartoState(category,status)
+
+      if(state!=='WAITING'){
+        return{
+          state,
+          category,
+          status,
+          response,
+          timeout:false
+        }
+      }
+    }
+
+    return{
+      state:'FAILED' as const,
+      category,
+      status,
+      response,
+      timeout:true
+    }
+  }finally{
+    partoWaiting.value=false
+  }
+}
+
+const getPartoProviderResult=(
+  session:PaymentSession
+)=>{
+  const items=Array.isArray(session?.providerResults)
+    ?session.providerResults
+    :[]
+
+  return items.find(
+    item=>
+      String(item?.supplier||'')
+        .trim()
+        .toUpperCase()==='PARTO'
+  )||null
+}
+
+const getPartoPassengerTypeFromContract=(
+  passenger:any
+):number=>{
+  const type=String(
+    passenger?.age||
+    passenger?.type||
+    'ADL'
+  ).trim().toUpperCase()
+
+  if(type==='CHD'||type==='2')return 2
+  if(type==='INF'||type==='3')return 3
+  return 1
+}
+
+const getPartoGenderFromContract=(
+  passenger:any
+):number=>{
+  const value=String(
+    passenger?.gender??''
+  ).trim().toLowerCase()
+
+  if(
+    passenger?.gender===true||
+    value==='true'||
+    value==='male'||
+    value==='m'||
+    value==='1'
+  ){
+    return 0
+  }
+
+  return 1
+}
+
+const getPartoPassengerTitleFromContract=(
+  passenger:any
+):number=>{
+  const passengerType=
+    getPartoPassengerTypeFromContract(
+      passenger
+    )
+
+  const isMale=
+    getPartoGenderFromContract(
+      passenger
+    )===0
+
+  if(
+    passengerType===2||
+    passengerType===3
+  ){
+    return isMale?4:3
+  }
+
+  return isMale?0:2
+}
+
+const mapContractPassengerToParto=(
+  passenger:any
+)=>{
+  const nationality=String(
+    passenger?.nationality||'IR'
+  ).trim().toUpperCase()
+
+  const isIranian=nationality==='IR'
+
+  return{
+    dateOfBirth:
+      passenger?.birthDate||null,
+
+    gender:
+      getPartoGenderFromContract(
+        passenger
+      ),
+
+    passengerType:
+      getPartoPassengerTypeFromContract(
+        passenger
+      ),
+
+    passengerName:{
+      passengerFirstName:String(
+        passenger?.fName||
+        passenger?.firstName||
+        ''
+      ).trim(),
+
+      passengerMiddleName:'',
+
+      passengerLastName:String(
+        passenger?.lName||
+        passenger?.lastName||
+        ''
+      ).trim(),
+
+      passengerTitle:
+        getPartoPassengerTitleFromContract(
+          passenger
+        )
+    },
+
+    passport:{
+      country:nationality,
+
+      expiryDate:
+        passenger?.passportExpDate||
+        passenger?.passportExpireDate||
+        null,
+
+      issueDate:
+        passenger?.passportIssueDate||'',
+
+      passportNumber:String(
+        passenger?.passportNo||
+        passenger?.passportNumber||
+        ''
+      ).trim()
+    },
+
+    nationalId:isIranian
+      ?String(
+          passenger?.codeMelli||
+          passenger?.nationalCode||
+          ''
+        ).trim()
+      :'',
+
+    nationality,
+    extraServiceId:[],
+    mealTypeServiceId:[],
+    seatServiceId:[],
+    frequentFlyerNumber:'',
+    seatPreference:0,
+    mealPreference:0,
+    wheelchair:false,
+    destinationAddress:''
+  }
+}
+
+const buildPartoBookPayloadFromContract=(
+  contract:any,
+  session:PaymentSession,
+  providerResult:any
+)=>{
+  const fareSourceCode=String(
+    providerResult?.fareSourceCode||''
+  ).trim()
+
+  if(!fareSourceCode){
+    throw new Error(
+      'FareSourceCode پرواز Parto در اطلاعات پرداخت ذخیره نشده است.'
+    )
+  }
+
+  const passengers=Array.isArray(
+    contract?.contractPassengers
+  )
+    ?contract.contractPassengers
+    :[]
+
+  const airTravelers=passengers
+    .map(mapContractPassengerToParto)
+
+  if(!airTravelers.length){
+    throw new Error(
+      'اطلاعات مسافران قرارداد برای رزرو Parto موجود نیست.'
+    )
+  }
+
+  const phoneNumber=String(
+    session?.mobile||
+    contract?.userName||
+    contract?.mobile||
+    contract?.contactMobile||
+    ''
+  ).trim()
+
+  const email=String(
+    session?.email||
+    contract?.email||
+    contract?.contactEmail||
+    ''
+  ).trim()
+
+  return{
+    fareSourceCode,
+    clientUniqueId:`AHUAN-${Date.now()}`,
+    markupForAdult:0,
+    markupForChild:0,
+    markupForInfant:0,
+    cancellationGuaranteeId:'',
+    travelerInfo:{
+      phoneNumber,
+      email,
+      ownerPhoneNumber:phoneNumber,
+      ownerEmail:email,
+      airTravelers
+    },
+    payLaterServiceId:''
+  }
+}
+
+const extractPartoTicketNumbers=(
+  response:any
+):string[]=>{
+  const result=new Set<string>()
+  const ticketKeys=new Set([
+    'ticketnumber',
+    'ticketno',
+    'eticketnumber',
+    'eticketno',
+    'tickets'
+  ])
+
+  const walk=(value:any)=>{
+    if(value==null)return
+
+    if(Array.isArray(value)){
+      value.forEach(walk)
+      return
+    }
+
+    if(typeof value!=='object')return
+
+    for(const[key,item]of Object.entries(value)){
+      const normalizedKey=String(key)
+        .replace(/[^a-z0-9]/gi,'')
+        .toLowerCase()
+
+      if(
+        ticketKeys.has(normalizedKey)&&
+        (typeof item==='string'||
+         typeof item==='number')
+      ){
+        const ticket=String(item).trim()
+        if(ticket)result.add(ticket)
+      }else{
+        walk(item)
+      }
+    }
+  }
+
+  walk(response)
+  return[...result]
+}
+
 const issueContractBySupplier = async (contract: any) => {
   const contractId = Number(contract?.id || 0)
 
@@ -821,6 +1394,7 @@ const issueContractBySupplier = async (contract: any) => {
 
   const hasNira = suppliers.includes('NIRA')
   const hasMahan = suppliers.includes('MAHAN')
+  const hasParto = suppliers.includes('PARTO')
 
   /*
    * صدور پروازهای نیرا
@@ -1268,6 +1842,320 @@ writeFlightDocument(
   issueResults,
   contract
 }
+  }
+
+  /*
+   * صدور Parto
+   *
+   * چه یک‌طرفه و چه رفت‌وبرگشت، Parto یک Booking
+   * و یک UniqueId دارد. بنابراین Book/Issue/GetBooking
+   * فقط یک بار اجرا می‌شود و نتیجه روی تمام
+   * contractFlightهای Parto اعمال می‌شود.
+   */
+  if(hasParto){
+    const session=getPaymentSession()
+
+    if(!session){
+      throw new Error(
+        'اطلاعات پرداخت برای صدور Parto یافت نشد.'
+      )
+    }
+
+    const partoFlights=flights.filter(
+      (flight:any)=>
+        String(
+          flight?.flightSupplier||''
+        ).trim().toUpperCase()==='PARTO'
+    )
+
+    if(!partoFlights.length){
+      throw new Error(
+        'پرواز Parto در قرارداد یافت نشد.'
+      )
+    }
+
+    const providerResult=
+      getPartoProviderResult(session)
+
+    if(!providerResult){
+      throw new Error(
+        'اطلاعات رزرو اولیه Parto در PaymentSession یافت نشد.'
+      )
+    }
+
+    const fareType=Number(
+      providerResult?.fareType||0
+    )
+
+    let uniqueId=String(
+      partoFlights[0]?.pnr||
+      providerResult?.uniqueId||
+      providerResult?.pnr||
+      ''
+    ).trim()
+
+    let actionResponse:any=null
+
+    try{
+      if(fareType===2){
+        if(!uniqueId){
+          throw new Error(
+            'UniqueId رزرو Parto برای Issue موجود نیست.'
+          )
+        }
+
+        actionResponse=
+          await issueParoFlight(
+            uniqueId
+          )
+      }else if(fareType===4){
+        const bookingPayload=
+          buildPartoBookPayloadFromContract(
+            contract,
+            session,
+            providerResult
+          )
+
+        actionResponse=
+          await bookParoFlight(
+            bookingPayload
+          )
+
+        uniqueId=String(
+          actionResponse?.uniqueId||''
+        ).trim()
+
+        if(!uniqueId){
+          throw new Error(
+            'UniqueId رزرو Parto بعد از Book دریافت نشد.'
+          )
+        }
+      }else{
+        throw new Error(
+          `FareType نامعتبر Parto: ${fareType}`
+        )
+      }
+
+      /*
+       * UniqueId کل Booking روی هر دو مسیر رفت و برگشت
+       * در قرارداد ذخیره می‌شود.
+       */
+      for(const flight of partoFlights){
+        flight.pnr=uniqueId
+      }
+
+      /*
+       * GetBooking فقط یک بار برای کل Booking اجرا می‌شود.
+       * در Pending سه بار با فاصله دو دقیقه بررسی می‌شود.
+       */
+      const finalBooking=
+        await waitForPartoBooking(
+          uniqueId
+        )
+
+      const success=
+        finalBooking.state==='SUCCESS'
+
+      const ticketNumbers=success
+        ?extractPartoTicketNumbers(
+            finalBooking.response
+          )
+        :[]
+
+      const resultMessage=success
+        ?'بلیت Parto با موفقیت صادر شد.'
+        :finalBooking.timeout
+          ?'پس از ۶ دقیقه وضعیت رزرو Parto نهایی نشد.'
+          :String(
+              finalBooking.response
+                ?.error?.message||
+              `وضعیت نهایی Parto: ${finalBooking.category}/${finalBooking.status}`
+            )
+
+      /*
+       * Status Parto برای کل Booking یکی است؛ اما برای
+       * سازگاری Settlement، یک نتیجه با همان status برای
+       * هر contractFlight تولید می‌شود.
+       */
+      const issueResults=partoFlights.map(
+        (flight:any)=>({
+          flightId:flight?.id??null,
+          flightNumber:String(
+            flight?.flightNumber||''
+          ).trim(),
+          airlineCode:String(
+            flight?.airlineIataCode||
+            (
+              flight?.airlineId
+                ?flightStore.getAirlineCode(
+                    Number(flight.airlineId)
+                  )
+                :''
+            )||
+            ''
+          ).trim().toUpperCase(),
+          pnr:uniqueId,
+          success,
+          tickets:ticketNumbers.map(
+            ticket=>({Tickets:ticket})
+          ),
+          message:resultMessage,
+          raw:{
+            fareType,
+            actionResponse,
+            category:finalBooking.category,
+            status:finalBooking.status,
+            timeout:finalBooking.timeout,
+            booking:finalBooking.response
+          }
+        })
+      )
+
+      for(const flight of partoFlights){
+        const document=
+          readFlightDocument(
+            flight,
+            session
+          )
+
+        document.issue={
+          provider:'PARTO',
+          status:success
+            ?'success'
+            :'failed',
+          pnr:uniqueId,
+          ticketNumbers,
+          message:resultMessage,
+          response:{
+            fareType,
+            actionResponse,
+            category:finalBooking.category,
+            status:finalBooking.status,
+            timeout:finalBooking.timeout,
+            booking:finalBooking.response
+          },
+          attemptedAt:
+            new Date().toISOString()
+        }
+
+        writeFlightDocument(
+          flight,
+          document
+        )
+      }
+
+      const finalStatus=success
+        ?'confirm'
+        :'incomplete'
+
+      contract.ticketStatus=finalStatus
+      contract.confirmStatus=finalStatus
+      contract.reduceFlightLoad=null
+      contract.reduceHotelLoad=null
+
+      console.log(
+        'PARTO final booking:',
+        {
+          uniqueId,
+          fareType,
+          category:finalBooking.category,
+          status:finalBooking.status,
+          timeout:finalBooking.timeout,
+          success
+        }
+      )
+
+      return{
+        success,
+        ticketStatus:finalStatus,
+        confirmStatus:finalStatus,
+        issueResults,
+        contract
+      }
+    }catch(error:any){
+      /*
+       * اگر Book/Issue/GetBooking قبل از ساخت result نهایی
+       * fail شود، کل Booking Parto ناموفق محسوب می‌شود تا
+       * Settlement بتواند در پرداخت بانکی Refund را اجرا کند.
+       */
+      const message=
+        error?.data?.message||
+        error?.data?.title||
+        error?.message||
+        'خطا در فرآیند Parto'
+
+      const failedResults=partoFlights.map(
+        (flight:any)=>({
+          flightId:flight?.id??null,
+          flightNumber:String(
+            flight?.flightNumber||''
+          ).trim(),
+          airlineCode:String(
+            flight?.airlineIataCode||
+            (
+              flight?.airlineId
+                ?flightStore.getAirlineCode(
+                    Number(flight.airlineId)
+                  )
+                :''
+            )||
+            ''
+          ).trim().toUpperCase(),
+          pnr:uniqueId,
+          success:false,
+          tickets:[],
+          message,
+          raw:{
+            fareType,
+            actionResponse,
+            error:error?.data||message
+          }
+        })
+      )
+
+      for(const flight of partoFlights){
+        const document=
+          readFlightDocument(
+            flight,
+            session
+          )
+
+        document.issue={
+          provider:'PARTO',
+          status:'failed',
+          pnr:uniqueId||String(
+            flight?.pnr||''
+          ).trim(),
+          ticketNumbers:[],
+          message,
+          response:{
+            fareType,
+            actionResponse,
+            error:error?.data||message
+          },
+          attemptedAt:
+            new Date().toISOString()
+        }
+
+        writeFlightDocument(
+          flight,
+          document
+        )
+      }
+
+      contract.ticketStatus='incomplete'
+      contract.confirmStatus='incomplete'
+      contract.reduceFlightLoad=null
+      contract.reduceHotelLoad=null
+
+      return{
+        success:false,
+        ticketStatus:'incomplete',
+        confirmStatus:'incomplete',
+        issueResults:failedResults,
+        contract
+      }
+    }
   }
 
   /*
@@ -2511,6 +3399,10 @@ try{
     }
 
     statusStep.value='SUCCESS'
+
+    toast.success(
+      'خرید و صدور بلیت با موفقیت انجام شد.'
+    )
   }catch(err:any){
     if(statusStep.value==='PENDING'){
       statusStep.value='ISSUE_FAILED'
@@ -2520,6 +3412,16 @@ try{
       err?.data?.message||
       err?.message||
       'خطای غیرمنتظره‌ای رخ داده است.'
+
+    if(statusStep.value==='BANK_FAILED'){
+      toast.error(
+        errorMessage.value
+      )
+    }else if(statusStep.value==='ISSUE_FAILED'){
+      toast.error(
+        errorMessage.value
+      )
+    }
   }finally{
     loading.value=false
   }

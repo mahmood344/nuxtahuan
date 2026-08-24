@@ -306,81 +306,131 @@ export const useFlightStore = defineStore('flights', {
         latitude: null,
         longitude: null,
         orderId: 10
-      }
+      },
+      {
+  id: 1009,
+  countryCode: 'IR',
+  countryNicName: 'ایران',
+  cityName: 'Kerman',
+  cityNicName: 'کرمان',
+  cityCode: 'KER',
+  iataCode: 'KER',
+  name: 'Kerman Airport',
+  nicName: 'فرودگاه کرمان',
+  isCity: false,
+  latitude: null,
+  longitude: null,
+  orderId: 9
+},
+{
+  id: 1010,
+  countryCode: 'IR',
+  countryNicName: 'ایران',
+  cityName: 'Ardabil',
+  cityNicName: 'اردبیل',
+  cityCode: 'ADU',
+  iataCode: 'ADU',
+  name: 'Ardabil Airport',
+  nicName: 'فرودگاه اردبیل',
+  isCity: false,
+  latitude: null,
+  longitude: null,
+  orderId: 10
+}
     ],
-
+airportCache:{},
+airportLoading:{},
     airlines: [
       {
         code: 'I3',
         name: 'آتا',
         credentials: { username: 'THR155.WS', password: 'Ahuan1348' },
-        logo: '/imgs/flight/airlines/ata.png'
+        logo: '/imgs/flight/airlines/ata.png',
+        website:'http://ra.ataair.ir'
       },
       {
         code: 'Y9',
         name: 'کیش‌ایر',
         credentials: { username: 'THR100.WS', password: 'Ahuan1348' },
-        logo: '/imgs/flight/airlines/kishair.png'
+        logo: '/imgs/flight/airlines/kishair.png',
+        website:'https://crs.kishairlines.ir'
+      },
+      {
+        code: 'J1',
+        name: 'معراج',
+        credentials: { username: 'THR158.WS', password: 'THR158AH' },
+        logo: '/imgs/flight/airlines/meraj.png',
+        website:'http://ra.meraj.aero'
       },
       {
         code: 'QB',
         name: 'قشم‌ایر',
         credentials: { username: 'THR166.WS', password: 'Ahuan1348' },
-        logo: '/imgs/flight/airlines/gheshm.png'
+        logo: '/imgs/flight/airlines/gheshm.png',
+         website:'http://pra.qeshm-air.com'
       },
       {
         code: 'HH',
         name: 'تابان',
         credentials: { username: 'THR168.WS', password: 'Ahuan1348' },
-        logo: '/imgs/flight/airlines/taban.png'
+        logo: '/imgs/flight/airlines/taban.png',
+        website:'http://epay.taban.aero'
       },
       {
         code: 'EP',
         name: 'آسمان',
         credentials: { username: 'THR100.WS', password: 'Ahuan1348' },
-        logo: '/imgs/flight/airlines/aseman.png'
+        logo: '/imgs/flight/airlines/aseman.png',
+        website:'http://ra.iaa.ir'
       },
       {
         code: 'ZV',
         name: 'زاگرس',
         credentials: { username: 'THR197.WS', password: 'Ahuan1348' },
-        logo: '/imgs/flight/airlines/zagros.png'
+        logo: '/imgs/flight/airlines/zagros.png',
+        website:'http://ra.zagrosairlines.com'
       },
       {
         code: 'NV',
         name: 'نفت',
         credentials: { username: 'THR100.WS', password: 'Ahuan1348' },
-        logo: '/imgs/flight/airlines/naft.png'
+        logo: '/imgs/flight/airlines/naft.png',
+        website:'http://pra.karunair.ir'
       },
       {
         code: 'VR',
         name: 'وارش',
         credentials: { username: 'THR215.WS', password: 'A2930' },
-        logo: '/imgs/flight/airlines/varesh.png'
+        logo: '/imgs/flight/airlines/varesh.png',
+        website:'http://vr.nirasoft.ir'
       },
       {
         code: 'IRZ',
         name: 'ساها',
         credentials: { username: 'THR140.WS', password: '123456789' },
-        logo: '/imgs/flight/airlines/saha.png'
+        logo: '/imgs/flight/airlines/saha.png',
+        website:'http://ra.sahaair.com/'
       },
       {
         code: 'FP',
         name: 'فلای‌پرشیا',
         credentials: { username: 'THR106.WS', password: '123456789' },
-        logo: '/imgs/flight/airlines/flypersia.png'
+        logo: '/imgs/flight/airlines/flypersia.png',
+        website:'http://fp.nirasoft.ir'
       },
       {
         code: 'IV',
         name: 'کاسپین',
         credentials: { username: 'THR100.WS', password: 'Ahuan1348' },
-        logo: '/imgs/flight/airlines/caspian.png'
+        logo: '/imgs/flight/airlines/caspian.png',
+        website:'http://ra.caspianairlines.com'
       },
       {
         code: 'PA',
         name: 'پارس‌ایر',
         credentials: { username: 'THR226.WS', password: 'Ahouvan@2026' },
-        logo: '/imgs/flight/airlines/parsair1.png'
+        logo: '/imgs/flight/airlines/parsair1.png',
+        website:'https://parsair.ir/'
       }
     ],
 airlineIdMap : {
@@ -409,12 +459,21 @@ airlineIdMap : {
   AVAAIR: 1076,
   H8: 1070
 },
+basicAirlines:[],
+basicAirlinesLoading:false,
+basicAirlinesLoaded:false,
+
+airportCache:{},
+airportLoading:{},
     flights: [],
+    countries:[],
+  countriesLoading:false,
+  countriesLoaded:false,
     loading: false,
     authLoading: false,
     backgroundLoading: false,
     searchFinished: false,
-
+    partoSessionId:null,
     selectedFlight: null,
     selectedDepartureFlight: null,
     selectedReturnFlight: null,
@@ -438,6 +497,51 @@ airlineIdMap : {
   }),
 
   getters: {
+    getAirportByCode:(state)=>(code)=>{
+  return state.airportCache[
+    String(code||'')
+      .trim()
+      .toUpperCase()
+  ]||null
+},
+
+getAirportCityName:(state)=>(code)=>{
+  const normalized=
+    String(code||'')
+      .trim()
+      .toUpperCase()
+
+  const airport=
+    state.airportCache[
+      normalized
+    ]
+
+  return String(
+    airport?.cityNicName||
+    airport?.cityName||
+    normalized||
+    ''
+  ).trim()
+},
+
+getAirportName:(state)=>(code)=>{
+  const normalized=
+    String(code||'')
+      .trim()
+      .toUpperCase()
+
+  const airport=
+    state.airportCache[
+      normalized
+    ]
+
+  return String(
+    airport?.nicName||
+    airport?.name||
+    normalized||
+    ''
+  ).trim()
+},
      isLoggedIn: (state) => {
       // اگر از قبل در استیت به عنوان لاگین‌شده علامت‌گذاری شده یا کوکی وجود دارد
       if (state.isUserLoggedIn) return true
@@ -445,14 +549,100 @@ airlineIdMap : {
       return !!token.value
     },
     userName: (state) => state.userData ? `${state.userData.firstName} ${state.userData.lastName}` : 'پنل کاربری',
-    getAirlineId: (state) => (stepfindip) => {
-      const code = String(stepfindip || '').trim().toUpperCase()
-      return state.airlineIdMap[code] || 0
-    },
-    getAirlineCode: (state) => (id) => {
-    const entry = Object.entries(state.airlineIdMap).find(([_, value]) => value === id)
-    return entry ? entry[0] : ''
-  },
+    getAirlineId:(state)=>(value)=>{
+  const code=
+    String(value||'')
+      .trim()
+      .toUpperCase()
+
+  const basicAirline=
+    state.basicAirlines.find(
+      item=>
+        String(item?.iataCode||'')
+          .trim()
+          .toUpperCase()===
+        code
+    )
+
+  if(
+    Number(basicAirline?.id)>0
+  ){
+    return Number(
+      basicAirline.id
+    )
+  }
+
+  return Number(
+    state.airlineIdMap[code]||0
+  )
+},
+getAirlineByCode:(state)=>(value)=>{
+  const code=
+    String(value||'')
+      .trim()
+      .toUpperCase()
+
+  if(!code){
+    return null
+  }
+
+  const basic=
+    state.basicAirlines.find(
+      item=>
+        String(
+          item?.iataCode||''
+        )
+          .trim()
+          .toUpperCase()===
+        code
+    )
+
+  if(basic){
+    return basic
+  }
+
+  return state.airlines.find(
+    item=>
+      String(
+        item?.code||''
+      )
+        .trim()
+        .toUpperCase()===
+      code
+  )||null
+},
+  getAirlineCode:(state)=>(id)=>{
+  const numericId=
+    Number(id)
+
+  const basicAirline=
+    state.basicAirlines.find(
+      item=>
+        Number(item?.id)===
+        numericId
+    )
+
+  if(basicAirline?.iataCode){
+    return String(
+      basicAirline.iataCode
+    )
+      .trim()
+      .toUpperCase()
+  }
+
+  const entry=
+    Object.entries(
+      state.airlineIdMap
+    ).find(
+      ([_,value])=>
+        Number(value)===
+        numericId
+    )
+
+  return entry
+    ?entry[0]
+    :''
+},
     pricedFlightsCount(state) {
       if (!state.flights) return 0
 
@@ -529,6 +719,52 @@ airlineIdMap : {
   },
 
   actions: {
+    async loadAirportByCode(code){
+  const normalized=
+    String(code||'')
+      .trim()
+      .toUpperCase()
+
+  if(!normalized)return null
+
+  if(this.airportCache[normalized]){
+    return this.airportCache[normalized]
+  }
+
+  if(this.airportLoading[normalized]){
+    return this.airportLoading[normalized]
+  }
+
+  const request=
+    $fetch(
+      `https://api.ahuan.ir/api/BasicInfo/airports/${encodeURIComponent(normalized)}`
+    )
+      .then(response=>{
+        const airport=
+          Array.isArray(response)
+            ?response[0]||null
+            :response?.data||
+              response||
+              null
+
+        if(airport){
+          this.airportCache[normalized]=
+            airport
+        }
+
+        return airport
+      })
+      .finally(()=>{
+        delete this.airportLoading[
+          normalized
+        ]
+      })
+
+  this.airportLoading[normalized]=
+    request
+
+  return request
+},
      openModal(action = null) {
       this.isAuthModalOpen = true
       this.authStep = 'mobile'
@@ -536,6 +772,108 @@ airlineIdMap : {
       this.error = ''
       this.successMessage = ''
     },
+    setPartoSessionId(sessionId){
+  this.partoSessionId=sessionId||null
+},
+async loadCountries(){
+  if(
+    this.countriesLoading||
+    this.countriesLoaded
+  ){
+    return this.countries
+  }
+
+  this.countriesLoading=true
+
+  try{
+    const response=
+      await $fetch(
+        'https://api.ahuan.ir/api/BasicInfo/countries'
+      )
+
+    const items=
+      Array.isArray(response)
+        ?response
+        :Array.isArray(response?.data)
+          ?response.data
+          :[]
+
+    this.countries=
+      items
+        .filter(item=>
+          /^[A-Z]{2}$/.test(
+            String(item?.code2||'')
+              .trim()
+              .toUpperCase()
+          )
+        )
+        .map(item=>({
+          label:
+            item?.nicName||
+            item?.name||
+            item?.code2,
+
+          value:
+            String(item.code2)
+              .trim()
+              .toUpperCase(),
+
+          name:
+            item?.name||'',
+
+          code3:
+            item?.code3||''
+        }))
+
+    this.countriesLoaded=true
+
+    return this.countries
+  }catch(error){
+    this.countries=[]
+    this.countriesLoaded=false
+
+    throw error
+  }finally{
+    this.countriesLoading=false
+  }
+},
+async loadBasicAirlines(){
+  if(
+    this.basicAirlinesLoaded||
+    this.basicAirlinesLoading
+  ){
+    return this.basicAirlines
+  }
+
+  this.basicAirlinesLoading=true
+
+  try{
+    const response=
+      await $fetch(
+        'https://api.ahuan.ir/api/BasicInfo/airlines'
+      )
+
+    this.basicAirlines=
+      Array.isArray(response)
+        ?response
+        :Array.isArray(response?.data)
+          ?response.data
+          :[]
+
+    this.basicAirlinesLoaded=true
+
+    return this.basicAirlines
+  }catch(error){
+    this.basicAirlines=[]
+    this.basicAirlinesLoaded=false
+    throw error
+  }finally{
+    this.basicAirlinesLoading=false
+  }
+},
+clearPartoSessionId(){
+  this.partoSessionId=null
+},
     closeModal() {
       this.isAuthModalOpen = false
       this.authStep = 'mobile' // بازنشانی مرحله مودال به اولین وضعیت
@@ -781,10 +1119,20 @@ airlineIdMap : {
     },
 
     selectFlight(flight) {
+       console.log(
+   'SELECTED FLIGHT:',
+   flight.provider,
+   flight.id
+ )
       this.selectedFlight = flight
     },
 
     selectDepartureFlight(flight) {
+      console.log(
+   'DEP SELECT:',
+   flight.provider,
+   flight.id
+ )
       this.selectedDepartureFlight = flight
       this.selectedFlight = flight
     },
@@ -823,6 +1171,10 @@ airlineIdMap : {
     },
 
     async refreshSelectedFlightsPricing(passengerCounts) {
+      console.log(
+    'REFRESH PRICING FLIGHTS:',
+    this.selectedFlights
+  )
       const flights = this.selectedFlights || []
 
       if (!flights.length) {
@@ -855,18 +1207,42 @@ airlineIdMap : {
     },
 
     async buildFlightFinalPricing(flight, passengerCounts, index = 0) {
-      const provider = String(flight?.provider || '').toUpperCase()
+  const provider =
+    String(flight?.provider || '').toUpperCase()
 
-      if (provider === 'NIRA') {
-        return await this.buildNiraFinalPricing(flight, passengerCounts, index)
-      }
+  if(provider==='NIRA'){
+    return await this.buildNiraFinalPricing(
+      flight,
+      passengerCounts,
+      index
+    )
+  }
 
-      if (provider === 'MAHAN') {
-        return this.buildMahanFinalPricing(flight, passengerCounts, index)
-      }
+  if(provider==='MAHAN'){
+    return this.buildMahanFinalPricing(
+      flight,
+      passengerCounts,
+      index
+    )
+  }
 
-      return this.buildDefaultFinalPricing(flight, passengerCounts, index)
-    },
+  if(provider==='PARTO'){
+    console.log(
+  'PARTO PRICING HIT'
+)
+    return this.buildPartoFinalPricing(
+      flight,
+      passengerCounts,
+      index
+    )
+  }
+
+  return this.buildDefaultFinalPricing(
+    flight,
+    passengerCounts,
+    index
+  )
+},
 
     async buildNiraFinalPricing(flight, passengerCounts, index = 0) {
       const fare = await this.fetchNiraFare(flight)
@@ -953,7 +1329,85 @@ airlineIdMap : {
         currency: flight?.currency || 'IRR'
       }
     },
+buildPartoFinalPricing(flight, passengerCounts, index = 0) {
+  const prices =
+    flight?.passengerPrices || {}
 
+  const passengerPrices = [
+    {
+      type:'ADL',
+      label:'بزرگسال',
+      count:Number(passengerCounts.adult || 0),
+      unitPrice:Number(
+        prices.adult?.totalFare || 0
+      ),
+      total:
+        Number(prices.adult?.totalFare || 0) *
+        Number(passengerCounts.adult || 0)
+    },
+    {
+      type:'CHD',
+      label:'کودک',
+      count:Number(passengerCounts.child || 0),
+      unitPrice:Number(
+        prices.child?.totalFare || 0
+      ),
+      total:
+        Number(prices.child?.totalFare || 0) *
+        Number(passengerCounts.child || 0)
+    },
+    {
+      type:'INF',
+      label:'نوزاد',
+      count:Number(passengerCounts.infant || 0),
+      unitPrice:Number(
+        prices.infant?.totalFare || 0
+      ),
+      total:
+        Number(prices.infant?.totalFare || 0) *
+        Number(passengerCounts.infant || 0)
+    }
+  ].filter(item=>item.count>0)
+
+
+  const totalPrice =
+    passengerPrices.reduce(
+      (sum,item)=>
+        sum + Number(item.total || 0),
+      0
+    )
+
+
+  return {
+    key:`${flight?.id || 'flight'}-${index}`,
+
+    flightId:
+      flight?.id || null,
+
+    provider:'PARTO',
+
+    airline:
+      flight?.airline || '',
+
+    flightNumber:
+      flight?.flightNumber || '',
+
+    route:
+      `${flight?.origin || ''}-${flight?.destination || ''}`,
+
+    departure:
+      flight?.departure || '',
+
+    fare:null,
+
+    passengerPrices,
+
+    totalPrice,
+
+    currency:
+      flight?.currency || 'IRR'
+  }
+},
     buildDefaultFinalPricing(flight, passengerCounts, index = 0) {
       const basePrice = Number(flight?.priceFrom || 0)
       const childPrice = Math.round(basePrice * 0.75)
