@@ -147,16 +147,24 @@
           </div>
 
           <h1 class="mb-2 text-xl font-bold text-green-600">
-            خرید و صدور بلیت با موفقیت انجام شد
-          </h1>
+  {{
+    isHotelBooking
+      ? 'رزرو و صدور واچر با موفقیت انجام شد'
+      : 'خرید و صدور بلیت با موفقیت انجام شد'
+  }}
+</h1>
 
-          <p class="mb-6 text-gray-700">
-            بلیت شما با موفقیت صادر گردید.
-          </p>
+<p class="mb-6 text-gray-700">
+  {{
+    isHotelBooking
+      ? 'واچر هتل شما با موفقیت صادر گردید.'
+      : 'بلیت شما با موفقیت صادر گردید.'
+  }}
+</p>
 
           <!-- اطلاعات پرواز صادر شده -->
           <div
-            v-if="contractData"
+            v-if="contractData && !isHotelBooking" 
             class="mb-6 rounded-2xl border border-green-100 bg-green-50 p-5 text-center"
           >
             <div
@@ -212,30 +220,38 @@
           </div>
 
           <!-- دکمه دانلود بلیت -->
-          <div class="flex justify-center">
-            <NuxtLink
-              v-if="contractData?.id"
-              :to="getDownloadTicketRoute(contractData.id)"
-              class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white shadow-md transition duration-200 hover:bg-blue-700"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="2"
-                stroke="currentColor"
-                class="h-5 w-5"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
-                />
-              </svg>
+          <!-- دکمه دانلود بلیت / واچر -->
+<div class="flex justify-center">
+  <NuxtLink
+    v-if="contractData?.id || paymentInfo?.contractId"
+    :to="getDownloadTicketRoute(
+      contractData?.id ||
+      paymentInfo?.contractId
+    )"
+    class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white shadow-md transition duration-200 hover:bg-blue-700"
+  >
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke-width="2"
+      stroke="currentColor"
+      class="h-5 w-5"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
+      />
+    </svg>
 
-              دانلود بلیت
-            </NuxtLink>
-          </div>
+    {{
+      isHotelBooking
+        ? 'دانلود واچر'
+        : 'دانلود بلیت'
+    }}
+  </NuxtLink>
+</div>
         </div>
 
         <!-- وضعیت نامشخص -->
@@ -267,26 +283,42 @@ definePageMeta({
 
 type PaymentType = 'agency' | 'travelcard' | 'travelcard-gateway' | 'gateway'
 
-type PaymentSession = {
-  contractId: number
-  type: PaymentType
-  totalPrice: number
-  payableAmount: number
-  travelCardUsed: boolean
-  travelCardAmount: number
-  travelCardNumber: string
-  email?: string
-  mobile?: string
-  travelType?: string
-  providerResults?: Array<{
-    flightId:number|string|null
-    supplier:string
-    pnr:string
-    uniqueId:string
-    fareType:number|null
-    partoFlow:string
-    fareSourceCode?:string
+type PaymentSession={
+ contractId:number
+ type:PaymentType
+ totalPrice:number
+ payableAmount:number
+ travelCardUsed:boolean
+ travelCardAmount:number
+ travelCardNumber:string
+ email?:string
+ mobile?:string
+ travelType?:string
+
+ bookingType?:'flight'|'hotel'
+
+ hotel?:{
+  hotelId:number|string
+  checkIn:string
+  checkOut:string
+  rooms:Array<{
+   roomId:number|string
+   roomName:string
+   count:number
+   unitPrice:number
+   price:number
   }>
+ }
+
+ providerResults?:Array<{
+  flightId:number|string|null
+  supplier:string
+  pnr:string
+  uniqueId:string
+  fareType:number|null
+  partoFlow:string
+  fareSourceCode?:string
+ }>
 }
 const travelType = computed(() => {
   const value = String(
@@ -302,23 +334,33 @@ const travelType = computed(() => {
     : 'one-way'
 })
 
-const flightSteps = computed(() => {
-  if (travelType.value === 'round-trip') {
-    return [
-      { icon: '✈️', label: 'انتخاب پرواز رفت' },
-      { icon: '🔁', label: 'انتخاب پرواز برگشت' },
-      { icon: '📄', label: 'تکمیل اطلاعات' },
-      { icon: '💳', label: 'تایید و پرداخت' },
-      { icon: '🎫', label: 'دریافت بلیت' }
-    ]
-  }
-
-  return [
-    { icon: '✈️', label: 'انتخاب پرواز' },
-    { icon: '📄', label: 'تکمیل اطلاعات' },
-    { icon: '💳', label: 'تایید و پرداخت' },
-    { icon: '🎫', label: 'دریافت بلیت' }
+const flightSteps=computed(()=>{
+ if(paymentInfo.value?.bookingType==='hotel'){
+  return[
+  //  {icon:'🏨',label:'انتخاب هتل'},
+   {icon:'🛏️',label:'انتخاب اتاق'},
+   {icon:'📄',label:'تکمیل اطلاعات'},
+   {icon:'💳',label:'تایید و پرداخت'},
+   {icon:'🎫',label:'دریافت واچر'}
   ]
+ }
+
+ if(travelType.value==='round-trip'){
+  return[
+   {icon:'✈️',label:'انتخاب پرواز رفت'},
+   {icon:'🔁',label:'انتخاب پرواز برگشت'},
+   {icon:'📄',label:'تکمیل اطلاعات'},
+   {icon:'💳',label:'تایید و پرداخت'},
+   {icon:'🎫',label:'دریافت بلیت'}
+  ]
+ }
+
+ return[
+  {icon:'✈️',label:'انتخاب پرواز'},
+  {icon:'📄',label:'تکمیل اطلاعات'},
+  {icon:'💳',label:'تایید و پرداخت'},
+  {icon:'🎫',label:'دریافت بلیت'}
+ ]
 })
 
 const verifyActiveStep = computed(() => {
@@ -2430,30 +2472,58 @@ const getBankPaymentDetails=(
   }
 }
 const updateContract=async(
-  contract:any
+ contract:any
 ):Promise<any>=>{
-  contract.reduceFlightLoad=null
-  contract.reduceHotelLoad=null
+ contract.reduceFlightLoad=null
+ contract.reduceHotelLoad=null
 
-  const response=await $fetch<any>(
-    'https://api.ahuan.ir/api/Contract/update',
-    {
-      method:'PUT',
-      body:contract,
-      headers:{
-        'Content-Type':'application/json'
-      }
-    }
-  )
-
-  if(response?.success===false||response?.error){
-    throw new Error(
-      response?.message||
-      'ذخیره اطلاعات قرارداد ناموفق بود.'
-    )
+ const response=await $fetch<any>(
+  'https://api.ahuan.ir/api/Contract/update',
+  {
+   method:'PUT',
+   body:contract,
+   headers:{
+    'Content-Type':'application/json'
+   }
   }
+ )
 
-  return response?.data||response||contract
+ if(
+  response?.success===false||
+  response?.error
+ ){
+  throw new Error(
+   response?.message||
+   'ذخیره اطلاعات قرارداد ناموفق بود.'
+  )
+ }
+
+ const responseData=response?.data
+
+ if(
+  responseData&&
+  typeof responseData==='object'&&
+  !Array.isArray(responseData)
+ ){
+  return{
+   ...contract,
+   ...responseData,
+   contractRoutes:
+    Array.isArray(responseData.contractRoutes)
+     ?responseData.contractRoutes
+     :contract.contractRoutes,
+   contractPassengers:
+    Array.isArray(responseData.contractPassengers)
+     ?responseData.contractPassengers
+     :contract.contractPassengers,
+   contractFlights:
+    Array.isArray(responseData.contractFlights)
+     ?responseData.contractFlights
+     :contract.contractFlights
+  }
+ }
+
+ return contract
 }
 const failedSaveSteps=ref<string[]>([])
 
@@ -2587,10 +2657,12 @@ const verifyAndApplyBankPayment=async(
   bank.paymentId
 ].join('-')
 
-applyPaymentToFlightJson(
+if(session.bookingType!=='hotel'){
+ applyPaymentToFlightJson(
   contract,
   session
-)
+ )
+}
 
 return contract
 }
@@ -3012,6 +3084,329 @@ const requestId=requestIdParts
     }
   }
 }
+const markHotelIncomplete=async(
+ contract:any,
+ step:string
+)=>{
+ contract.ticketStatus='incomplete'
+ contract.confirmStatus='incomplete'
+ contract.reduceFlightLoad=null
+ contract.reduceHotelLoad=null
+
+ const save=
+  await trySaveContractStep(
+   contract,
+   step
+  )
+
+ contractData.value=
+  save.contract
+
+ return save
+}
+
+const bookHotelRoom=async(
+ contract:any
+)=>{
+   console.log(
+  'BOOK HOTEL CONTRACT:',
+  contract
+ )
+
+ console.log(
+  'BOOK HOTEL ROUTES:',
+  contract?.contractRoutes
+ )
+ try{
+  const routes=
+   Array.isArray(contract?.contractRoutes)
+    ?contract.contractRoutes
+    :[]
+
+  for(const routeItem of routes){
+   await $fetch(
+    'https://api.ahuan.ir/api/Hotel/room/book',
+    {
+     method:'PUT',
+     body:{
+      roomId:routeItem.roomId,
+      checkIn:new Date(
+       routeItem.checkIn
+      ).toISOString(),
+      checkOut:new Date(
+       routeItem.checkOut
+      ).toISOString(),
+      amount:
+       Number(routeItem.price||0)||
+       Number(contract?.totalPrice||0)
+     }
+    }
+   )
+  }
+
+  console.log(
+   'Hotel room booked successfully'
+  )
+ }catch(error){
+  /*
+   * عمداً throw نمی‌کنیم.
+   * نتیجه این API روی موفقیت نهایی قرارداد
+   * تأثیر ندارد.
+   */
+  console.error(
+   'Hotel booking failed:',
+   error
+  )
+ }
+}
+
+const refundHotelBankPayment=async(
+ session:PaymentSession,
+ contract:any
+)=>{
+ if(
+  session.type!=='gateway'&&
+  session.type!=='travelcard-gateway'
+ ){
+  return null
+ }
+
+ const amount=Math.floor(
+  Number(session.payableAmount||0)
+ )
+
+ if(amount<=0){
+  return null
+ }
+
+ return await refundBankPayment(
+  contract,
+  amount
+ )
+}
+
+const processHotelVerify=async(
+ session:PaymentSession
+)=>{
+ let bankVerified=false
+
+ try{
+  /*
+   * 1) پرداخت بانکی
+   */
+  if(
+   session.type==='gateway'||
+   session.type==='travelcard-gateway'
+  ){
+   try{
+    contractData.value=
+     await verifyAndApplyBankPayment(
+      session,
+      contractData.value
+     )
+
+    bankVerified=true
+   }catch(error){
+    /*
+     * خود پرداخت ناموفق بوده:
+     * قرارداد incomplete می‌شود.
+     */
+    await markHotelIncomplete(
+     contractData.value,
+     'hotel-payment-failed'
+    )
+
+    throw error
+   }
+
+   /*
+    * Bank موفق است.
+    * paymentId همین‌جا روی Contract قرار گرفته.
+    * حالا سریعاً ذخیره‌اش می‌کنیم.
+    */
+   const bankSave=
+    await trySaveContractStep(
+     contractData.value,
+     'hotel-bank-verify'
+    )
+
+   contractData.value=
+    bankSave.contract
+
+   if(!bankSave.success){
+    /*
+     * پول از بانک گرفته شده ولی
+     * paymentId روی Contract ذخیره نشده.
+     */
+    const refund=
+     await refundHotelBankPayment(
+      session,
+      contractData.value
+     )
+
+    await markHotelIncomplete(
+     contractData.value,
+     'hotel-bank-save-failed'
+    )
+
+    statusStep.value='ISSUE_FAILED'
+
+    throw new Error(
+     refund?.success
+      ?'پرداخت انجام شد اما ثبت اطلاعات پرداخت قرارداد ناموفق بود و مبلغ بانکی برای استرداد ارسال شد.'
+      :'پرداخت انجام شد اما ثبت اطلاعات پرداخت قرارداد ناموفق بود.'
+    )
+   }
+  }
+
+  /*
+   * 2) سفرکارت
+   */
+  if(
+   session.type==='travelcard'||
+   session.type==='travelcard-gateway'
+  ){
+   const travelCardAmount=
+    Math.floor(
+     Number(
+      session.travelCardAmount||0
+     )
+    )
+
+   if(travelCardAmount<=0){
+    if(bankVerified){
+     await refundHotelBankPayment(
+      session,
+      contractData.value
+     )
+    }
+
+    await markHotelIncomplete(
+     contractData.value,
+     'hotel-travelcard-invalid'
+    )
+
+    statusStep.value='ISSUE_FAILED'
+
+    throw new Error(
+     'مبلغ سفرکارت معتبر نیست.'
+    )
+   }
+
+   const safarCardResult=
+    await updateSafarCardAfterIssue(
+     session,
+     contractData.value,
+     travelCardAmount
+    )
+
+   if(!safarCardResult.success){
+    /*
+     * در حالت ترکیبی بانک قبلاً موفق بوده،
+     * بنابراین سهم بانک Refund می‌شود.
+     */
+    if(bankVerified){
+     await refundHotelBankPayment(
+      session,
+      contractData.value
+     )
+    }
+
+    await markHotelIncomplete(
+     contractData.value,
+     'hotel-travelcard-failed'
+    )
+
+    statusStep.value='ISSUE_FAILED'
+
+    throw new Error(
+     safarCardResult.error||
+     'کسر اعتبار سفرکارت ناموفق بود.'
+    )
+   }
+  }
+
+  /*
+   * 3) تمام عملیات پرداخت موفق است.
+   * قرارداد هتل Confirm می‌شود.
+   */
+  contractData.value.ticketStatus=
+   'confirm'
+
+  contractData.value.confirmStatus=
+   'confirm'
+
+  contractData.value.reduceFlightLoad=
+   null
+
+  contractData.value.reduceHotelLoad=
+   null
+
+  /*
+   * 4) Update نهایی Hotel
+   */
+  const finalSave=
+   await trySaveContractStep(
+    contractData.value,
+    'hotel-final'
+   )
+
+  contractData.value=
+   finalSave.contract
+
+  if(!finalSave.success){
+   /*
+    * پرداخت انجام شده ولی Final Update
+    * قرارداد موفق نشده.
+    */
+   if(bankVerified){
+    await refundHotelBankPayment(
+     session,
+     contractData.value
+    )
+   }
+
+   await markHotelIncomplete(
+    contractData.value,
+    'hotel-final-failed'
+   )
+
+   statusStep.value='ISSUE_FAILED'
+
+   throw new Error(
+    'پرداخت انجام شد اما ثبت نهایی قرارداد هتل ناموفق بود.'
+   )
+  }
+
+  /*
+   * 5) فقط بعد از Update موفق قرارداد
+   * موجودی اتاق Book می‌شود.
+   *
+   * موفق یا ناموفق بودن این API
+   * روی SUCCESS تأثیر ندارد.
+   */
+  await bookHotelRoom(
+   contractData.value
+  )
+await sendHotelSms(
+ contractData.value,
+ session
+)
+  failedSaveSteps.value=[]
+
+  /*
+   * 6) پایان موفق
+   */
+  statusStep.value='SUCCESS'
+
+  toast.success(
+   'رزرو هتل با موفقیت انجام شد.'
+  )
+
+ }catch(error){
+  throw error
+ }
+}
 const processVerify=async()=>{
   loading.value=true
   errorMessage.value=''
@@ -3051,7 +3446,12 @@ const processVerify=async()=>{
       await fetchContractDetails(
         contractId
       )
-
+if(session.bookingType==='hotel'){
+ await processHotelVerify(
+  session
+ )
+ return
+}
     /*
      * فقط پرداخت‌هایی که درگاه دارند
      * باید Verify شوند.
@@ -3426,7 +3826,120 @@ try{
     loading.value=false
   }
 }
+const sendHotelSms=async(
+ contract:any,
+ session:PaymentSession
+)=>{
+ const adminMobile=''
 
+ const buyerMobile=String(
+  contract?.userName||
+  contract?.mobile||
+  session?.mobile||
+  ''
+ ).trim()
+
+ const contractId=Number(
+  contract?.id||
+  session?.contractId||
+  0
+ )
+
+ if(!contractId){
+  console.error(
+   'Hotel SMS: ContractId not found',
+   {
+    contractId:contract?.id,
+    sessionContractId:session?.contractId,
+    contract
+   }
+  )
+  return
+ }
+
+ const encodedContractId=
+  encodeContractId(contractId)
+
+ const voucherUrl=
+  `${window.location.origin}/downloadticket/${encodedContractId}`
+
+ const adminSms=
+  `رزرو جدید
+
+شماره قرارداد: ${contractId}
+
+لینک دانلود واچر:
+${voucherUrl}`
+
+ const passengers=
+  Array.isArray(contract?.contractPassengers)
+   ?contract.contractPassengers
+   :[]
+
+ let passengerText=''
+
+ for(const passenger of passengers){
+  passengerText+=
+   `${passenger?.codeMelli||''} به‌نام ${(passenger?.lName||'').toUpperCase()}/${(passenger?.fName||'').toUpperCase()}\n`
+ }
+
+ const buyerSms=
+  `مسافر گرامی،
+احتراماً به اطلاع می‌رساند رزرو هتل شما با موفقیت انجام شد.
+
+شماره قرارداد: ${contractId}
+
+${passengerText}
+لینک دانلود واچر:
+${voucherUrl}
+
+با آرزوی سفری خوش
+شرکت خدمات مسافرتی آهوان`
+
+ try{
+  await $fetch(
+   'https://api.ahuan.ir/api/Auth/Send-Sms',
+   {
+    method:'POST',
+    body:{
+     mobile:adminMobile,
+     sms:adminSms
+    }
+   }
+  )
+ }catch(error){
+  console.error(
+   'Hotel admin SMS failed:',
+   error
+  )
+ }
+
+ if(
+  buyerMobile&&
+  buyerMobile!==adminMobile
+ ){
+  try{
+   await $fetch(
+    'https://api.ahuan.ir/api/Auth/Send-Sms',
+    {
+     method:'POST',
+     body:{
+      mobile:buyerMobile,
+      sms:buyerSms
+     }
+    }
+   )
+  }catch(error){
+   console.error(
+    'Hotel buyer SMS failed:',
+    error
+   )
+  }
+ }
+}
+const isHotelBooking=computed(
+ ()=>paymentInfo.value?.bookingType==='hotel'
+)
 onMounted(() => {
   processVerify()
 })

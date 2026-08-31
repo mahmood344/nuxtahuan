@@ -169,8 +169,8 @@
   @submit="onContinueShopping"
   />
 </div>
-
 <div v-else-if="flightStore.currentStep === previewStep" class="space-y-4">
+
   <BookingInfoTable
     mode="passengers"
     :flight-type="flightType"

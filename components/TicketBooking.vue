@@ -103,6 +103,7 @@
   >
 
     <div class="w-full">
+      
       <UiBaseAutocomplete
         label="شهر"
         placeholder="نام شهر را جستجو کنید..."
@@ -117,11 +118,11 @@
     </div>
 
     <div class="w-full">
-      <UiSingleDatePicker
-        v-model="hotelDate"
-        label="تاریخ ورود و خروج"
-        placeholder="انتخاب تاریخ"
-      />
+     <UiSingleDatePicker
+  v-model="hotelDate"
+  label=" تاریخ ورود و خروج"
+  placeholder="انتخاب تاریخ"
+/>
     </div>
 
     <div class="w-full">
@@ -146,7 +147,8 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router'
 import { useFlightStore } from '~/stores/flights'
-const flightStore = useFlightStore()
+import { useHotelStore } from '~/stores/hotels'
+const hotelStore = useHotelStore()
 const router = useRouter()
 const origin = ref(null)
 const destination = ref(null)
@@ -168,37 +170,60 @@ const hotelDate=ref(null)
 const hotelDatePickerOpen=ref(false)
 
 const hotelCities=computed(()=>{
-  const items=Array.isArray(
-    flightStore.popularCities
-  )
-    ?flightStore.popularCities
-    :[]
 
-  return items
-    .filter(item=>
-      item?.countryCode==='IR'
-    )
-    .map(item=>({
-      code:
-        item.cityCode||
-        item.iataCode||
-        '',
-      name:
-        item.cityNicName||
-        item.nicName||
-        item.cityName||
-        ''
-    }))
-    .filter(item=>
-      item.code&&item.name
-    )
+  const items=Array.isArray(
+    hotelStore.hotels
+  )
+    ? hotelStore.hotels
+    : []
+
+
+  return items.map(item=>({
+
+    code:item.id,
+
+    name:item.title
+
+  }))
+
 })
 
-const hotelDateLabel=computed(()=>{
-  if(!hotelDate.value)return ''
+const hotelDateLabel = computed(()=>{
 
-  return String(hotelDate.value)
-    .replace(/-/g,'/')
+  if(!hotelDate.value)
+    return ''
+
+
+  const dates = String(hotelDate.value)
+    .split(',')
+
+
+  if(dates.length !== 2)
+    return hotelDate.value
+
+
+  const formatter = new Intl.DateTimeFormat(
+    'fa-IR',
+    {
+      year:'numeric',
+      month:'long',
+      day:'numeric'
+    }
+  )
+
+
+  const checkIn = formatter.format(
+    new Date(dates[0].replace(/\//g,'-'))
+  )
+
+
+  const checkOut = formatter.format(
+    new Date(dates[1].replace(/\//g,'-'))
+  )
+
+
+  return `از ${checkIn} تا ${checkOut}`
+
 })
 
 function handleHotelDateChange(value){
@@ -207,13 +232,30 @@ function handleHotelDateChange(value){
 }
 
 function searchAhuanHotel(){
-  if(!hotelCity.value||!hotelDate.value)
+
+  if(!hotelCity.value || !hotelDate.value)
     return
 
-  console.log({
-    city:hotelCity.value,
-    date:hotelDate.value
+
+  const dates = Array.isArray(hotelDate.value)
+    ? hotelDate.value
+    : String(hotelDate.value).split(',')
+
+
+  router.push({
+
+    path:`/hotels/${hotelCity.value}`,
+
+    query:{
+
+      checkIn:dates[0],
+
+      checkOut:dates[1]
+
+    }
+
   })
+
 }
 const images = [
   '/imgs/ticketbooking/flightbackground.png',
