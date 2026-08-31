@@ -154,7 +154,6 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
-
 const props = defineProps({
   originalPrice: { type: [Number, String], default: 0 },
   finalPrice: { type: [Number, String], default: 0 },

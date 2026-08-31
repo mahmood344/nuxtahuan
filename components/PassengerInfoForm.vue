@@ -3,7 +3,9 @@ import {computed,ref,watch,nextTick} from 'vue'
 import { useRoute } from '#app'
 import moment from 'moment-jalaali'
 import { useFlightStore } from '~/stores/flights'
-
+const isHotelBooking = computed(() =>
+  route.path.startsWith('/hotels')
+)
 const flightStore = useFlightStore()
 moment.loadPersian({
   usePersianDigits: false,
@@ -86,9 +88,23 @@ const scrollableMenuProps = {
   overflowY: 'auto',
 }
 
-const adlCount = computed(() => Number.parseInt(route.query.adl || '1', 10) || 1)
-const chdCount = computed(() => Number.parseInt(route.query.chd || '0', 10) || 0)
-const infCount = computed(() => Number.parseInt(route.query.inf || '0', 10) || 0)
+const adlCount = computed(() =>
+  isHotelBooking.value
+    ? 1
+    : Number.parseInt(route.query.adl || '1',10) || 1
+)
+
+const chdCount = computed(() =>
+  isHotelBooking.value
+    ? 0
+    : Number.parseInt(route.query.chd || '0',10) || 0
+)
+
+const infCount = computed(() =>
+  isHotelBooking.value
+    ? 0
+    : Number.parseInt(route.query.inf || '0',10) || 0
+)
 
 const flightType = computed(() => String(route.query.flightType || '').toLowerCase())
 const isDomesticFlight = computed(() => flightType.value === 'domestic')
@@ -619,10 +635,19 @@ function isValidPassport(value) {
   return /^[A-Za-z0-9]{1,10}$/.test(String(value || '').trim())
 }
 
-function getPassengerTitle(type, index) {
-  if (type === 'ADL') return `بزرگسال ${index + 1}`
-  if (type === 'CHD') return `کودک ${index + 1}`
-  return `نوزاد ${index + 1}`
+function getPassengerTitle(type,index){
+
+ if(isHotelBooking.value)
+  return ''
+
+
+ if(type==='ADL')
+  return `بزرگسال ${index+1}`
+
+ if(type==='CHD')
+  return `کودک ${index+1}`
+
+ return `نوزاد ${index+1}`
 }
 
 function getPassengerIcon(type) {
@@ -1298,11 +1323,16 @@ function onBirthYearChange(passenger, value) {
 }
 
 watch(
-  () => [route.query.adl, route.query.chd, route.query.inf],
-  () => {
-    initPassengers()
-  },
-  { immediate: true }
+ ()=>[
+   route.path,
+   route.query.adl,
+   route.query.chd,
+   route.query.inf
+ ],
+ ()=>{
+   initPassengers()
+ },
+ {immediate:true}
 )
 
 defineExpose({
@@ -1321,9 +1351,9 @@ defineExpose({
     >
       <div class="flex flex-col gap-6 md:flex-row">
         <div class="order-1 flex shrink-0 flex-col items-center justify-between py-1 md:w-44">
-          <h3 class="mb-4 w-full text-right text-lg font-bold text-gray-800 md:mb-0">
-            مشخصات فردی
-          </h3>
+        <h3 class="mb-4 w-full text-right text-lg font-bold text-gray-800 md:mb-0">
+ {{isHotelBooking ? 'مشخصات رزرو کننده' : 'مشخصات فردی'}}
+</h3>
 
           <div class="my-auto flex flex-col items-center justify-center">
             <div class="mb-3 flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-slate-100 to-blue-50 text-slate-700 shadow-sm">

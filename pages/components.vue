@@ -21,6 +21,14 @@
     </div>
   </div>
   </div>
+  <div class="border border-primary rounded-xl p-4 space-y-3">
+      <h2 class="font-semibold">UiSingleDatePicker</h2>
+      <UiSingleDatePicker
+  v-model="hotelDate"
+  label="تاریخ ورود"
+  placeholder="انتخاب تاریخ"
+/>
+      </div>
 <div class="border border-primary rounded-xl p-4 space-y-3">
       <h2 class="font-semibold">range slider</h2>
       <UiBaseRangeSlider

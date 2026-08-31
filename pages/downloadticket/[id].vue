@@ -68,11 +68,13 @@
 
             <div>
 
-              <h1 class="text-xl font-bold text-slate-900">
-
-                دریافت بلیت
-
-              </h1>
+             <h1 class="text-xl font-bold text-slate-900">
+ {{
+  isHotelBooking
+   ?'دریافت واچر هتل'
+   :'دریافت بلیت'
+ }}
+</h1>
 
               <p class="mt-1 text-sm text-slate-500">
 
@@ -84,7 +86,7 @@
 
             <button
 
-              v-if="tickets.length"
+             v-if="tickets.length || isHotelBooking"
 
               type="button"
 
@@ -172,77 +174,66 @@
 
         </section>
 
-        <!-- Tickets -->
+       <!-- Hotel Voucher -->
+<div
+ v-else-if="isHotelBooking"
+ id="ticket-print-area"
+>
+ <HotelVoucherComponent
+  v-for="(route,index) in contractData?.contractRoutes||[]"
+  :key="route?.id||index"
+  :contract="contractData"
+  :route="route"
+  :room-index="index"
+ />
+</div>
 
-        <div
+<!-- Flight Tickets -->
+<div
+ v-else-if="tickets.length"
+ id="ticket-print-area"
+>
+ <div
+  v-if="cancelledTickets.length"
+  class="mb-5 space-y-3 print:mb-4"
+ >
+  <div
+   v-for="ticket in cancelledTickets"
+   :key="`cancelled-${ticket.key}`"
+   class="rounded-2xl border-2 border-red-500 bg-red-50 px-5 py-4 text-center"
+  >
+   <p class="text-lg font-black text-red-700">
+    این بلیت کنسل شده است
+   </p>
 
-          v-else-if="tickets.length"
+   <p class="mt-1 text-sm text-red-600">
+    شماره بلیت:
+    <span
+     dir="ltr"
+     class="font-bold"
+    >
+     {{ ticket.ticketNo }}
+    </span>
+   </p>
+  </div>
+ </div>
 
-          id="ticket-print-area"
+ <TicketPrintComponent
+  :tickets="tickets"
+ />
+</div>
 
-        >
-
-          <div
-
-            v-if="cancelledTickets.length"
-
-            class="mb-5 space-y-3 print:mb-4"
-
-          >
-
-            <div
-
-              v-for="ticket in cancelledTickets"
-
-              :key="`cancelled-${ticket.key}`"
-
-              class="rounded-2xl border-2 border-red-500 bg-red-50 px-5 py-4 text-center"
-
-            >
-
-              <p class="text-lg font-black text-red-700">
-
-                این بلیت کنسل شده است
-
-              </p>
-
-              <p class="mt-1 text-sm text-red-600">
-
-                شماره بلیت:
-
-                <span dir="ltr" class="font-bold">
-
-                  {{ ticket.ticketNo }}
-
-                </span>
-
-              </p>
-
-            </div>
-
-          </div>
-
-          <TicketPrintComponent
-
-            :tickets="tickets"
-
-          />
-
-        </div>
-
-        <!-- Empty -->
-
-        <section
-
-          v-else
-
-          class="rounded-2xl border border-slate-200 bg-white p-8 text-center text-gray-500 print:hidden"
-
-        >
-
-          بلیتی برای نمایش وجود ندارد.
-
-        </section>
+<!-- Empty -->
+<section
+ v-else
+ class="rounded-2xl border border-slate-200 bg-white p-8 text-center text-gray-500 print:hidden"
+>
+ {{
+  isHotelBooking
+   ?'واچری برای نمایش وجود ندارد.'
+   :'بلیتی برای نمایش وجود ندارد.'
+ }}
+</section>
 
       </div>
 
@@ -617,7 +608,9 @@ const loading = ref(true)
 const errorMessage = ref('')
 
 const contractData = ref<any>(null)
-
+const isHotelBooking=computed(
+ ()=>contractData.value?.hotel===true
+)
 const tickets = ref<PrintableTicket[]>([])
 
 const cancelledTickets=computed(()=>
@@ -658,38 +651,33 @@ const travelType = computed(() => {
 
 })
 
-const flightSteps = computed(() => {
-
-  if (travelType.value === 'round-trip') {
-
-    return [
-
-      { icon: '✈️', label: 'انتخاب پرواز رفت' },
-
-      { icon: '🔁', label: 'انتخاب پرواز برگشت' },
-
-      { icon: '📄', label: 'تکمیل اطلاعات' },
-
-      { icon: '💳', label: 'تایید و پرداخت' },
-
-      { icon: '🎫', label: 'دریافت بلیت' }
-
-    ]
-
-  }
-
-  return [
-
-    { icon: '✈️', label: 'انتخاب پرواز' },
-
-    { icon: '📄', label: 'تکمیل اطلاعات' },
-
-    { icon: '💳', label: 'تایید و پرداخت' },
-
-    { icon: '🎫', label: 'دریافت بلیت' }
-
+const flightSteps=computed(()=>{
+ if(isHotelBooking.value){
+  return[
+  //  {icon:'🏨',label:'انتخاب هتل'},
+   {icon:'🛏️',label:'انتخاب اتاق'},
+   {icon:'📄',label:'تکمیل اطلاعات'},
+   {icon:'💳',label:'تایید و پرداخت'},
+   {icon:'🎫',label:'دریافت واچر'}
   ]
+ }
 
+ if(travelType.value==='round-trip'){
+  return[
+   {icon:'✈️',label:'انتخاب پرواز رفت'},
+   {icon:'🔁',label:'انتخاب پرواز برگشت'},
+   {icon:'📄',label:'تکمیل اطلاعات'},
+   {icon:'💳',label:'تایید و پرداخت'},
+   {icon:'🎫',label:'دریافت بلیت'}
+  ]
+ }
+
+ return[
+  {icon:'✈️',label:'انتخاب پرواز'},
+  {icon:'📄',label:'تکمیل اطلاعات'},
+  {icon:'💳',label:'تایید و پرداخت'},
+  {icon:'🎫',label:'دریافت بلیت'}
+ ]
 })
 
 const downloadActiveStep = computed(() => {
@@ -4840,19 +4828,16 @@ const initializePage = async () => {
 
       )
 
-    contractData.value =
+    contractData.value=
+ await fetchContractDetails(
+  contractId
+ )
 
-      await fetchContractDetails(
-
-        contractId
-
-      )
-
-    await processContractTickets(
-
-      contractData.value
-
-    )
+if(!isHotelBooking.value){
+ await processContractTickets(
+  contractData.value
+ )
+}
 
   } catch (error: any) {
 
