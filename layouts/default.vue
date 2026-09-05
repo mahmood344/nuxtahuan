@@ -1,19 +1,21 @@
 <template>
-  <div class="layout-wrapper">
-    <!-- هدر سایت -->
-    <Header />
+ <div
+  class="
+   flex
+   min-h-screen
+   flex-col
+  "
+ >
+  <Header />
 
-    <!-- محتوای صفحات -->
-    <main> <!-- به اندازه ارتفاع هدر پدینگ بده که محتوا زیرش نره -->
-      <slot />
-    </main>
+  <main class="flex-1">
+   <slot />
+  </main>
 
-    <!-- فوتر سایت -->
-    <Footer />
+  <Footer />
 
-    <!-- مودال احراز هویت که در کل سایت در دسترس است -->
-    <AuthModal />
-  </div>
+  <AuthModal />
+ </div>
 </template>
 
 <script setup>

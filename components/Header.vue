@@ -74,21 +74,59 @@ onMounted(() => {
               </div>
             </div>
             <div v-if="hoveredCat!==null" class="w-[180px] bg-white border border-gray-100 rounded-[12px] shadow-lg p-2">
-              <div v-for="(grp,g) in menu[hoveredCat].groups" :key="grp.id" @mouseenter="hoveredGrp=g"
-                   class="px-4 py-2.5 rounded-[8px] text-sm flex justify-between items-center hover:bg-gray-50"
-                   :class="hoveredGrp===g ? 'bg-gray-50 text-[var(--color-primary)] font-bold':''">
-                <span>{{grp.group}}</span>
-                <span v-if="grp.packages?.length" class="text-[10px] text-[var(--color-primary)]">●</span>
-              </div>
+             <NuxtLink
+ v-for="(grp,g) in menu[hoveredCat].groups"
+ :key="grp.id"
+ :to="`/domesticinternationaltours/${grp.id}`"
+ @mouseenter="hoveredGrp=g"
+ class="
+  px-4
+  py-2.5
+  rounded-[8px]
+  text-sm
+  flex
+  justify-between
+  items-center
+  hover:bg-gray-50
+ "
+ :class="
+  hoveredGrp===g
+   ? 'bg-gray-50 text-[var(--color-primary)] font-bold'
+   : ''
+ "
+>
+ <span>{{grp.group}}</span>
+
+ <span
+  v-if="grp.packages?.length"
+  class="text-[10px] text-[var(--color-primary)]"
+ >
+  ●
+ </span>
+</NuxtLink>
             </div>
             <div v-if="hoveredGrp!==null && menu[hoveredCat].groups[hoveredGrp]?.packages?.length" 
                  class="w-[200px] bg-white border border-gray-100 rounded-[12px] shadow-lg p-2">
-              <a v-for="pkg in menu[hoveredCat].groups[hoveredGrp].packages" :key="pkg.id" :href="`/package/${pkg.id}`"
-                 class="block px-4 py-2 rounded-[8px] text-sm hover:bg-gray-50 text-gray-700">{{pkg.package}}</a>
+              <NuxtLink
+ v-for="pkg in menu[hoveredCat].groups[hoveredGrp].packages"
+ :key="pkg.id"
+ :to="`/domesticinternationaltours/${menu[hoveredCat].groups[hoveredGrp].id}/${pkg.id}`"
+ class="
+  block
+  px-4
+  py-2
+  rounded-[8px]
+  text-sm
+  hover:bg-gray-50
+  text-gray-700
+ "
+>
+ {{pkg.package}}
+</NuxtLink>
             </div>
           </div>
         </div>
-        <NuxtLink href="#" class="text-[12px] hover:text-[var(--color-primary-dark)]">هتل آهوان</NuxtLink>
+        <NuxtLink to="http://localhost:3000/hotels/3" class="text-[12px] hover:text-[var(--color-primary-dark)]">هتل آهوان</NuxtLink>
         <NuxtLink href="#" class="text-[12px] hover:text-[var(--color-primary-dark)]">درباره ما</NuxtLink>
         <NuxtLink href="#" class="text-[12px] hover:text-[var(--color-primary-dark)]">مجله گردشگری آهوان</NuxtLink>
         <NuxtLink href="#" class="text-[12px] hover:text-[var(--color-primary-dark)]">پشتیبانی آنلاین</NuxtLink>
@@ -197,13 +235,56 @@ onMounted(() => {
               <transition name="accordion">
                 <div v-if="expanded.categories[cat.category]" class="mt-1 space-y-1">
                   <div v-for="grp in cat.groups" :key="grp.id">
-                    <button class="w-full flex justify-between items-center p-2 text-[11px] bg-gray-300 rounded-lg" @click="toggle('group',grp.id)">
-                      <span>{{grp.group}}</span>
-                      <span v-if="grp.packages?.length">{{expanded.groups[grp.id] ? '−' : '+'}}</span>
-                    </button>
+                   <div
+ class="
+  w-full
+  flex
+  justify-between
+  items-center
+  p-2
+  text-[11px]
+  bg-gray-300
+  rounded-lg
+ "
+>
+ <NuxtLink
+  :to="`/domesticinternationaltours/${grp.id}`"
+  class="flex-1"
+  @click="isMobileMenuOpen=false"
+ >
+  {{grp.group}}
+ </NuxtLink>
+
+ <button
+  v-if="grp.packages?.length"
+  type="button"
+  class="
+   px-3
+   text-[14px]
+   font-bold
+   text-[var(--color-primary)]
+  "
+  @click.stop="toggle('group',grp.id)"
+ >
+  {{expanded.groups[grp.id] ? '−' : '+'}}
+ </button>
+</div>
                     <transition name="accordion">
                       <div v-if="expanded.groups[grp.id] && grp.packages?.length" class="bg-white border-r-2 border-[var(--color-primary)] p-2 mt-1">
-                        <a v-for="pkg in grp.packages" :key="pkg.id" :href="`/package/${pkg.id}`" class="block text-[10px] py-1 text-gray-600">{{pkg.package}}</a>
+                        <NuxtLink
+ v-for="pkg in grp.packages"
+ :key="pkg.id"
+ :to="`/domesticinternationaltours/${grp.id}/${pkg.id}`"
+ class="
+  block
+  text-[10px]
+  py-1
+  text-gray-600
+ "
+ @click="isMobileMenuOpen=false"
+>
+ {{pkg.package}}
+</NuxtLink>
                       </div>
                     </transition>
                   </div>
@@ -213,7 +294,7 @@ onMounted(() => {
           </div>
         </transition>
       </div>
-      <NuxtLink href="#" class="block border-2 border-[var(--color-primary)] rounded-xl p-3 text-sm font-bold text-[var(--color-primary)]">هتل آهوان</NuxtLink>
+      <NuxtLink to="http://localhost:3000/hotels/3" class="block border-2 border-[var(--color-primary)] rounded-xl p-3 text-sm font-bold text-[var(--color-primary)]">هتل آهوان</NuxtLink>
       <NuxtLink href="#" class="block border-2 border-[var(--color-primary)] rounded-xl p-3 text-sm font-bold text-[var(--color-primary)]">درباره ما</NuxtLink>
       <NuxtLink href="#" class="block border-2 border-[var(--color-primary)] rounded-xl p-3 text-sm font-bold text-[var(--color-primary)]">مجله گردشگری آهوان</NuxtLink>
       <NuxtLink href="#" class="block border-2 border-[var(--color-primary)] rounded-xl p-3 text-sm font-bold text-[var(--color-primary)]">پشتیبانی آنلاین</NuxtLink>

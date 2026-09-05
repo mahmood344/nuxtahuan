@@ -1,15 +1,17 @@
 <template>
-  <div>
-    <TicketBooking></TicketBooking>
-  </div>
+ <div>
+  <TicketBooking/>
+  <HotelBanner/>
+  <NatureTours/>
+  <DomesticInternationalTours/>
+  <HotelExperience />
+  <HotelSuggest />
+  <HotelFaq />
+  <AboutAhuan />
+  <LatestArticles />
+  <NewsletterSection />
+ </div>
 </template>
 
-<script>
-export default {
-
-}
+<script setup>
 </script>
-
-<style>
-
-</style>
