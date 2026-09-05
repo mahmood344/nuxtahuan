@@ -46,7 +46,7 @@
     <FlightSearchPanel mode="aside" :showServices="true" />
   </div>
 <HotelBookingAside
- :hotel="hotel"
+ :hotel="hotelDisplay"
  :check-in="checkIn"
  :check-out="checkOut"
  :gallery-images="galleryImages"
@@ -101,11 +101,16 @@
           <!-- ========================= -->
           <!-- Hotel Content -->
           <!-- ========================= -->
-          <div
-            v-else-if="hotel"
-            class="space-y-7"
-            dir="rtl"
-          >
+        <div
+ v-else-if="
+  hotel||
+  galleryImages.length||
+  hotelFacilities.length||
+  hasHotelLocation
+ "
+ class="space-y-7"
+ dir="rtl"
+>
 
             <!-- ========================= -->
             <!-- Gallery -->
@@ -120,7 +125,7 @@
               >
                 <img
                   :src="getHotelImageUrl(galleryImages[0]?.image)"
-                  :alt="hotel?.name||''"
+                  :alt="hotelDisplay.name"
                   class="block w-full h-full object-cover"
                    @click="openHotelGallery(0)"
                 >
@@ -139,7 +144,7 @@
                 >
                   <img
                     :src="getHotelImageUrl(image.image)"
-                    :alt="image.description||hotel?.name||''"
+                    :alt="image.description||hotelDisplay.name"
                     class="block w-full h-full object-cover"
                   >
 
@@ -233,13 +238,13 @@
             <!-- Hotel Info -->
             <!-- ========================= -->
             <section
-            v-if="currentStep===0"
-              class="bg-white rounded-2xl p-4 md:p-6"
-            >
+ v-if="currentStep===0"
+ class="bg-white rounded-2xl p-4 md:p-6"
+>
               <h1
                 class="text-[20px] md:text-[22px] font-black text-gray-900"
               >
-                هتل {{hotel.name}}
+                هتل {{hotelDisplay.name}}
               </h1>
 
 
@@ -252,7 +257,7 @@
                   dir="ltr"
                 >
                   <i
-                    v-for="star in Number(hotel.star||0)"
+                    v-for="star in Number(hotelDisplay.star||4)"
                     :key="star"
                     class="bi bi-star-fill"
                   ></i>
@@ -261,27 +266,27 @@
                 <span
                   class="text-[12px] text-gray-500"
                 >
-                  {{hotel.star||0}}
+                  {{hotelDisplay.star||4}}
                   ستاره
                 </span>
 
                 <span
-                  v-if="hotel.score"
+                  v-if="hotelDisplay.score"
                   class="text-[12px] text-gray-500"
                 >
                   امتیاز
-                  {{hotel.score}}
+                  {{hotelDisplay.score}}
                 </span>
               </div>
 
 
               <!-- Description -->
               <p
-                v-if="hotel.description"
-                class="mt-5 text-[12px] leading-8 text-gray-600 text-justify"
-              >
-                {{hotel.description}}
-              </p>
+ v-if="hotelDescription"
+ class="mt-5 text-[12px] leading-8 text-gray-600 text-justify"
+>
+ {{hotelDescription}}
+</p>
 
 
               <!-- Extra info -->
@@ -289,17 +294,17 @@
                 class="mt-5 flex flex-wrap gap-5 text-[11px] text-gray-500"
               >
                 <span
-                  v-if="hotel.checkInTime"
+                  v-if="hotelDisplay.checkInTime"
                   class="flex items-center gap-2"
                 >
                   <i class="bi bi-clock"></i>
 
                   ساعت ورود:
-                  {{hotel.checkInTime}}
+                  {{hotelDisplay.checkInTime}}
                 </span>
 
                 <span
-                  v-if="hotel.checkOutTime"
+                  v-if="hotelDisplay.checkOutTime"
                   class="flex items-center gap-2"
                 >
                   <i
@@ -307,16 +312,16 @@
                   ></i>
 
                   ساعت خروج:
-                  {{hotel.checkOutTime}}
+                  {{hotelDisplay.checkOutTime}}
                 </span>
 
                 <span
-                  v-if="hotel.address"
+                  v-if="hotelDisplay.address"
                   class="flex items-center gap-2"
                 >
                   <i class="bi bi-geo-alt"></i>
 
-                  {{hotel.address}}
+                  {{hotelDisplay.address}}
                 </span>
               </div>
             </section>
@@ -363,15 +368,19 @@
 <!-- Rooms -->
 <!-- ========================= -->
 <HotelRooms
- v-if="currentStep===0"
-   :hotel="hotel"
-   :rooms="roomsWithPrice"
-   :rooms-loading="roomsLoading"
-   :rooms-error="roomsError"
-   :check-in="checkIn"
-   :check-out="checkOut"
-   @open-room-modal="openRoomModal"
-   @reserve="reserveRoom"
+ v-if="
+  currentStep===0&&
+  checkIn&&
+  checkOut
+ "
+ :hotel="hotelDisplay"
+ :rooms="roomsWithPrice"
+ :rooms-loading="roomsLoading"
+ :rooms-error="roomsError"
+ :check-in="checkIn"
+ :check-out="checkOut"
+ @open-room-modal="openRoomModal"
+ @reserve="reserveRoom"
 />
 <!-- ========================= -->
 <!-- Hotel Location -->
@@ -400,7 +409,7 @@
     </h2>
 
     <p class="mt-1 text-[11px] text-gray-400">
-     هتل {{hotel?.name||''}}
+     هتل {{hotelDisplay.name}}
     </p>
    </div>
   </div>
@@ -422,7 +431,7 @@
  >
   <iframe
    :src="hotelMapUrl"
-   :title="`موقعیت هتل ${hotel?.name||''}`"
+   :title="`موقعیت هتل ${hotelDisplay.name}`"
    class="absolute inset-0 h-full w-full border-0"
    loading="lazy"
    allowfullscreen
@@ -436,8 +445,8 @@
   <div class="flex items-center gap-2 text-[11px] text-gray-500">
    <i class="bi bi-geo-alt text-[var(--color-primary)]"></i>
 
-   <span v-if="hotel?.address">
-    {{hotel.address}}
+   <span v-if="hotelDisplay.address">
+    {{hotelDisplay.address}}
    </span>
 
    <span v-else>
@@ -868,6 +877,15 @@ const currentStep = computed(()=>flightStore.currentStep)
 const BASE_URL='https://api.ahuan.ir/api'
 const HOTEL_IMAGE_BASE='https://panel.ahuan.ir/uploads'
 const passengerFormRef=ref(null)
+const DEFAULT_HOTEL_DESCRIPTION=
+ 'هتل آهوان چابکسر از واحدهای اقامتی با سابقه این شهر می‌باشد که در زمینی به مساحت 18 هکتار به بهره‌برداری رسید. هتل ساحلی آهوان دارای سه مجموعه اقامتی با نام‌های گل‌نشان، گل‌افشان و ویلایی است. مجموعه گل‌نشان هتل آهوان شامل 11 ساختمان سه طبقه، مجموعه گل‌افشان دارای یک ساختمان پنج طبقه و مجموعه ویلایی شامل 50 باب ویلا می‌شود. هتل تفریحی ساحلی آهوان مجموعاً مشتمل بر 212 باب سوئیت و ویلا است که با دارا بودن امکانات اقامتی مناسب پذیرای میهمانان و گردشگران محترم در ساحل دریای خزر می‌باشد. مجتمع اقامتی آهوان در 16 کیلومتری جاده رامسر به رودسر واقع شده‌است و 10 کیلومتر بعد از شهر چابکسر قرار دارد. قابل توجه میهمانان گرامی، مجموعه گل‌نشان هتل چهار ستاره آهوان چابکسر فاقد آسانسور است.'
+const DEFAULT_HOTEL_LATITUDE=
+ 37.0155520580034
+
+const DEFAULT_HOTEL_LONGITUDE=
+ 50.4892617892048
+
+
 const contactFormRef=ref(null)
 const bookingData= ref({
   contact: {
@@ -887,24 +905,137 @@ const hotelAvailability=ref(null)
 const currentContractData=ref(null)
 const paymentLoading=ref(false)
 const paymentError=ref('')
-const hasHotelLocation=computed(()=>{
- const lat=Number(hotel.value?.latitude)
- const lng=Number(hotel.value?.longitude)
+const hotelId=computed(()=>
+ Number(route.params.id||0)
+)
 
- return(
+const isAhuanChaboksar=computed(()=>
+ hotelId.value===3
+)
+const hotelDisplay=computed(()=>{
+
+ const isChaboksar=
+  isAhuanChaboksar.value
+
+ return{
+  id:
+   hotel.value?.id||
+   hotelId.value||
+   0,
+
+  name:String(
+   hotel.value?.name||
+   (isChaboksar
+    ?'آهوان چابکسر'
+    :'')
+  ).trim(),
+
+  star:Number(
+   hotel.value?.star||
+   (isChaboksar
+    ?4
+    :0)
+  ),
+
+  score:
+   hotel.value?.score||
+   null,
+
+  description:String(
+   hotel.value?.description||
+   (isChaboksar
+    ?DEFAULT_HOTEL_DESCRIPTION
+    :'')
+  ).trim(),
+
+  checkInTime:
+   hotel.value?.checkInTime||
+   '',
+
+  checkOutTime:
+   hotel.value?.checkOutTime||
+   '',
+
+  address:
+   hotel.value?.address||
+   '',
+
+  latitude:Number(
+   hotel.value?.latitude||
+   (isChaboksar
+    ?DEFAULT_HOTEL_LATITUDE
+    :0)
+  ),
+
+  longitude:Number(
+   hotel.value?.longitude||
+   (isChaboksar
+    ?DEFAULT_HOTEL_LONGITUDE
+    :0)
+  )
+ }
+
+})
+const hotelDescription=computed(()=>hotelDisplay.value.description)
+
+const hotelLatitude=computed(()=>{
+
+ const lat=
+  Number(
+   hotelDisplay.value.latitude
+  )
+
+ if(
   Number.isFinite(lat)&&
-  Number.isFinite(lng)&&
-  lat!==0&&
-  lng!==0
- )
+  lat!==0
+ ){
+  return lat
+ }
+
+ return null
+
 })
 
-const hotelMapUrl=computed(()=>{
- if(!hasHotelLocation.value)
-  return''
 
- const lat=Number(hotel.value.latitude)
- const lng=Number(hotel.value.longitude)
+const hotelLongitude=computed(()=>{
+
+ const lng=
+  Number(
+   hotelDisplay.value.longitude
+  )
+
+ if(
+  Number.isFinite(lng)&&
+  lng!==0
+ ){
+  return lng
+ }
+
+ return null
+
+})
+
+
+const hasHotelLocation=computed(()=>
+ Number.isFinite(
+  hotelLatitude.value
+ )&&
+ Number.isFinite(
+  hotelLongitude.value
+ )
+)
+
+
+
+
+
+
+
+
+const hotelMapUrl=computed(()=>{
+
+ const lat=hotelLatitude.value
+ const lng=hotelLongitude.value
  const delta=.008
 
  const bbox=[
@@ -922,12 +1053,11 @@ const hotelMapUrl=computed(()=>{
  )
 })
 
-const hotelMapLink=computed(()=>{
- if(!hasHotelLocation.value)
-  return'#'
 
- const lat=Number(hotel.value.latitude)
- const lng=Number(hotel.value.longitude)
+const hotelMapLink=computed(()=>{
+
+ const lat=hotelLatitude.value
+ const lng=hotelLongitude.value
 
  return(
   'https://www.openstreetmap.org/'+
@@ -935,6 +1065,8 @@ const hotelMapLink=computed(()=>{
   `#map=16/${lat}/${lng}`
  )
 })
+
+
 const PAYMENT_SESSION_KEY='flight_payment_session'
 
 const formshaparakRef=ref(null)
@@ -961,9 +1093,9 @@ const hotelGalleryIndex=ref(0)
 // =========================
 // Route
 // =========================
-const hotelId=computed(()=>
-  Number(route.params.id||0)
-)
+// const hotelId=computed(()=>
+//   Number(route.params.id||0)
+// )
 
 const checkIn=computed(()=>
   String(route.query.checkIn||'').trim()
@@ -2138,12 +2270,12 @@ const galleryImages=computed(()=>
   sortedHotelImages.value
 )
 
-// const remainingImagesCount=computed(()=>
-//   Math.max(
-//     sortedHotelImages.value.length-5,
-//     0
-//   )
-// )
+const remainingImagesCount=computed(()=>
+ Math.max(
+  sortedHotelImages.value.length-5,
+  0
+ )
+)
 
 // =========================
 // Image URL
@@ -2218,6 +2350,12 @@ hotelStore.removeRoom(room.key)
 
 }
 async  function continueBooking(){
+   if(!hotelStore.selectedRooms.length){
+
+  flightStore.setCurrentStep(0)
+
+  return
+ }
 // await hotelStore.refreshSelectedRoomsPricing()
  flightStore.setCurrentStep(1)
 
@@ -2363,21 +2501,23 @@ async function loadHotelExtras(){
 // Hotel + Availability + Rooms
 // =========================
 async function loadHotelAvailability(){
-  if(!hotelId.value){
-    errorMessage.value='شناسه هتل معتبر نیست.'
-    return
-  }
+ if(!hotelId.value){
+  errorMessage.value='شناسه هتل معتبر نیست.'
+  return
+ }
 
-  if(!checkIn.value||!checkOut.value){
-    errorMessage.value='تاریخ ورود و خروج مشخص نیست.'
-    return
-  }
+ if(!checkIn.value||!checkOut.value){
+  hotelAvailability.value=null
+  hotelRooms.value=[]
+  roomsError.value=''
+  roomsLoading.value=false
+  return
+ }
 
   loading.value=true
   roomsLoading.value=true
   errorMessage.value=''
   roomsError.value=''
-  hotel.value=null
   hotelRooms.value=[]
 
   try{
@@ -2393,7 +2533,8 @@ async function loadHotelAvailability(){
     )
 
     hotelAvailability.value=response||null
-    hotel.value=response||null
+    if(response)
+      hotel.value=response
 
     hotelRooms.value=
       Array.isArray(response?.hotelRooms)
@@ -2416,11 +2557,9 @@ async function loadHotelAvailability(){
     )
 
     hotelAvailability.value=null
-    hotel.value=null
     hotelRooms.value=[]
 
-    errorMessage.value=
-      'دریافت اطلاعات هتل با خطا مواجه شد.'
+    errorMessage.value=''
 
     roomsError.value=
       'دریافت اطلاعات اتاق‌ها با خطا مواجه شد.'
@@ -2440,13 +2579,44 @@ watch(
   },
   {immediate:true}
 )
-
 watch(
-  [hotelId,checkIn,checkOut],
-  ()=>{
-    loadHotelAvailability()
-  },
-  {immediate:true}
+ () => hotelStore.selectedRooms.length,
+ (roomsCount) => {
+
+  if(
+   roomsCount === 0 &&
+   flightStore.currentStep > 0
+  ){
+   flightStore.setCurrentStep(0)
+
+   nextTick(()=>{
+    window.scrollTo({
+     top:0,
+     behavior:'smooth'
+    })
+   })
+  }
+
+ }
+)
+watch(
+ [hotelId,checkIn,checkOut],
+ ()=>{
+  if(
+   !hotelId.value||
+   !checkIn.value||
+   !checkOut.value
+  ){
+   hotelAvailability.value=null
+   hotelRooms.value=[]
+   roomsError.value=''
+   roomsLoading.value=false
+   return
+  }
+
+  loadHotelAvailability()
+ },
+ {immediate:true}
 )
 function getRoomPriceDetails(room){
 
