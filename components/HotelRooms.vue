@@ -272,76 +272,114 @@
 
 </div>
 
-        <!-- سمت قیمت -->
+      <!-- سمت قیمت -->
 <div
-  class="flex flex-wrap items-center justify-end gap-4"
->
-<div
- v-if="
-  room.calculatedPrice>0 &&
-  getRoomAvailableCount(room)>0
+ class="
+  flex
+  flex-wrap
+  items-center
+  justify-end
+  gap-4
  "
- class="text-left"
- dir="rtl"
 >
- <p class="text-[10px] text-gray-400">
-  قیمت برای
-  {{room.nightCount}}
-  شب
- </p>
-
- <div class="mt-1 flex items-end gap-1">
-  <span class="text-[18px] font-black text-gray-900">
-   {{formatPrice(room.calculatedPrice)}}
-  </span>
-
-  <span class="pb-[2px] text-[10px] text-gray-500">
-   ریال
-  </span>
- </div>
-</div>
-
-<div
- v-else-if="getRoomAvailableCount(room)===0"
- class="text-[11px] font-bold text-red-500"
->
- تکمیل ظرفیت
-</div>
-
-<div
- v-else
- class="text-[11px] font-bold text-gray-400"
->
- قیمت موجود نیست
-</div>
-
-<span
- v-if="
-  room.onRequest &&
-  getRoomAvailableCount(room)>0
- "
- class="text-[11px] font-bold text-orange-500"
->
- واچر بعد از تایید هتل ارسال میشود
-</span>
-
-<button
-  type="button"
-  class="rounded-lg px-5 py-3 text-[11px] font-bold text-white"
-  :class="
-    getRoomAvailableCount(room)>0
-      ? 'bg-red-500'
-      : 'bg-gray-400 cursor-not-allowed'
+ <!-- قیمت -->
+ <div
+  v-if="
+   Number(room.calculatedPrice||0)>0 &&
+   getRoomAvailableCount(room)>0
   "
-  :disabled="getRoomAvailableCount(room)===0"
+  class="text-left"
+  dir="rtl"
+ >
+  <p class="text-[10px] text-gray-400">
+   قیمت برای
+   {{room.nightCount}}
+   شب
+  </p>
+
+  <div class="mt-1 flex items-end gap-1">
+   <span
+    class="
+     text-[18px]
+     font-black
+     text-gray-900
+    "
+   >
+    {{formatPrice(room.calculatedPrice)}}
+   </span>
+
+   <span
+    class="
+     pb-[2px]
+     text-[10px]
+     text-gray-500
+    "
+   >
+    ریال
+   </span>
+  </div>
+ </div>
+
+
+ <!-- فقط زمانی که ظرفیت داریم ولی قیمت نداریم -->
+ <div
+  v-if="
+   getRoomAvailableCount(room)>0 &&
+   Number(room.calculatedPrice||0)<=0
+  "
+  class="
+   text-[11px]
+   font-bold
+   text-gray-400
+  "
+ >
+  قیمت موجود نیست
+ </div>
+
+
+ <!-- واچر -->
+ <span
+  v-if="
+   room.onRequest &&
+   getRoomAvailableCount(room)>0
+  "
+  class="
+   text-[11px]
+   font-bold
+   text-orange-500
+  "
+ >
+  واچر بعد از تایید هتل ارسال میشود
+ </span>
+
+
+ <!-- تنها محل نمایش تکمیل ظرفیت -->
+ <button
+  type="button"
+  class="
+   rounded-lg
+   px-5
+   py-3
+   text-[11px]
+   font-bold
+   text-white
+  "
+  :class="
+   getRoomAvailableCount(room)>0
+    ? 'bg-red-500'
+    : 'bg-gray-400 cursor-not-allowed'
+  "
+  :disabled="
+   getRoomAvailableCount(room)===0
+  "
   @click="reserveRoom(room)"
->
+ >
   {{
-    getRoomAvailableCount(room)>0
-      ? 'رزرو اتاق'
-      : 'تکمیل ظرفیت'
+   getRoomAvailableCount(room)>0
+    ? 'رزرو اتاق'
+    : 'تکمیل ظرفیت'
   }}
-</button>
+ </button>
 </div>
       </div>
     </div>

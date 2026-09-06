@@ -377,6 +377,7 @@
  :rooms="roomsWithPrice"
  :rooms-loading="roomsLoading"
  :rooms-error="roomsError"
+ :display-only="roomsFallbackMode"
  :check-in="checkIn"
  :check-out="checkOut"
  @open-room-modal="openRoomModal"
@@ -1083,6 +1084,10 @@ const errorMessage=ref('')
 const hotelRooms=ref([])
 const roomsLoading=ref(false)
 const roomsError=ref('')
+
+// وقتی availability اتاق قابل فروش برنگرداند،
+// اتاق‌های عمومی هتل از /Hotel/rooms/{id} فقط برای نمایش دریافت می‌شوند.
+const roomsFallbackMode=ref(false)
 
 const selectedRoom=ref(null)
 const roomModalOpen=ref(false)
@@ -2327,8 +2332,17 @@ function nextHotelGallery(){
 }
 function reserveRoom(data){
 
- const room=data.room
- const count=data.count
+ const room=data?.room
+ const count=Number(data?.count||1)
+
+ // اتاق‌های fallback صرفاً جهت معرفی هستند و نباید رزرو شوند.
+ if(
+  !room||
+  room.forShow===true||
+  Number(room.calculatedPrice||0)<=0
+ ){
+  return
+ }
 
  hotelStore.addRoom({
   key:`${room.id||room.roomId}-${Date.now()}`,
@@ -2500,6 +2514,117 @@ async function loadHotelExtras(){
 // =========================
 // Hotel + Availability + Rooms
 // =========================
+
+function normalizeRoomApiResponse(response){
+ if(Array.isArray(response))
+  return response
+
+ if(Array.isArray(response?.data))
+  return response.data
+
+ if(Array.isArray(response?.result))
+  return response.result
+
+ return []
+}
+
+function isPublicFallbackRoom(room){
+ if(!room)
+  return false
+
+ const name=String(room?.name||'').trim()
+ const type=String(room?.type||'').trim()
+ const text=`${name} ${type}`
+
+ // در خروجی فعلی رکورد تست غیرقابل فروش وجود دارد.
+ // این رکورد نباید در سایت به کاربر نمایش داده شود.
+ if(
+  text.includes('تست')||
+  text.includes('غیرقابل فروش')||
+  type==='ندارد'
+ )
+  return false
+
+ return true
+}
+
+async function loadAllHotelRooms(){
+
+ if(!hotelId.value)
+  return false
+
+ try{
+
+  const response=
+   await $fetch(
+    `${BASE_URL}/Hotel/rooms/${hotelId.value}`
+   )
+
+  // تمام اتاق‌هایی که API برمی‌گرداند نمایش داده می‌شوند
+  // حتی رکوردهایی مثل «تست غیرقابل فروش»
+  const rooms=
+   normalizeRoomApiResponse(response)
+
+  roomsFallbackMode.value=true
+
+  hotelRooms.value=
+   rooms.map(room=>({
+    ...room,
+
+    forShow:true,
+    displayOnly:true,
+
+    calculatedPrice:0,
+    availableCount:0,
+
+    hotelRoomImages:
+     Array.isArray(room?.hotelRoomImages)
+      ?room.hotelRoomImages
+      :[]
+   }))
+
+  console.log(
+   'Hotel Rooms Fallback:',
+   hotelRooms.value
+  )
+
+  console.log(
+   'Fallback Room IDs:',
+   hotelRooms.value.map(room=>({
+    id:room.id,
+    name:room.name,
+    type:room.type
+   }))
+  )
+
+  return hotelRooms.value.length>0
+
+ }
+ catch(error){
+
+  console.error(
+   'Hotel rooms fallback error:',
+   error
+  )
+
+  hotelRooms.value=[]
+
+  return false
+ }
+
+}
+function hasSellableAvailabilityRoom(rooms){
+ if(!Array.isArray(rooms)||!rooms.length)
+  return false
+
+ return rooms.some(room=>{
+  const price=getRoomTotalPrice(room)
+  const available=getRoomAvailableCount(room)
+
+  return price>0&&available>0
+ })
+}
+
 async function loadHotelAvailability(){
  if(!hotelId.value){
   errorMessage.value='شناسه هتل معتبر نیست.'
@@ -2509,64 +2634,95 @@ async function loadHotelAvailability(){
  if(!checkIn.value||!checkOut.value){
   hotelAvailability.value=null
   hotelRooms.value=[]
+  roomsFallbackMode.value=false
   roomsError.value=''
   roomsLoading.value=false
   return
  }
 
-  loading.value=true
-  roomsLoading.value=true
-  errorMessage.value=''
-  roomsError.value=''
-  hotelRooms.value=[]
+ loading.value=true
+ roomsLoading.value=true
+ errorMessage.value=''
+ roomsError.value=''
+ hotelRooms.value=[]
+ roomsFallbackMode.value=false
 
-  try{
-    const response=await $fetch(
-      `${BASE_URL}/Hotel/hotel-availability`,
-      {
-        params:{
-          HotelId:hotelId.value,
-          CheckIn:checkIn.value,
-          CheckOut:checkOut.value
-        }
-      }
-    )
+ try{
+  const response=await $fetch(
+   `${BASE_URL}/Hotel/hotel-availability`,
+   {
+    params:{
+     HotelId:hotelId.value,
+     CheckIn:checkIn.value,
+     CheckOut:checkOut.value
+    }
+   }
+  )
 
-    hotelAvailability.value=response||null
-    if(response)
-      hotel.value=response
+  hotelAvailability.value=response||null
 
-    hotelRooms.value=
-      Array.isArray(response?.hotelRooms)
-        ?response.hotelRooms
-        :[]
+  if(response)
+   hotel.value=response
 
-    console.log(
-      'Hotel Availability:',
-      hotelAvailability.value
-    )
+  const availabilityRooms=
+   Array.isArray(response?.hotelRooms)
+    ?response.hotelRooms
+    :[]
 
-    console.log(
-      'Hotel Rooms:',
-      hotelRooms.value
-    )
-  }catch(error){
-    console.error(
-      'Hotel Availability Error:',
-      error
-    )
+  hotelRooms.value=availabilityRooms
 
-    hotelAvailability.value=null
-    hotelRooms.value=[]
+  console.log(
+   'Hotel Availability:',
+   hotelAvailability.value
+  )
 
-    errorMessage.value=''
+  console.log(
+   'Hotel Availability Rooms:',
+   availabilityRooms
+  )
 
+  // ابتدا اتاق‌های availability بررسی می‌شوند.
+  // فقط اگر هیچ اتاق دارای قیمت و ظرفیت نبود، /Hotel/rooms/{id} صدا زده می‌شود.
+  if(!hasSellableAvailabilityRoom(availabilityRooms)){
+   const fallbackLoaded=
+    await loadAllHotelRooms()
+
+   if(fallbackLoaded){
+    roomsError.value=''
+   }
+   else{
     roomsError.value=
-      'دریافت اطلاعات اتاق‌ها با خطا مواجه شد.'
-  }finally{
-    loading.value=false
-    roomsLoading.value=false
+     'در تاریخ انتخابی اتاق قابل رزرو یافت نشد.'
+   }
   }
+ }
+ catch(error){
+  console.error(
+   'Hotel Availability Error:',
+   error
+  )
+
+  hotelAvailability.value=null
+  hotelRooms.value=[]
+  errorMessage.value=''
+
+  // حتی اگر availability خطا بدهد، اطلاعات عمومی اتاق‌ها
+  // را فقط برای نمایش امتحان می‌کنیم.
+  const fallbackLoaded=
+   await loadAllHotelRooms()
+
+  if(fallbackLoaded){
+   roomsError.value=''
+  }
+  else{
+   roomsError.value=
+    'دریافت اطلاعات اتاق‌ها با خطا مواجه شد.'
+  }
+ }
+ finally{
+  loading.value=false
+  roomsLoading.value=false
+ }
 }
 
 // =========================
@@ -2609,6 +2765,7 @@ watch(
   ){
    hotelAvailability.value=null
    hotelRooms.value=[]
+   roomsFallbackMode.value=false
    roomsError.value=''
    roomsLoading.value=false
    return
@@ -2757,11 +2914,32 @@ const roomsWithPrice=computed(()=>{
 
  return hotelRooms.value.map(room=>{
 
+  if(
+   roomsFallbackMode.value||
+   room?.forShow===true||
+   room?.displayOnly===true
+  ){
+   return{
+    ...room,
+    forShow:true,
+    displayOnly:true,
+    calculatedPrice:0,
+    availableCount:0,
+    nightCount:Math.max(
+     0,
+     calculateNights()
+    )
+   }
+  }
+
   const details=
    getRoomPriceDetails(room)
 
   const price=
    getRoomTotalPrice(room)
+
+  const availableCount=
+   getRoomAvailableCount(room)
 
   console.log(
    'ROOM DEBUG',
@@ -2777,13 +2955,17 @@ const roomsWithPrice=computed(()=>{
      loadNo:x.loadNo,
      bookNo:x.bookNo
     })),
-    price
+    price,
+    availableCount
    }
   )
 
   return{
    ...room,
+   forShow:false,
+   displayOnly:false,
    calculatedPrice:price,
+   availableCount,
    nightCount:Math.max(
     0,
     calculateNights()
@@ -2791,6 +2973,7 @@ const roomsWithPrice=computed(()=>{
   }
  })
 })
+
 function getRoomNightCount(room){
   return getRoomPriceDetails(room)
     .length
