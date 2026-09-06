@@ -95,6 +95,7 @@
       w-full
       object-cover
      "
+    
     >
 
     <div

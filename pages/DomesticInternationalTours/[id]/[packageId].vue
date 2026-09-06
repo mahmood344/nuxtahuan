@@ -73,72 +73,135 @@
    <!-- موبایل مخفی -->
    <!-- ========================= -->
 
-   <section
-    v-if="getMainImage(packageData)"
+  <!-- ========================= -->
+<!-- Hero - Desktop + Mobile -->
+<!-- ========================= -->
+
+<!-- ========================= -->
+<!-- Hero -->
+<!-- ========================= -->
+
+<section
+ v-if="getMainImage(packageData)"
+ class="
+  relative
+  mt-[-35px]
+  w-full
+  overflow-hidden
+  bg-[#f8f8f8]
+ "
+>
+ <!-- Mobile -->
+ <div
+  class="
+   relative
+   h-[320px]
+   w-full
+   md:hidden
+  "
+ >
+  <img
+   :src="getMobileImage(packageData)"
+   :alt="packageData.name"
+   class="
+    h-full
+    w-full
+    object-cover
+    object-center
+   "
+  >
+
+  <div
+   class="
+    pointer-events-none
+    absolute
+    inset-x-0
+    bottom-0
+    bg-gradient-to-t
+    from-black/70
+    via-black/20
+    to-transparent
+    px-4
+    pb-5
+    pt-20
+   "
+  >
+   <h1
     class="
-     relative
-     hidden
-     h-[250px]
-     mt-[-50px]
-     w-full
-     overflow-hidden
-     md:block
+     text-[18px]
+     font-black
+     text-white
+     drop-shadow-lg
     "
    >
-    <img
-     :src="getMainImage(packageData)"
-     :alt="packageData.name"
-     class="
-      absolute
-      inset-0
-      h-full
-      w-full
-      object-cover
-     "
-    >
+    {{packageData.name}}
+   </h1>
+  </div>
+ </div>
 
-    <div
-     class="
-      absolute
-      inset-0
-      bg-gradient-to-t
-      from-black/60
-      via-black/10
-      to-transparent
-     "
-    ></div>
 
-    <div
+ <!-- Desktop -->
+ <div
+  class="
+   relative
+   hidden
+   w-full
+   md:block
+  "
+ >
+  <img
+   :src="getMainImage(packageData)"
+   :alt="packageData.name"
+   class="
+    block
+    h-auto
+    w-full
+    object-contain
+   "
+  >
+
+  <div
+   class="
+    pointer-events-none
+    absolute
+    inset-x-0
+    bottom-0
+    bg-gradient-to-t
+    from-black/55
+    via-black/10
+    to-transparent
+    px-6
+    pb-7
+    pt-20
+   "
+  >
+   <div
+    class="
+     mx-auto
+     w-full
+     max-w-[1100px]
+    "
+   >
+    <h1
      class="
-      absolute
-      bottom-0
-      right-0
-      left-0
-      mx-auto
-      w-full
-      max-w-[1100px]
-      px-6
-      pb-5
+      text-[24px]
+      font-black
       text-white
+      drop-shadow-lg
      "
     >
-     <h1
-      class="
-       text-[24px]
-       font-black
-       drop-shadow-lg
-      "
-     >
-      {{packageData.name}}
-     </h1>
-    </div>
-   </section>
+     {{packageData.name}}
+    </h1>
+   </div>
+  </div>
+ </div>
+</section>
 
    <!-- ========================= -->
    <!-- Mobile Title -->
    <!-- ========================= -->
 
-   <div
+   <!-- <div
     class="
      px-4
      pb-3
@@ -155,7 +218,7 @@
     >
      {{packageData.name}}
     </h1>
-   </div>
+   </div> -->
 
    <!-- ========================= -->
    <!-- Sticky Tabs -->
@@ -1049,7 +1112,19 @@ const hasPhotos=computed(()=>
 /* ========================= */
 /* Sort */
 /* ========================= */
+function getMobileImage(item){
 
+ if(!item)
+  return''
+
+ return buildImageUrl(
+  item.backImageM ||
+  item.imageM ||
+  item.backImage ||
+  item.image
+ )
+
+}
 function sortItems(items){
  if(!Array.isArray(items))
   return[]
