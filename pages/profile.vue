@@ -14,24 +14,30 @@
       <div class="profile-container">
         <div class="profile-layout">
           <!-- منوی باریک سمت راست -->
-          <aside class="profile-menu">
-            <button
-              v-for="item in menuItems"
-              :key="item.key"
-              type="button"
-              class="profile-menu-item"
-              :class="activeItem === item.key ? 'profile-menu-item-active' : ''"
-              @click="activeItem = item.key"
-            >
-              <span class="text-xl">
-                {{ item.icon }}
-              </span>
+          <aside class="profile-menu mt-14 md:mt-0">
+ <button
+  v-for="item in menuItems"
+  :key="item.key"
+  type="button"
+  class="profile-menu-item"
+  :class="{
+   'profile-menu-item-active':
+    activeItem === item.key && item.key !== 'logout',
 
-              <span class="text-[11px]">
-                {{ item.label }}
-              </span>
-            </button>
-          </aside>
+   'text-red-500':
+    item.key === 'logout'
+  }"
+  @click="handleMenuClick(item)"
+ >
+  <span class="text-xl">
+   {{ item.icon }}
+  </span>
+
+  <span class="text-[11px]">
+   {{ item.label }}
+  </span>
+ </button>
+</aside>
 
           <!-- ستون وسط -->
           <main class="profile-content">
@@ -733,111 +739,433 @@
     </button>
   </div>
 
+  <div v-else>
+ <!-- ========================= -->
+ <!-- Mobile Cards -->
+ <!-- ========================= -->
+ <div
+  v-if="passengers.length"
+  class="
+   space-y-3
+   md:hidden
+  "
+ >
   <div
-    v-else
-    class="overflow-x-auto rounded-xl bg-white shadow-sm"
+   v-for="passenger in passengers"
+   :key="passenger.id"
+   class="
+    overflow-hidden
+    rounded-2xl
+    border
+    border-gray-100
+    bg-white
+    shadow-sm
+   "
   >
-    <table
-      v-if="passengers.length"
-      class="w-full min-w-[750px] border-collapse text-center text-sm"
-    >
-      <thead>
-        <tr class="border-b border-gray-200 text-gray-800">
-          <th class="px-4 py-5">
-            نام
-          </th>
+   <!-- Header -->
+   <div
+    class="
+     flex
+     items-center
+     justify-between
+     bg-[#edf7ff]
+     px-4
+     py-3
+    "
+   >
+    <div>
+     <p class="text-[10px] text-gray-400">
+      مسافر
+     </p>
 
-          <th class="px-4 py-5">
-            نام خانوادگی
-          </th>
-
-          <th class="px-4 py-5">
-            کد ملی
-          </th>
-
-          <th class="px-4 py-5">
-            ملیت
-          </th>
-
-          <th class="px-4 py-5">
-            جنسیت
-          </th>
-
-          <th class="px-4 py-5">
-            تاریخ تولد
-          </th>
-
-          <th class="px-4 py-5">
-            عملیات
-          </th>
-        </tr>
-      </thead>
-
-      <tbody>
-        <tr
-          v-for="passenger in passengers"
-          :key="passenger.id"
-          class="border-b border-gray-200 last:border-b-0"
-        >
-          <td class="px-4 py-4">
-            {{ passenger.fName || '-' }}
-          </td>
-
-          <td class="px-4 py-4">
-            {{ passenger.lName || '-' }}
-          </td>
-
-          <td class="px-4 py-4">
-            {{ toPersianDigits(passenger.codeMelli || '-') }}
-          </td>
-
-          <td class="px-4 py-4">
-            {{ passenger.nationality || '-' }}
-          </td>
-
-          <td class="px-4 py-4">
-            {{ getGenderTitle(passenger.gender) }}
-          </td>
-
-          <td class="px-4 py-4">
-            {{ formatUserBirthDate(passenger.birthDate) }}
-          </td>
-
-          <td class="px-4 py-4">
-            <div class="flex items-center justify-center gap-2">
-              <button
-                type="button"
-                class="rounded-full bg-[#14179e] px-5 py-2 text-xs font-bold text-white"
-                @click="openEditPassengerModal(passenger)"
-              >
-                ویرایش
-              </button>
-
-              <button
-                type="button"
-                class="rounded-full bg-[#e9b978] px-5 py-2 text-xs font-bold text-white"
-                :disabled="deletingPassengerId === passenger.id"
-                @click="openDeletePassengerModal(passenger)"
-              >
-                {{
-                  deletingPassengerId === passenger.id
-                    ? 'در حال حذف...'
-                    : 'حذف'
-                }}
-              </button>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+     <p
+      class="
+       mt-1
+       text-[13px]
+       font-black
+       text-gray-800
+      "
+     >
+      {{passenger.fName || '-'}}
+      {{passenger.lName || ''}}
+     </p>
+    </div>
 
     <div
-      v-else
-      class="p-10 text-center text-sm font-bold text-gray-500"
+     class="
+      flex
+      h-9
+      w-9
+      items-center
+      justify-center
+      rounded-full
+      bg-white
+      text-lg
+     "
     >
-      هنوز مسافری ثبت نشده است.
+     👤
     </div>
+   </div>
+
+
+   <!-- Body -->
+   <div class="p-4">
+    <div
+     class="
+      grid
+      grid-cols-2
+      gap-x-4
+      gap-y-5
+      text-[11px]
+     "
+    >
+     <!-- نام -->
+     <div>
+      <p class="text-gray-400">
+       نام
+      </p>
+
+      <p class="mt-1 font-bold">
+       {{passenger.fName || '-'}}
+      </p>
+     </div>
+
+
+     <!-- نام خانوادگی -->
+     <div>
+      <p class="text-gray-400">
+       نام خانوادگی
+      </p>
+
+      <p class="mt-1 font-bold">
+       {{passenger.lName || '-'}}
+      </p>
+     </div>
+
+
+     <!-- کد ملی -->
+     <div>
+      <p class="text-gray-400">
+       کد ملی
+      </p>
+
+      <p
+       class="
+        mt-1
+        break-all
+        font-bold
+       "
+       dir="ltr"
+      >
+       {{
+        toPersianDigits(
+         passenger.codeMelli || '-'
+        )
+       }}
+      </p>
+     </div>
+
+
+     <!-- ملیت -->
+     <div>
+      <p class="text-gray-400">
+       ملیت
+      </p>
+
+      <p class="mt-1 font-bold">
+       {{passenger.nationality || '-'}}
+      </p>
+     </div>
+
+
+     <!-- جنسیت -->
+     <div>
+      <p class="text-gray-400">
+       جنسیت
+      </p>
+
+      <p class="mt-1 font-bold">
+       {{
+        getGenderTitle(
+         passenger.gender
+        )
+       }}
+      </p>
+     </div>
+
+
+     <!-- تاریخ تولد -->
+     <div>
+      <p class="text-gray-400">
+       تاریخ تولد
+      </p>
+
+      <p class="mt-1 font-bold">
+       {{
+        formatUserBirthDate(
+         passenger.birthDate
+        )
+       }}
+      </p>
+     </div>
+    </div>
+
+
+    <!-- Actions -->
+    <div
+     class="
+      mt-4
+      grid
+      grid-cols-2
+      gap-2
+      border-t
+      border-gray-100
+      pt-4
+     "
+    >
+     <button
+      type="button"
+      class="
+       w-full
+       rounded-xl
+       bg-[#14179e]
+       px-4
+       py-3
+       text-[11px]
+       font-bold
+       text-white
+       transition
+       hover:bg-[#0d107e]
+      "
+      @click="openEditPassengerModal(passenger)"
+     >
+      ویرایش
+     </button>
+
+     <button
+      type="button"
+      class="
+       w-full
+       rounded-xl
+       bg-[#e9b978]
+       px-4
+       py-3
+       text-[11px]
+       font-bold
+       text-white
+       transition
+       disabled:opacity-50
+      "
+      :disabled="
+       deletingPassengerId === passenger.id
+      "
+      @click="
+       openDeletePassengerModal(
+        passenger
+       )
+      "
+     >
+      {{
+       deletingPassengerId === passenger.id
+        ? 'در حال حذف...'
+        : 'حذف'
+      }}
+     </button>
+    </div>
+   </div>
   </div>
+ </div>
+
+
+ <!-- ========================= -->
+ <!-- Desktop Table -->
+ <!-- ========================= -->
+ <div
+  v-if="passengers.length"
+  class="
+   hidden
+   overflow-x-auto
+   rounded-xl
+   bg-white
+   shadow-sm
+   md:block
+  "
+ >
+  <table
+   class="
+    w-full
+    min-w-[750px]
+    border-collapse
+    text-center
+    text-sm
+   "
+  >
+   <thead>
+    <tr
+     class="
+      border-b
+      border-gray-200
+      text-gray-800
+     "
+    >
+     <th class="px-4 py-5">
+      نام
+     </th>
+
+     <th class="px-4 py-5">
+      نام خانوادگی
+     </th>
+
+     <th class="px-4 py-5">
+      کد ملی
+     </th>
+
+     <th class="px-4 py-5">
+      ملیت
+     </th>
+
+     <th class="px-4 py-5">
+      جنسیت
+     </th>
+
+     <th class="px-4 py-5">
+      تاریخ تولد
+     </th>
+
+     <th class="px-4 py-5">
+      عملیات
+     </th>
+    </tr>
+   </thead>
+
+
+   <tbody>
+    <tr
+     v-for="passenger in passengers"
+     :key="passenger.id"
+     class="
+      border-b
+      border-gray-200
+      last:border-b-0
+     "
+    >
+     <td class="px-4 py-4">
+      {{passenger.fName || '-'}}
+     </td>
+
+     <td class="px-4 py-4">
+      {{passenger.lName || '-'}}
+     </td>
+
+     <td class="px-4 py-4">
+      {{
+       toPersianDigits(
+        passenger.codeMelli || '-'
+       )
+      }}
+     </td>
+
+     <td class="px-4 py-4">
+      {{passenger.nationality || '-'}}
+     </td>
+
+     <td class="px-4 py-4">
+      {{
+       getGenderTitle(
+        passenger.gender
+       )
+      }}
+     </td>
+
+     <td class="px-4 py-4">
+      {{
+       formatUserBirthDate(
+        passenger.birthDate
+       )
+      }}
+     </td>
+
+     <td class="px-4 py-4">
+      <div
+       class="
+        flex
+        items-center
+        justify-center
+        gap-2
+       "
+      >
+       <button
+        type="button"
+        class="
+         rounded-full
+         bg-[#14179e]
+         px-5
+         py-2
+         text-xs
+         font-bold
+         text-white
+        "
+        @click="
+         openEditPassengerModal(
+          passenger
+         )
+        "
+       >
+        ویرایش
+       </button>
+
+       <button
+        type="button"
+        class="
+         rounded-full
+         bg-[#e9b978]
+         px-5
+         py-2
+         text-xs
+         font-bold
+         text-white
+        "
+        :disabled="
+         deletingPassengerId ===
+         passenger.id
+        "
+        @click="
+         openDeletePassengerModal(
+          passenger
+         )
+        "
+       >
+        {{
+         deletingPassengerId ===
+         passenger.id
+          ? 'در حال حذف...'
+          : 'حذف'
+        }}
+       </button>
+      </div>
+     </td>
+    </tr>
+   </tbody>
+  </table>
+ </div>
+
+
+ <!-- Empty -->
+ <div
+  v-if="!passengers.length"
+  class="
+   rounded-xl
+   bg-white
+   p-10
+   text-center
+   text-sm
+   font-bold
+   text-gray-500
+  "
+ >
+  هنوز مسافری ثبت نشده است.
+ </div>
+</div>
 </section>
           </main>
 
@@ -1059,536 +1387,1642 @@
     </div>
   </Transition>
 </Teleport>
-  <Teleport to="body">
-  <Transition name="contract-modal">
+<Teleport to="body">
+ <Transition name="contract-modal">
+  <div
+   v-if="detailsModalOpen"
+   dir="rtl"
+   class="
+    fixed
+    inset-0
+    z-[2000]
+    flex
+    items-center
+    justify-center
+    bg-black/40
+    p-2
+    backdrop-blur-[1px]
+    sm:p-4
+   "
+   @click.self="closeOrderDetails"
+  >
+   <!-- =============================== -->
+   <!-- Modal Container -->
+   <!-- =============================== -->
+   <div
+    class="
+     flex
+     max-h-[96vh]
+     w-full
+     max-w-[1400px]
+     flex-col
+     overflow-hidden
+     rounded-2xl
+     bg-white
+     shadow-2xl
+     sm:max-h-[92vh]
+    "
+   >
+    <!-- =============================== -->
+    <!-- Header -->
+    <!-- =============================== -->
     <div
-      v-if="detailsModalOpen"
-      dir="rtl"
-      class="fixed inset-0 z-[2000] flex items-center justify-center bg-black/40 p-4 backdrop-blur-[1px]"
-      @click.self="closeOrderDetails"
+     class="
+      flex
+      shrink-0
+      items-center
+      justify-between
+      border-b
+      border-gray-100
+      px-4
+      py-3
+      sm:px-5
+      sm:py-4
+     "
     >
-      <div
-        class="flex max-h-[92vh] w-full max-w-[1400px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+     <div>
+      <h2
+       class="
+        text-[14px]
+        font-black
+        text-gray-800
+        sm:text-base
+       "
       >
-        <!-- هدر مودال -->
-        <div class="flex items-center justify-end px-5 py-4">
-          <button
-            type="button"
-            class="flex h-9 w-9 items-center justify-center rounded-full text-3xl leading-none text-gray-500 transition hover:bg-gray-100 hover:text-gray-800"
-            @click="closeOrderDetails"
+       جزئیات سفارش
+      </h2>
+
+      <p
+       class="
+        mt-1
+        text-[10px]
+        text-gray-400
+        sm:text-xs
+       "
+      >
+       شماره سفارش:
+       {{toPersianDigits(selectedContract?.id||'-')}}
+      </p>
+     </div>
+
+     <button
+      type="button"
+      class="
+       flex
+       h-9
+       w-9
+       shrink-0
+       items-center
+       justify-center
+       rounded-full
+       text-3xl
+       leading-none
+       text-gray-500
+       transition
+       hover:bg-gray-100
+       hover:text-gray-800
+      "
+      @click="closeOrderDetails"
+     >
+      ×
+     </button>
+    </div>
+
+
+    <!-- =============================== -->
+    <!-- Scrollable Content -->
+    <!-- =============================== -->
+    <div
+     class="
+      overflow-y-auto
+      overflow-x-hidden
+      px-3
+      pb-6
+      pt-4
+      sm:px-5
+      md:px-7
+     "
+    >
+     <!-- =============================== -->
+     <!-- Order Summary -->
+     <!-- =============================== -->
+     <section
+      class="
+       grid
+       grid-cols-2
+       gap-3
+       rounded-2xl
+       bg-[#e2f2ff]
+       p-4
+       text-[11px]
+       text-gray-800
+       sm:grid-cols-2
+       sm:gap-x-8
+       sm:gap-y-6
+       sm:p-6
+       sm:text-sm
+       xl:grid-cols-4
+      "
+     >
+      <div
+       class="
+        rounded-xl
+        bg-white/55
+        p-3
+        sm:bg-transparent
+        sm:p-0
+       "
+      >
+       <span
+        class="
+         block
+         text-[10px]
+         text-gray-500
+         sm:inline
+         sm:text-sm
+         sm:font-black
+         sm:text-gray-800
+        "
+       >
+        شماره سفارش:
+       </span>
+
+       <span
+        class="
+         mt-1
+         block
+         font-bold
+         sm:mr-1
+         sm:inline
+        "
+       >
+        {{toPersianDigits(selectedContract?.id||'-')}}
+       </span>
+      </div>
+
+
+      <div
+       class="
+        rounded-xl
+        bg-white/55
+        p-3
+        sm:bg-transparent
+        sm:p-0
+       "
+      >
+       <span
+        class="
+         block
+         text-[10px]
+         text-gray-500
+         sm:inline
+         sm:text-sm
+         sm:font-black
+         sm:text-gray-800
+        "
+       >
+        تاریخ رزرو:
+       </span>
+
+       <span
+        class="
+         mt-1
+         block
+         font-bold
+         sm:mr-1
+         sm:inline
+        "
+       >
+        {{formatContractDate(selectedContract?.issueDate)}}
+       </span>
+      </div>
+
+
+      <div
+       class="
+        rounded-xl
+        bg-white/55
+        p-3
+        sm:bg-transparent
+        sm:p-0
+       "
+      >
+       <span
+        class="
+         block
+         text-[10px]
+         text-gray-500
+         sm:inline
+         sm:text-sm
+         sm:font-black
+         sm:text-gray-800
+        "
+       >
+        ساعت رزرو:
+       </span>
+
+       <span
+        class="
+         mt-1
+         block
+         font-bold
+         sm:mr-1
+         sm:inline
+        "
+       >
+        {{toPersianDigits(selectedContract?.issueTime||'-')}}
+       </span>
+      </div>
+
+
+      <div
+       class="
+        rounded-xl
+        bg-white/55
+        p-3
+        sm:bg-transparent
+        sm:p-0
+       "
+      >
+       <span
+        class="
+         block
+         text-[10px]
+         text-gray-500
+         sm:inline
+         sm:text-sm
+         sm:font-black
+         sm:text-gray-800
+        "
+       >
+        روز رزرو:
+       </span>
+
+       <span
+        class="
+         mt-1
+         block
+         font-bold
+         sm:mr-1
+         sm:inline
+        "
+       >
+        {{getPersianWeekday(selectedContract?.issueDate)}}
+       </span>
+      </div>
+
+
+      <div
+       class="
+        rounded-xl
+        bg-white/55
+        p-3
+        sm:bg-transparent
+        sm:p-0
+       "
+      >
+       <span
+        class="
+         block
+         text-[10px]
+         text-gray-500
+         sm:inline
+         sm:text-sm
+         sm:font-black
+         sm:text-gray-800
+        "
+       >
+        تعداد مسیر:
+       </span>
+
+       <span
+        class="
+         mt-1
+         block
+         font-bold
+         sm:mr-1
+         sm:inline
+        "
+       >
+        {{getRouteCountTitle(selectedContract)}}
+       </span>
+      </div>
+
+
+      <div
+       class="
+        rounded-xl
+        bg-white/55
+        p-3
+        sm:bg-transparent
+        sm:p-0
+       "
+      >
+       <span
+        class="
+         block
+         text-[10px]
+         text-gray-500
+         sm:inline
+         sm:text-sm
+         sm:font-black
+         sm:text-gray-800
+        "
+       >
+        تعداد مسافر:
+       </span>
+
+       <span
+        class="
+         mt-1
+         block
+         font-bold
+         sm:mr-1
+         sm:inline
+        "
+       >
+        {{toPersianDigits(getPassengerCount(selectedContract))}}
+        نفر
+       </span>
+      </div>
+
+
+      <div
+       class="
+        rounded-xl
+        bg-white/55
+        p-3
+        sm:bg-transparent
+        sm:p-0
+       "
+      >
+       <span
+        class="
+         block
+         text-[10px]
+         text-gray-500
+         sm:inline
+         sm:text-sm
+         sm:font-black
+         sm:text-gray-800
+        "
+       >
+        وضعیت:
+       </span>
+
+       <span
+        class="
+         mt-1
+         block
+         font-bold
+         sm:mr-1
+         sm:inline
+        "
+       >
+        {{getContractStatusTitle(selectedContract)}}
+       </span>
+      </div>
+
+
+      <div
+       class="
+        rounded-xl
+        bg-white/55
+        p-3
+        sm:bg-transparent
+        sm:p-0
+       "
+      >
+       <span
+        class="
+         block
+         text-[10px]
+         text-gray-500
+         sm:inline
+         sm:text-sm
+         sm:font-black
+         sm:text-gray-800
+        "
+       >
+        نوع سفارش:
+       </span>
+
+       <span
+        class="
+         mt-1
+         block
+         font-bold
+         sm:mr-1
+         sm:inline
+        "
+       >
+        {{getContractServiceType(selectedContract)}}
+       </span>
+      </div>
+     </section>
+
+
+     <!-- ================================================= -->
+     <!-- Flight Contract -->
+     <!-- ================================================= -->
+     <section
+      v-if="isFlightContract(selectedContract)"
+      class="mt-7"
+     >
+      <h2
+       class="
+        mb-4
+        text-[15px]
+        font-black
+        text-gray-800
+        sm:mb-5
+        sm:text-lg
+       "
+      >
+       لیست بلیت‌ها
+      </h2>
+
+
+      <!-- =============================== -->
+      <!-- Mobile Flight Cards -->
+      <!-- =============================== -->
+      <div
+       v-if="ticketRows.length"
+       class="
+        space-y-3
+        md:hidden
+       "
+      >
+       <div
+        v-for="row in ticketRows"
+        :key="row.key"
+        class="
+         overflow-hidden
+         rounded-2xl
+         border
+         border-gray-100
+         bg-white
+         shadow-sm
+        "
+       >
+        <!-- Card Header -->
+        <div
+         class="
+          flex
+          items-center
+          justify-between
+          bg-[#edf7ff]
+          px-4
+          py-3
+         "
+        >
+         <div>
+          <p
+           class="
+            text-[10px]
+            text-gray-400
+           "
           >
-            ×
-          </button>
+           مسافر
+          </p>
+
+          <p
+           class="
+            mt-1
+            text-[12px]
+            font-black
+            text-gray-800
+           "
+           dir="ltr"
+          >
+           {{row.passengerName}}
+          </p>
+         </div>
+
+         <div
+          class="
+           rounded-full
+           bg-white
+           px-3
+           py-1.5
+           text-[10px]
+           font-bold
+           text-[#14179e]
+          "
+         >
+          {{row.passengerType}}
+         </div>
         </div>
 
-        <div class="overflow-y-auto px-5 pb-7 md:px-7">
-          <!-- خلاصه سفارش -->
-          <section
-            class="grid grid-cols-1 gap-x-8 gap-y-8 rounded-3xl bg-[#e2f2ff] px-6 py-8 text-sm text-gray-800 sm:grid-cols-2 xl:grid-cols-4"
+
+        <!-- Card Body -->
+        <div class="p-4">
+         <div
+          class="
+           grid
+           grid-cols-2
+           gap-x-4
+           gap-y-5
+           text-[11px]
+          "
+         >
+          <div>
+           <p class="text-gray-400">
+            مبدا
+           </p>
+
+           <p class="mt-1 font-bold">
+            {{row.origin}}
+           </p>
+          </div>
+
+          <div>
+           <p class="text-gray-400">
+            مقصد
+           </p>
+
+           <p class="mt-1 font-bold">
+            {{row.destination}}
+           </p>
+          </div>
+
+          <div>
+           <p class="text-gray-400">
+            تاریخ پرواز
+           </p>
+
+           <p class="mt-1 font-bold">
+            {{row.departureDate}}
+           </p>
+          </div>
+
+          <div>
+           <p class="text-gray-400">
+            ساعت پرواز
+           </p>
+
+           <p class="mt-1 font-bold">
+            {{toPersianDigits(row.departureTime)}}
+           </p>
+          </div>
+
+          <div>
+           <p class="text-gray-400">
+            شماره پرواز
+           </p>
+
+           <p class="mt-1 font-bold">
+            {{toPersianDigits(row.flightNumber)}}
+           </p>
+          </div>
+
+          <div>
+           <p class="text-gray-400">
+            نوع پرواز
+           </p>
+
+           <p class="mt-1 font-bold">
+            {{row.flightType}}
+           </p>
+          </div>
+
+          <div>
+           <p class="text-gray-400">
+            هواپیمایی
+           </p>
+
+           <p class="mt-1 font-bold">
+            {{row.airlineName}}
+           </p>
+          </div>
+
+          <div>
+           <p class="text-gray-400">
+            شماره بلیت
+           </p>
+
+           <p
+            class="
+             mt-1
+             break-all
+             font-bold
+            "
+           >
+            {{row.ticketNumber||'-'}}
+           </p>
+          </div>
+
+
+          <div
+           class="
+            col-span-2
+            rounded-xl
+            bg-gray-50
+            p-3
+           "
           >
-            <div class="flex items-center gap-2">
-              <span class="font-black">شماره سفارش:</span>
+           <div
+            class="
+             flex
+             items-center
+             justify-between
+             gap-3
+            "
+           >
+            <span class="text-gray-400">
+             مبلغ
+            </span>
 
-              <span>
-                {{ toPersianDigits(selectedContract?.id || '-') }}
-              </span>
-            </div>
+            <span
+             class="
+              text-[13px]
+              font-black
+              text-gray-800
+             "
+            >
+             {{formatPrice(row.amount)}}
+            </span>
+           </div>
+          </div>
+         </div>
 
-            <div class="flex items-center gap-2">
-              <span class="font-black">تاریخ رزرو:</span>
 
-              <span>
-                {{ formatContractDate(selectedContract?.issueDate) }}
-              </span>
-            </div>
-
-            <div class="flex items-center gap-2">
-              <span class="font-black">ساعت رزرو:</span>
-
-              <span>
-                {{ toPersianDigits(selectedContract?.issueTime || '-') }}
-              </span>
-            </div>
-
-            <div class="flex items-center gap-2">
-              <span class="font-black">روز رزرو:</span>
-
-              <span>
-                {{ getPersianWeekday(selectedContract?.issueDate) }}
-              </span>
-            </div>
-
-            <div class="flex items-center gap-2">
-              <span class="font-black">تعداد مسیر:</span>
-
-              <span>
-                {{ getRouteCountTitle(selectedContract) }}
-              </span>
-            </div>
-
-            <div class="flex items-center gap-2">
-              <span class="font-black">تعداد مسافر:</span>
-
-              <span>
-                {{ toPersianDigits(getPassengerCount(selectedContract)) }}
-                نفر
-              </span>
-            </div>
-
-            <div class="flex items-center gap-2">
-              <span class="font-black">وضعیت:</span>
-
-              <span>
-                {{ getContractStatusTitle(selectedContract) }}
-              </span>
-            </div>
-
-            <div class="flex items-center gap-2">
-              <span class="font-black">نوع سفارش:</span>
-
-              <span>
-                {{ getContractServiceType(selectedContract) }}
-              </span>
-            </div>
-          </section>
-
-          <!-- لیست بلیت‌ها -->
-          <section
-            v-if="isFlightContract(selectedContract)"
-            class="mt-7"
+         <!-- Actions -->
+         <div
+          class="
+           mt-4
+           grid
+           grid-cols-1
+           gap-2
+           border-t
+           border-gray-100
+           pt-4
+          "
+         >
+          <button
+           type="button"
+           class="
+            w-full
+            rounded-xl
+            border
+            px-4
+            py-3
+            text-[11px]
+            font-bold
+            transition
+            disabled:cursor-not-allowed
+           "
+           :class="getCancelButtonClass(row)"
+           :disabled="
+            !row.canCancel||
+            cancellingTicketKey===row.key
+           "
+           @click="openCancelTicket(row)"
           >
-            <h2 class="mb-5 text-lg font-black text-gray-800">
-              لیست بلیت‌ها
-            </h2>
+           {{
+            cancellingTicketKey===row.key
+             ?'در حال بررسی جریمه...'
+             :getCancellationStatusTitle(row)
+           }}
+          </button>
 
-            <div
-              v-if="ticketRows.length"
-              class="overflow-x-auto rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.08)]"
-            >
-              <table
-                class="w-full min-w-[1100px] border-collapse text-center text-sm"
-              >
-                <thead class="bg-[#d9effd] text-gray-800">
-                  <tr>
-                    <th class="px-4 py-4">
-                      نام مسافر
-                    </th>
 
-                    <th class="px-4 py-4">
-                      بازه سنی
-                    </th>
-
-                    <th class="px-4 py-4">
-                      مبدا
-                    </th>
-
-                    <th class="px-4 py-4">
-                      مقصد
-                    </th>
-
-                    <th class="px-4 py-4">
-                      مبلغ
-                    </th>
-
-                    <th class="px-4 py-4">
-                      شماره بلیت
-                    </th>
-
-                    <th class="px-4 py-4">
-                      تاریخ پرواز
-                    </th>
-
-                    <th class="px-4 py-4">
-                      ساعت پرواز
-                    </th>
-
-                    <th class="px-4 py-4">
-                      شماره پرواز
-                    </th>
-
-                    <th class="px-4 py-4">
-                      نوع پرواز
-                    </th>
-
-                    <th class="px-4 py-4">
-                      هواپیمایی
-                    </th>
-
-                    <th class="px-4 py-4">
-                      عملیات
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  <tr
-                    v-for="row in ticketRows"
-                    :key="row.key"
-                    class="border-b border-gray-100 last:border-b-0"
-                  >
-                    <td
-                      dir="ltr"
-                      class="px-4 py-5 font-medium"
-                    >
-                      {{ row.passengerName }}
-                    </td>
-
-                    <td class="px-4 py-5">
-                      {{ row.passengerType }}
-                    </td>
-
-                    <td class="px-4 py-5">
-                      {{ row.origin }}
-                    </td>
-
-                    <td class="px-4 py-5">
-                      {{ row.destination }}
-                    </td>
-
-                    <td class="px-4 py-5">
-                      {{ formatPrice(row.amount) }}
-                    </td>
-
-                    <td class="px-4 py-5">
-                      {{ row.ticketNumber || '-' }}
-                    </td>
-
-                    <td class="px-4 py-5">
-                      {{ row.departureDate }}
-                    </td>
-
-                    <td class="px-4 py-5">
-                      {{ toPersianDigits(row.departureTime) }}
-                    </td>
-
-                    <td class="px-4 py-5">
-                      {{ toPersianDigits(row.flightNumber) }}
-                    </td>
-
-                    <td class="px-4 py-5">
-                      {{ row.flightType }}
-                    </td>
-
-                    <td class="px-4 py-5">
-                      {{ row.airlineName }}
-                    </td>
-
-                    <td class="px-4 py-5">
-                      <div class="flex min-w-[175px] flex-col gap-3">
-                        <div
-                          class="rounded border border-gray-300 bg-gray-50 px-3 py-2 text-xs text-gray-500"
-                        >
-                          {{
-                            row.ticketNumber
-                              ? row.ticketNumber
-                              : 'شماره بلیت ثبت نشده'
-                          }}
-                        </div>
-
-                        <button
-                          type="button"
-                          class="rounded border px-4 py-2.5 text-xs font-bold transition disabled:cursor-not-allowed"
-                          :class="getCancelButtonClass(row)"
-                          :disabled="!row.canCancel || cancellingTicketKey === row.key"
-                          @click="openCancelTicket(row)"
-                        >
-                          {{
-                            cancellingTicketKey === row.key
-                              ? 'در حال بررسی جریمه...'
-                              : getCancellationStatusTitle(row)
-                          }}
-                        </button>
-
-                        <button
-                          type="button"
-                          class="rounded border border-gray-300 px-4 py-2.5 text-xs transition"
-                          :class="
-                            row.canDownload
-                              ? 'bg-white text-[#14179e] hover:bg-blue-50'
-                              : 'cursor-not-allowed bg-gray-50 text-gray-300'
-                          "
-                          :disabled="!row.canDownload"
-                          @click="downloadContractTicket(row)"
-                        >
-                          دانلود بلیت
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <div
-              v-else
-              class="rounded-xl bg-gray-50 p-8 text-center text-sm text-gray-500"
-            >
-              اطلاعات بلیتی برای این سفارش ثبت نشده است.
-            </div>
-          </section>
-
-          <!-- اطلاعات هتل -->
-          <!-- اطلاعات هتل و مسافران -->
-<section
-  v-else-if="selectedContract?.hotel"
-  class="mt-7"
->
-  <h2 class="mb-5 text-lg font-black text-gray-800">
-    اطلاعات هتل
-  </h2>
-
-  <div
-    v-if="selectedContractRoutes.length"
-    class="space-y-4"
-  >
-    <div
-      v-for="route in selectedContractRoutes"
-      :key="route.id"
-      class="grid grid-cols-1 gap-5 rounded-xl bg-white p-5 shadow-[0_4px_20px_rgba(0,0,0,0.08)] sm:grid-cols-2 lg:grid-cols-4"
-    >
-      <div>
-        <p class="text-xs text-gray-400">
-          نام هتل
-        </p>
-
-        <p class="mt-2 font-bold">
-          {{
-            route.hotelName ||
-            route.name ||
-            '-'
-          }}
-        </p>
+          <button
+           type="button"
+           class="
+            w-full
+            rounded-xl
+            border
+            border-gray-300
+            px-4
+            py-3
+            text-[11px]
+            font-bold
+            transition
+           "
+           :class="
+            row.canDownload
+             ?'bg-white text-[#14179e]'
+             :'cursor-not-allowed bg-gray-50 text-gray-300'
+           "
+           :disabled="!row.canDownload"
+           @click="downloadContractTicket(row)"
+          >
+           دانلود بلیت
+          </button>
+         </div>
+        </div>
+       </div>
       </div>
 
-      <div>
-        <p class="text-xs text-gray-400">
-          اتاق
-        </p>
 
-        <p class="mt-2 font-bold">
-          {{
-            route.roomName ||
-            route.roomType ||
-            '-'
-          }}
-        </p>
-      </div>
-
-      <div>
-        <p class="text-xs text-gray-400">
-          تاریخ ورود
-        </p>
-
-        <p class="mt-2 font-bold">
-          {{
-            formatContractDate(
-              route.checkIn ||
-              route.checkInDate
-            )
-          }}
-        </p>
-      </div>
-
-      <div>
-        <p class="text-xs text-gray-400">
-          تاریخ خروج
-        </p>
-
-        <p class="mt-2 font-bold">
-          {{
-            formatContractDate(
-              route.checkOut ||
-              route.checkOutDate
-            )
-          }}
-        </p>
-      </div>
-    </div>
-  </div>
-
-  <div
-    v-else
-    class="rounded-xl bg-gray-50 p-7 text-center text-sm text-gray-500"
-  >
-    اطلاعات هتل برای این قرارداد ثبت نشده است.
-  </div>
-
-  <!-- اطلاعات مسافران هتل -->
-  <div class="mt-8">
-    <h2 class="mb-5 text-lg font-black text-gray-800">
-      اطلاعات مسافران
-    </h2>
-
-    <div
-      v-if="selectedContractPassengers.length"
-      class="overflow-x-auto rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.08)]"
-    >
-      <table
-        class="w-full min-w-[900px] border-collapse text-center text-sm"
+      <!-- =============================== -->
+      <!-- Desktop Flight Table -->
+      <!-- =============================== -->
+      <div
+       v-if="ticketRows.length"
+       class="
+        hidden
+        overflow-x-auto
+        rounded-xl
+        bg-white
+        shadow-[0_4px_20px_rgba(0,0,0,0.08)]
+        md:block
+       "
       >
-        <thead class="bg-[#d9effd] text-gray-800">
-          <tr>
-            <th class="px-4 py-4">
-              ردیف
-            </th>
+       <table
+        class="
+         w-full
+         min-w-[1100px]
+         border-collapse
+         text-center
+         text-sm
+        "
+       >
+        <thead
+         class="
+          bg-[#d9effd]
+          text-gray-800
+         "
+        >
+         <tr>
+          <th class="px-4 py-4">
+           نام مسافر
+          </th>
 
-            <th class="px-4 py-4">
-              نام
-            </th>
+          <th class="px-4 py-4">
+           بازه سنی
+          </th>
 
-            <th class="px-4 py-4">
-              نام خانوادگی
-            </th>
+          <th class="px-4 py-4">
+           مبدا
+          </th>
 
-            <th class="px-4 py-4">
-              بازه سنی
-            </th>
+          <th class="px-4 py-4">
+           مقصد
+          </th>
 
-            <th class="px-4 py-4">
-              کد ملی
-            </th>
+          <th class="px-4 py-4">
+           مبلغ
+          </th>
 
-            <th class="px-4 py-4">
-              شماره پاسپورت
-            </th>
+          <th class="px-4 py-4">
+           شماره بلیت
+          </th>
 
-            <th class="px-4 py-4">
-              ملیت
-            </th>
+          <th class="px-4 py-4">
+           تاریخ پرواز
+          </th>
 
-            <th class="px-4 py-4">
-              جنسیت
-            </th>
+          <th class="px-4 py-4">
+           ساعت پرواز
+          </th>
 
-            <th class="px-4 py-4">
-              تاریخ تولد
-            </th>
+          <th class="px-4 py-4">
+           شماره پرواز
+          </th>
 
-            <th class="px-4 py-4">
-              اتاق
-            </th>
-            <th class="px-4 py-4">
-  عملیات
-</th>
-          </tr>
+          <th class="px-4 py-4">
+           نوع پرواز
+          </th>
+
+          <th class="px-4 py-4">
+           هواپیمایی
+          </th>
+
+          <th class="px-4 py-4">
+           عملیات
+          </th>
+         </tr>
         </thead>
 
+
         <tbody>
-          <tr
-            v-for="(passenger,index) in selectedContractPassengers"
-            :key="passenger.id || index"
-            class="border-b border-gray-100 last:border-b-0"
+         <tr
+          v-for="row in ticketRows"
+          :key="row.key"
+          class="
+           border-b
+           border-gray-100
+           last:border-b-0
+          "
+         >
+          <td
+           dir="ltr"
+           class="px-4 py-5 font-medium"
           >
-            <td class="px-4 py-5">
-              {{ toPersianDigits(index+1) }}
-            </td>
+           {{row.passengerName}}
+          </td>
 
-            <td class="px-4 py-5 font-medium">
-              {{
-                passenger.fName ||
-                passenger.firstName ||
-                '-'
-              }}
-            </td>
+          <td class="px-4 py-5">
+           {{row.passengerType}}
+          </td>
 
-            <td class="px-4 py-5 font-medium">
-              {{
-                passenger.lName ||
-                passenger.lastName ||
-                '-'
-              }}
-            </td>
+          <td class="px-4 py-5">
+           {{row.origin}}
+          </td>
 
-            <td class="px-4 py-5">
-              {{
-                getPassengerTypeTitle(
-                  passenger.age
-                )
-              }}
-            </td>
+          <td class="px-4 py-5">
+           {{row.destination}}
+          </td>
 
-            <td
-              dir="ltr"
-              class="px-4 py-5"
+          <td class="px-4 py-5">
+           {{formatPrice(row.amount)}}
+          </td>
+
+          <td class="px-4 py-5">
+           {{row.ticketNumber||'-'}}
+          </td>
+
+          <td class="px-4 py-5">
+           {{row.departureDate}}
+          </td>
+
+          <td class="px-4 py-5">
+           {{toPersianDigits(row.departureTime)}}
+          </td>
+
+          <td class="px-4 py-5">
+           {{toPersianDigits(row.flightNumber)}}
+          </td>
+
+          <td class="px-4 py-5">
+           {{row.flightType}}
+          </td>
+
+          <td class="px-4 py-5">
+           {{row.airlineName}}
+          </td>
+
+          <td class="px-4 py-5">
+           <div
+            class="
+             flex
+             min-w-[175px]
+             flex-col
+             gap-3
+            "
+           >
+            <div
+             class="
+              rounded
+              border
+              border-gray-300
+              bg-gray-50
+              px-3
+              py-2
+              text-xs
+              text-gray-500
+             "
             >
-              {{
-                toPersianDigits(
-                  passenger.codeMelli ||
-                  '-'
-                )
-              }}
-            </td>
+             {{
+              row.ticketNumber
+               ?row.ticketNumber
+               :'شماره بلیت ثبت نشده'
+             }}
+            </div>
 
-            <td
-              dir="ltr"
-              class="px-4 py-5"
+            <button
+             type="button"
+             class="
+              rounded
+              border
+              px-4
+              py-2.5
+              text-xs
+              font-bold
+              transition
+              disabled:cursor-not-allowed
+             "
+             :class="getCancelButtonClass(row)"
+             :disabled="
+              !row.canCancel||
+              cancellingTicketKey===row.key
+             "
+             @click="openCancelTicket(row)"
             >
-              {{
-                passenger.passportNo ||
-                '-'
-              }}
-            </td>
+             {{
+              cancellingTicketKey===row.key
+               ?'در حال بررسی جریمه...'
+               :getCancellationStatusTitle(row)
+             }}
+            </button>
 
-            <td class="px-4 py-5">
-              {{
-                passenger.nationality ||
-                '-'
-              }}
-            </td>
-
-            <td class="px-4 py-5">
-              {{
-                getGenderTitle(
-                  passenger.gender
-                )
-              }}
-            </td>
-
-            <td class="px-4 py-5">
-              {{
-                formatContractDate(
-                  passenger.birthDate
-                )
-              }}
-            </td>
-
-            <td class="px-4 py-5">
-              {{
-                passenger.room ||
-                passenger.roomType ||
-                passenger.hotelRoom?.roomName ||
-                passenger.hotelRoom?.name ||
-                '-'
-              }}
-            </td>
-           <td class="px-4 py-5">
-  <button
-  type="button"
-  class="rounded border border-[#14179e] bg-white px-4 py-2 text-xs font-bold text-[#14179e] hover:bg-blue-50 disabled:opacity-50"
-  :disabled="!passenger?.goTicketUrl"
-  @click="downloadHotelVoucher(passenger)"
->
-  دانلود واچر هتل
-</button>
-</td>
-          </tr>
+            <button
+             type="button"
+             class="
+              rounded
+              border
+              border-gray-300
+              px-4
+              py-2.5
+              text-xs
+              transition
+             "
+             :class="
+              row.canDownload
+               ?'bg-white text-[#14179e] hover:bg-blue-50'
+               :'cursor-not-allowed bg-gray-50 text-gray-300'
+             "
+             :disabled="!row.canDownload"
+             @click="downloadContractTicket(row)"
+            >
+             دانلود بلیت
+            </button>
+           </div>
+          </td>
+         </tr>
         </tbody>
-      </table>
-    </div>
-
-    <div
-      v-else
-      class="rounded-xl bg-gray-50 p-7 text-center text-sm text-gray-500"
-    >
-      مسافری برای این رزرو هتل ثبت نشده است.
-    </div>
-  </div>
-</section>
-        </div>
+       </table>
       </div>
+
+
+      <div
+       v-else
+       class="
+        rounded-xl
+        bg-gray-50
+        p-8
+        text-center
+        text-sm
+        text-gray-500
+       "
+      >
+       اطلاعات بلیتی برای این سفارش ثبت نشده است.
+      </div>
+     </section>
+
+
+     <!-- ================================================= -->
+     <!-- Hotel Contract -->
+     <!-- ================================================= -->
+     <section
+      v-else-if="selectedContract?.hotel"
+      class="mt-7"
+     >
+      <h2
+       class="
+        mb-4
+        text-[15px]
+        font-black
+        text-gray-800
+        sm:mb-5
+        sm:text-lg
+       "
+      >
+       اطلاعات هتل
+      </h2>
+
+
+      <!-- =============================== -->
+      <!-- Hotel Routes -->
+      <!-- =============================== -->
+      <div
+       v-if="selectedContractRoutes.length"
+       class="space-y-3 sm:space-y-4"
+      >
+       <div
+        v-for="route in selectedContractRoutes"
+        :key="route.id"
+        class="
+         grid
+         grid-cols-2
+         gap-4
+         rounded-2xl
+         border
+         border-gray-100
+         bg-white
+         p-4
+         shadow-sm
+         sm:grid-cols-2
+         sm:gap-5
+         sm:p-5
+         lg:grid-cols-4
+        "
+       >
+        <div>
+         <p
+          class="
+           text-[10px]
+           text-gray-400
+           sm:text-xs
+          "
+         >
+          نام هتل
+         </p>
+
+         <p
+          class="
+           mt-1
+           text-[11px]
+           font-bold
+           sm:mt-2
+           sm:text-sm
+          "
+         >
+          {{
+           route.hotelName||
+           route.name||
+           '-'
+          }}
+         </p>
+        </div>
+
+
+        <div>
+         <p
+          class="
+           text-[10px]
+           text-gray-400
+           sm:text-xs
+          "
+         >
+          اتاق
+         </p>
+
+         <p
+          class="
+           mt-1
+           text-[11px]
+           font-bold
+           sm:mt-2
+           sm:text-sm
+          "
+         >
+          {{
+           route.roomName||
+           route.roomType||
+           '-'
+          }}
+         </p>
+        </div>
+
+
+        <div>
+         <p
+          class="
+           text-[10px]
+           text-gray-400
+           sm:text-xs
+          "
+         >
+          تاریخ ورود
+         </p>
+
+         <p
+          class="
+           mt-1
+           text-[11px]
+           font-bold
+           sm:mt-2
+           sm:text-sm
+          "
+         >
+          {{
+           formatContractDate(
+            route.checkIn||
+            route.checkInDate
+           )
+          }}
+         </p>
+        </div>
+
+
+        <div>
+         <p
+          class="
+           text-[10px]
+           text-gray-400
+           sm:text-xs
+          "
+         >
+          تاریخ خروج
+         </p>
+
+         <p
+          class="
+           mt-1
+           text-[11px]
+           font-bold
+           sm:mt-2
+           sm:text-sm
+          "
+         >
+          {{
+           formatContractDate(
+            route.checkOut||
+            route.checkOutDate
+           )
+          }}
+         </p>
+        </div>
+       </div>
+      </div>
+
+
+      <div
+       v-else
+       class="
+        rounded-xl
+        bg-gray-50
+        p-7
+        text-center
+        text-sm
+        text-gray-500
+       "
+      >
+       اطلاعات هتل برای این قرارداد ثبت نشده است.
+      </div>
+
+
+      <!-- =============================== -->
+      <!-- Hotel Passengers -->
+      <!-- =============================== -->
+      <div class="mt-8">
+       <h2
+        class="
+         mb-4
+         text-[15px]
+         font-black
+         text-gray-800
+         sm:mb-5
+         sm:text-lg
+        "
+       >
+        اطلاعات مسافران
+       </h2>
+
+
+       <!-- =============================== -->
+       <!-- Mobile Passenger Cards -->
+       <!-- =============================== -->
+       <div
+        v-if="selectedContractPassengers.length"
+        class="
+         space-y-3
+         md:hidden
+        "
+       >
+        <div
+         v-for="(passenger,index) in selectedContractPassengers"
+         :key="passenger.id||index"
+         class="
+          overflow-hidden
+          rounded-2xl
+          border
+          border-gray-100
+          bg-white
+          shadow-sm
+         "
+        >
+         <!-- Header -->
+         <div
+          class="
+           flex
+           items-center
+           justify-between
+           bg-[#edf7ff]
+           px-4
+           py-3
+          "
+         >
+          <div>
+           <p
+            class="
+             text-[10px]
+             text-gray-400
+            "
+           >
+            مسافر
+           </p>
+
+           <p
+            class="
+             mt-1
+             text-[12px]
+             font-black
+             text-gray-800
+            "
+           >
+            {{
+             passenger.fName||
+             passenger.firstName||
+             '-'
+            }}
+
+            {{
+             passenger.lName||
+             passenger.lastName||
+             ''
+            }}
+           </p>
+          </div>
+
+          <span
+           class="
+            rounded-full
+            bg-white
+            px-3
+            py-1.5
+            text-[10px]
+            font-bold
+            text-[#14179e]
+           "
+          >
+           {{toPersianDigits(index+1)}}
+          </span>
+         </div>
+
+
+         <div class="p-4">
+          <div
+           class="
+            grid
+            grid-cols-2
+            gap-x-4
+            gap-y-5
+            text-[11px]
+           "
+          >
+           <div>
+            <p class="text-gray-400">
+             بازه سنی
+            </p>
+
+            <p class="mt-1 font-bold">
+             {{
+              getPassengerTypeTitle(
+               passenger.age
+              )
+             }}
+            </p>
+           </div>
+
+
+           <div>
+            <p class="text-gray-400">
+             جنسیت
+            </p>
+
+            <p class="mt-1 font-bold">
+             {{
+              getGenderTitle(
+               passenger.gender
+              )
+             }}
+            </p>
+           </div>
+
+
+           <div>
+            <p class="text-gray-400">
+             کد ملی
+            </p>
+
+            <p
+             class="
+              mt-1
+              break-all
+              font-bold
+             "
+             dir="ltr"
+            >
+             {{
+              toPersianDigits(
+               passenger.codeMelli||
+               '-'
+              )
+             }}
+            </p>
+           </div>
+
+
+           <div>
+            <p class="text-gray-400">
+             شماره پاسپورت
+            </p>
+
+            <p
+             class="
+              mt-1
+              break-all
+              font-bold
+             "
+             dir="ltr"
+            >
+             {{
+              passenger.passportNo||
+              '-'
+             }}
+            </p>
+           </div>
+
+
+           <div>
+            <p class="text-gray-400">
+             ملیت
+            </p>
+
+            <p class="mt-1 font-bold">
+             {{
+              passenger.nationality||
+              '-'
+             }}
+            </p>
+           </div>
+
+
+           <div>
+            <p class="text-gray-400">
+             تاریخ تولد
+            </p>
+
+            <p class="mt-1 font-bold">
+             {{
+              formatContractDate(
+               passenger.birthDate
+              )
+             }}
+            </p>
+           </div>
+
+
+           <div
+            class="
+             col-span-2
+             rounded-xl
+             bg-gray-50
+             p-3
+            "
+           >
+            <p class="text-gray-400">
+             اتاق
+            </p>
+
+            <p
+             class="
+              mt-1
+              font-bold
+             "
+            >
+             {{
+              passenger.room||
+              passenger.roomType||
+              passenger.hotelRoom?.roomName||
+              passenger.hotelRoom?.name||
+              '-'
+             }}
+            </p>
+           </div>
+          </div>
+
+
+          <button
+           type="button"
+           class="
+            mt-4
+            w-full
+            rounded-xl
+            border
+            border-[#14179e]
+            bg-white
+            px-4
+            py-3
+            text-[11px]
+            font-bold
+            text-[#14179e]
+            transition
+            hover:bg-blue-50
+            disabled:cursor-not-allowed
+            disabled:opacity-40
+           "
+           :disabled="!passenger?.goTicketUrl"
+           @click="downloadHotelVoucher(passenger)"
+          >
+           دانلود واچر هتل
+          </button>
+         </div>
+        </div>
+       </div>
+
+
+       <!-- =============================== -->
+       <!-- Desktop Passenger Table -->
+       <!-- =============================== -->
+       <div
+        v-if="selectedContractPassengers.length"
+        class="
+         hidden
+         overflow-x-auto
+         rounded-xl
+         bg-white
+         shadow-[0_4px_20px_rgba(0,0,0,0.08)]
+         md:block
+        "
+       >
+        <table
+         class="
+          w-full
+          min-w-[900px]
+          border-collapse
+          text-center
+          text-sm
+         "
+        >
+         <thead
+          class="
+           bg-[#d9effd]
+           text-gray-800
+          "
+         >
+          <tr>
+           <th class="px-4 py-4">
+            ردیف
+           </th>
+
+           <th class="px-4 py-4">
+            نام
+           </th>
+
+           <th class="px-4 py-4">
+            نام خانوادگی
+           </th>
+
+           <th class="px-4 py-4">
+            بازه سنی
+           </th>
+
+           <th class="px-4 py-4">
+            کد ملی
+           </th>
+
+           <th class="px-4 py-4">
+            شماره پاسپورت
+           </th>
+
+           <th class="px-4 py-4">
+            ملیت
+           </th>
+
+           <th class="px-4 py-4">
+            جنسیت
+           </th>
+
+           <th class="px-4 py-4">
+            تاریخ تولد
+           </th>
+
+           <th class="px-4 py-4">
+            اتاق
+           </th>
+
+           <th class="px-4 py-4">
+            عملیات
+           </th>
+          </tr>
+         </thead>
+
+
+         <tbody>
+          <tr
+           v-for="(passenger,index) in selectedContractPassengers"
+           :key="passenger.id||index"
+           class="
+            border-b
+            border-gray-100
+            last:border-b-0
+           "
+          >
+           <td class="px-4 py-5">
+            {{toPersianDigits(index+1)}}
+           </td>
+
+           <td class="px-4 py-5 font-medium">
+            {{
+             passenger.fName||
+             passenger.firstName||
+             '-'
+            }}
+           </td>
+
+           <td class="px-4 py-5 font-medium">
+            {{
+             passenger.lName||
+             passenger.lastName||
+             '-'
+            }}
+           </td>
+
+           <td class="px-4 py-5">
+            {{
+             getPassengerTypeTitle(
+              passenger.age
+             )
+            }}
+           </td>
+
+           <td
+            dir="ltr"
+            class="px-4 py-5"
+           >
+            {{
+             toPersianDigits(
+              passenger.codeMelli||
+              '-'
+             )
+            }}
+           </td>
+
+           <td
+            dir="ltr"
+            class="px-4 py-5"
+           >
+            {{
+             passenger.passportNo||
+             '-'
+            }}
+           </td>
+
+           <td class="px-4 py-5">
+            {{
+             passenger.nationality||
+             '-'
+            }}
+           </td>
+
+           <td class="px-4 py-5">
+            {{
+             getGenderTitle(
+              passenger.gender
+             )
+            }}
+           </td>
+
+           <td class="px-4 py-5">
+            {{
+             formatContractDate(
+              passenger.birthDate
+             )
+            }}
+           </td>
+
+           <td class="px-4 py-5">
+            {{
+             passenger.room||
+             passenger.roomType||
+             passenger.hotelRoom?.roomName||
+             passenger.hotelRoom?.name||
+             '-'
+            }}
+           </td>
+
+           <td class="px-4 py-5">
+            <button
+             type="button"
+             class="
+              rounded
+              border
+              border-[#14179e]
+              bg-white
+              px-4
+              py-2
+              text-xs
+              font-bold
+              text-[#14179e]
+              hover:bg-blue-50
+              disabled:opacity-50
+             "
+             :disabled="!passenger?.goTicketUrl"
+             @click="downloadHotelVoucher(passenger)"
+            >
+             دانلود واچر هتل
+            </button>
+           </td>
+          </tr>
+         </tbody>
+        </table>
+       </div>
+
+
+       <div
+        v-else
+        class="
+         rounded-xl
+         bg-gray-50
+         p-7
+         text-center
+         text-sm
+         text-gray-500
+        "
+       >
+        مسافری برای این رزرو هتل ثبت نشده است.
+       </div>
+      </div>
+     </section>
     </div>
-    
-  </Transition>
+   </div>
+  </div>
+ </Transition>
 </Teleport>
 <!-- مودال جزئیات تراکنش -->
 <Teleport to="body">
@@ -2425,7 +3859,20 @@ const dayOptions=Array.from(
     value:String(i+1)
   })
 )
+async function handleMenuClick(item){
 
+ if(item.key==='logout'){
+  await logout()
+  return
+ }
+
+ activeItem.value=item.key
+
+}
+async function logout(){
+ await flightStore.logout()
+ await navigateTo('/')
+}
 function getPassportIssueYearOptions(){
   const years=[]
   const currentYear=new Date().getFullYear()

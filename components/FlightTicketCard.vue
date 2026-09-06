@@ -16,37 +16,103 @@
 
         <template v-else>
   <div
-    v-if="!props.hideSelectButton"
-    class="flex-1 order-1 md:order-2"
+ v-if="!props.hideSelectButton"
+ class="
+  order-1
+  flex
+  flex-1
+  flex-col
+  items-end
+  md:order-2
+  md:items-stretch
+ "
+>
+ <UiBaseButton
+  label="انتخاب پرواز"
+  variant="filled"
+  color="primary"
+  :active="false"
+  :disabled="false"
+  class="
+   !h-[42px]
+   !w-auto
+   min-w-[135px]
+   !rounded-xl
+   !px-5
+   !py-0
+   text-[12px]
+   font-bold
+   text-white
+   shadow-md
+   transition
+   duration-200
+   hover:-translate-y-0.5
+
+   md:mt-5
+   md:!h-auto
+   md:!w-full
+   md:min-w-0
+   md:!rounded-3xl
+   md:!py-2
+  "
+  @click="selectFlight"
+ />
+
+ <p
+  v-if="capacityError"
+  class="
+   mt-2
+   max-w-[160px]
+   text-center
+   text-[11px]
+   font-bold
+   text-red-500
+   md:max-w-none
+   md:text-[12px]
+  "
+  dir="rtl"
+ >
+  {{ capacityError }}
+ </p>
+</div>
+
+ <div
+ class="
+  flex-[3]
+  order-2
+  md:order-1
+ "
+>
+ <div
+  class="
+   flex
+   items-baseline
+   justify-start
+   gap-1.5
+  "
+  dir="rtl"
+ >
+  <span
+   class="
+    text-[22px]
+    font-bold
+    text-[var(--color-primary-dark)]
+   "
   >
-    <UiBaseButton
-      label="انتخاب پرواز"
-      variant="filled"
-      color="primary"
-      :active="false"
-      :disabled="false"
-      class="w-full text-[12px] text-white py-2 !rounded-3xl ml-2 mt-5"
-      @click="selectFlight"
-    />
+   {{ formatPrice(cardPrice) }}
+  </span>
 
-    <p
-      v-if="capacityError"
-      class="mt-2 text-center text-[12px] font-bold text-red-500"
-      dir="rtl"
-    >
-      {{ capacityError }}
-    </p>
-  </div>
-
-  <div class="flex-[3] order-2 text-right md:order-1">
-    <p class="font-bold text-[22px] text-[var(--color-primary-dark)]">
-      {{ formatPrice(cardPrice) }}
-    </p>
-
-    <p class="text-sm text-left font-normal">
-      ریال
-    </p>
-  </div>
+  <span
+   class="
+    text-[12px]
+    font-medium
+    text-gray-500
+   "
+  >
+   ریال
+  </span>
+ </div>
+</div>
 </template>
         </div>
 

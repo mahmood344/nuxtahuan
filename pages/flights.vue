@@ -243,32 +243,146 @@
       </div>
     </main>
 
-    <!-- مودال فیلتر موبایل -->
-    <transition name="fade">
-      <div
-        v-if="isFilterModalOpen"
-        class="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 backdrop-blur-sm lg:hidden"
-        @click.self="isFilterModalOpen = false"
-      >
-        <div class="w-full bg-white rounded-t-[2.5rem] p-6 max-h-[85vh] overflow-y-auto shadow-2xl flex flex-col" dir="rtl">
-          <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
-            <h3 class="font-black text-gray-800 text-lg">فیلترهای جستجو</h3>
-            <button @click="isFilterModalOpen = false" class="text-2xl text-gray-400 font-bold">&times;</button>
-          </div>
+  <!-- مودال فیلتر موبایل -->
+<transition name="fade">
+ <div
+  v-if="isFilterModalOpen"
+  class="
+   fixed
+   inset-0
+   z-[9999]
+   flex
+   items-end
+   justify-center
+   bg-slate-900/50
+   backdrop-blur-sm
+   lg:hidden
+  "
+  @click.self="isFilterModalOpen=false"
+ >
+  <div
+   dir="rtl"
+   class="
+    flex
+    max-h-[90vh]
+    w-full
+    flex-col
+    rounded-t-[2rem]
+    bg-white
+    shadow-2xl
+   "
+  >
+   <!-- Header -->
+   <div
+    class="
+     flex
+     shrink-0
+     items-center
+     justify-between
+     border-b
+     border-gray-100
+     px-5
+     py-4
+    "
+   >
+    <div>
+     <h3
+      class="
+       text-[16px]
+       font-black
+       text-gray-800
+      "
+     >
+      فیلترهای جستجو
+     </h3>
 
-          <div class="space-y-6">
-            <FlightSearchPanel mode="aside" :showServices="true" />
-            <UiBaseButton
-  label="اعمال فیلترها"
-  variant="filled"
-  color="primary"
-  class="w-full !rounded-2xl !py-4 shadow-lg"
-  @click="isFilterModalOpen = false"
-/>
-          </div>
-        </div>
-      </div>
-    </transition>
+     <p
+      class="
+       mt-1
+       text-[11px]
+       text-gray-400
+      "
+     >
+      نتایج پرواز را دقیق‌تر کنید
+     </p>
+    </div>
+
+    <button
+     type="button"
+     class="
+      flex
+      h-9
+      w-9
+      items-center
+      justify-center
+      rounded-full
+      bg-gray-100
+      text-2xl
+      text-gray-500
+     "
+     @click="isFilterModalOpen=false"
+    >
+     ×
+    </button>
+   </div>
+
+
+   <!-- Scrollable Content -->
+   <div
+    class="
+     flex-1
+     overflow-y-auto
+     px-4
+     py-5
+    "
+   >
+    <div class="space-y-5">
+
+     <!-- تغییر جستجو -->
+     <FlightSearchPanel
+      mode="aside"
+      :showServices="true"
+     />
+
+     <!-- فیلتر واقعی پرواز -->
+     <FilterFlight
+      v-model:filters="activeFilters"
+      :allFlightsData="flights"
+     />
+
+    </div>
+   </div>
+
+
+   <!-- Footer -->
+   <div
+    class="
+     shrink-0
+     border-t
+     border-gray-100
+     bg-white
+     p-4
+    "
+   >
+    <UiBaseButton
+     label="اعمال فیلترها"
+     variant="filled"
+     color="primary"
+     class="
+      w-full
+      !rounded-2xl
+      !py-4
+      text-[13px]
+      font-bold
+      shadow-lg
+     "
+     @click="isFilterModalOpen=false"
+    />
+   </div>
+
+  </div>
+ </div>
+</transition>
     <form
   ref="formshaparakRef"
   name="PostForm"

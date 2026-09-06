@@ -153,7 +153,7 @@ const API_URL=
  'https://api.ahuan.ir/api/package/groups'
 
 const IMAGE_BASE_URL=
- 'https://api.ahuan.ir'
+ 'https://panel.ahuan.ir/uploads'
 
 const tours=ref([])
 const loading=ref(false)

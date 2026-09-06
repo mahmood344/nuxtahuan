@@ -606,7 +606,7 @@ const BASE_URL=
  'https://api.ahuan.ir/api'
 
 const IMAGE_BASE_URL=
- 'https://api.ahuan.ir'
+ 'https://panel.ahuan.ir/uploads'
 
 /* ========================= */
 /* State */

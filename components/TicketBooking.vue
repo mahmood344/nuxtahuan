@@ -268,13 +268,13 @@ const images = [
 ]
 
 const services = [
-  { key: "flight", label: "بلیط هواپیما", icon: "🛫" },
-  { key: "package", label: "تور (گروهی)", icon: "🧳" },
-  { key: "hotelAhwan", label: "هتل آهوان", icon: "🏩" },
-  { key: "train", label: "قطار", icon: "🚄" },
-  { key: "bus", label: "اتوبوس", icon: "🚍" },
-  { key: "hotel", label: "هتل", icon: "🏝️" },
-  { key: "insurance", label: "بیمه سفر", icon: "🛡️" },
+  { key: "flight", label: "بلیط هواپیما", icon: "" },
+  { key: "package", label: "تور (گروهی)", icon: "" },
+  { key: "hotelAhwan", label: "هتل آهوان", icon: "" },
+  { key: "train", label: "قطار", icon: "" },
+  { key: "bus", label: "اتوبوس", icon: "" },
+  { key: "hotel", label: "هتل", icon: "" },
+  { key: "insurance", label: "بیمه سفر", icon: "" },
 ]
 
 const activeService = ref("flight")

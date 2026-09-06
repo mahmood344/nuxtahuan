@@ -173,18 +173,21 @@
     "
    >
     <div
-     class="
-      mx-auto
-      flex
-      w-full
-      max-w-[1100px]
-      gap-2
-      overflow-x-auto
-      px-4
-      py-3
-      md:justify-center
-     "
-    >
+ class="
+  mx-auto
+  grid
+  w-full
+  max-w-[1100px]
+  grid-cols-2
+  gap-2
+  px-4
+  py-3
+
+  md:flex
+  md:items-center
+  md:justify-center
+ "
+>
      <button
       v-if="hasPrograms"
       type="button"
@@ -950,7 +953,7 @@ const BASE_URL=
  'https://api.ahuan.ir/api'
 
 const IMAGE_BASE_URL=
- 'https://api.ahuan.ir'
+ 'https://panel.ahuan.ir/uploads'
 
 const packageData=ref(null)
 
@@ -1140,12 +1143,30 @@ function setDefaultTab(){
 /* ========================= */
 
 function tabClass(tab){
+
  return[
-  'shrink-0 rounded-full px-5 py-2 text-[10px] font-bold transition',
+  `
+   w-full
+   whitespace-nowrap
+   rounded-xl
+   px-3
+   py-3
+   text-[11px]
+   font-bold
+   transition
+
+   md:w-auto
+   md:rounded-full
+   md:px-5
+   md:py-2
+   md:text-[10px]
+  `,
+
   activeTab.value===tab
-   ?'bg-[#7f888d] text-white'
+   ?'bg-[#7f888d] text-white shadow-sm'
    :'bg-white text-gray-700 hover:bg-gray-200'
  ]
+
 }
 
 /* ========================= */

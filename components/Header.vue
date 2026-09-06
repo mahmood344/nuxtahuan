@@ -61,7 +61,7 @@ onMounted(() => {
     آهوان
   </span>
       <nav class="flex items-center gap-5 text-[13px] font-medium text-gray-800">
-        <NuxtLink href="#" class="text-[12px] hover:text-[var(--color-primary-dark)]">بلیط</NuxtLink>
+        <NuxtLink to="/flights" class="text-[12px] hover:text-[var(--color-primary-dark)]">بلیط</NuxtLink>
         <div class="relative h-20 flex items-center cursor-pointer" @mouseenter="openMenu" @mouseleave="closeMenu">
           <span class="text-[12px] font-semibold hover:text-[var(--color-primary-dark)]">تور</span>
           <div v-if="showTourMenu" class="absolute top-[80px] right-0 pt-2 flex gap-1 z-[9999]">
@@ -204,101 +204,385 @@ onMounted(() => {
 </div>
 
   <!-- MOBILE -->
-  <div class="min-[943px]:hidden">
-    <!-- Header Row -->
-    <div class="h-16 flex items-center justify-between px-4">
-      <!-- آیکون پروفایل -->
-      <button class="text-2xl" @click="isMobileMenuOpen=!isMobileMenuOpen">☰</button>
-      <!-- لوگو -->
-      <img src="/imgs/header/logo.png" class="h-8">
-      <!-- منو همبرگری -->
-      <a href="/login" class="text-2xl text-gray-700">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-        </svg>
-      </a>
-    </div>
+<div class="min-[943px]:hidden">
+ <!-- Header Row -->
+ <div class="h-16 flex items-center justify-between px-4">
 
-    <div v-if="isMobileMenuOpen" class="p-4 space-y-3 bg-white">
-      <NuxtLink href="#" class="block border-2 border-[var(--color-primary)] rounded-xl p-3 text-sm font-bold text-[var(--color-primary)]">بلیط</NuxtLink>
-      <div class="border-2 border-[var(--color-primary)] rounded-xl overflow-hidden">
-        <button class="w-full flex justify-between items-center p-3 text-sm font-bold text-[var(--color-primary)]" @click="toggle('tour')">
-          تور <span>{{expanded.tour ? '−' : '+'}}</span>
-        </button>
-        <transition name="accordion">
-          <div v-if="expanded.tour" class="bg-gray-100 p-2 space-y-2">
-            <div v-for="cat in menu" :key="cat.category">
-              <button class="w-full flex justify-between items-center p-3 text-xs font-bold bg-gray-200 rounded-lg" @click="toggle('category',cat.category)">
-                <span>{{cat.category}}</span>
-                <span v-if="cat.groups?.length">{{expanded.categories[cat.category] ? '−' : '+'}}</span>
-              </button>
-              <transition name="accordion">
-                <div v-if="expanded.categories[cat.category]" class="mt-1 space-y-1">
-                  <div v-for="grp in cat.groups" :key="grp.id">
-                   <div
+  <!-- منو همبرگری -->
+  <button
+   class="text-2xl"
+   @click="isMobileMenuOpen=!isMobileMenuOpen"
+  >
+   ☰
+  </button>
+
+  <!-- لوگو -->
+  <NuxtLink
+   to="/"
+   class="flex items-center justify-center"
+  >
+   <img
+    src="/imgs/header/logo.png"
+    class="h-8 cursor-pointer"
+    alt="آهوان"
+   >
+  </NuxtLink>
+
+  <!-- ======================== -->
+<!-- Mobile User -->
+<!-- ======================== -->
+
+<!-- اگر لاگین نیست -->
+<button
+ v-if="!flightStore.isLoggedIn"
+ type="button"
  class="
-  w-full
   flex
-  justify-between
+  h-10
+  w-10
   items-center
-  p-2
-  text-[11px]
-  bg-gray-300
-  rounded-lg
+  justify-center
+  text-gray-700
+ "
+ @click="flightStore.openModal()"
+>
+ <svg
+  xmlns="http://www.w3.org/2000/svg"
+  class="h-7 w-7"
+  viewBox="0 0 24 24"
+  fill="currentColor"
+ >
+  <path
+   d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+  />
+ </svg>
+</button>
+
+
+<!-- اگر لاگین است -->
+<NuxtLink
+ v-else
+ to="/profile"
+ class="
+  flex
+  h-10
+  w-10
+  items-center
+  justify-center
+  text-gray-700
  "
 >
- <NuxtLink
-  :to="`/domesticinternationaltours/${grp.id}`"
-  class="flex-1"
-  @click="isMobileMenuOpen=false"
+ <svg
+  xmlns="http://www.w3.org/2000/svg"
+  class="h-7 w-7"
+  viewBox="0 0 24 24"
+  fill="currentColor"
  >
-  {{grp.group}}
- </NuxtLink>
+  <path
+   d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+  />
+ </svg>
+</NuxtLink>
 
- <button
-  v-if="grp.packages?.length"
-  type="button"
+ </div>
+
+ <!-- Mobile Menu -->
+ <transition name="mobile-menu">
+ <div
+  v-if="isMobileMenuOpen"
   class="
-   px-3
-   text-[14px]
+   origin-top
+   space-y-3
+   bg-white
+   p-4
+   shadow-lg
+  "
+ >
+ <!-- بلیط -->
+ <NuxtLink
+  to="/flights"
+  class="
+   block
+   border-2
+   border-[var(--color-primary)]
+   rounded-xl
+   p-3
+   text-sm
    font-bold
    text-[var(--color-primary)]
   "
-  @click.stop="toggle('group',grp.id)"
+  @click="isMobileMenuOpen=false"
  >
-  {{expanded.groups[grp.id] ? '−' : '+'}}
- </button>
-</div>
-                    <transition name="accordion">
-                      <div v-if="expanded.groups[grp.id] && grp.packages?.length" class="bg-white border-r-2 border-[var(--color-primary)] p-2 mt-1">
-                        <NuxtLink
- v-for="pkg in grp.packages"
- :key="pkg.id"
- :to="`/domesticinternationaltours/${grp.id}/${pkg.id}`"
- class="
-  block
-  text-[10px]
-  py-1
-  text-gray-600
- "
- @click="isMobileMenuOpen=false"
->
- {{pkg.package}}
-</NuxtLink>
-                      </div>
-                    </transition>
-                  </div>
-                </div>
-              </transition>
-            </div>
-          </div>
+  بلیط
+ </NuxtLink>
+
+ <!-- تور -->
+ <div
+  class="
+   border-2
+   border-[var(--color-primary)]
+   rounded-xl
+   overflow-hidden
+  "
+ >
+  <button
+   class="
+    w-full
+    flex
+    justify-between
+    items-center
+    p-3
+    text-sm
+    font-bold
+    text-[var(--color-primary)]
+   "
+   @click="toggle('tour')"
+  >
+   تور
+
+   <span>
+    {{expanded.tour ? '−' : '+'}}
+   </span>
+  </button>
+
+  <transition name="accordion">
+   <div
+    v-if="expanded.tour"
+    class="
+     bg-gray-100
+     p-2
+     space-y-2
+    "
+   >
+    <!-- Category -->
+    <div
+     v-for="cat in menu"
+     :key="cat.category"
+    >
+     <button
+      class="
+       w-full
+       flex
+       justify-between
+       items-center
+       p-3
+       text-xs
+       font-bold
+       bg-gray-200
+       rounded-lg
+      "
+      @click="
+       toggle(
+        'category',
+        cat.category
+       )
+      "
+     >
+      <span>
+       {{cat.category}}
+      </span>
+
+      <span
+       v-if="cat.groups?.length"
+      >
+       {{
+        expanded.categories[
+         cat.category
+        ]
+         ? '−'
+         : '+'
+       }}
+      </span>
+     </button>
+
+     <transition name="accordion">
+      <div
+       v-if="
+        expanded.categories[
+         cat.category
+        ]
+       "
+       class="
+        mt-1
+        space-y-1
+       "
+      >
+       <!-- Groups -->
+       <div
+        v-for="grp in cat.groups"
+        :key="grp.id"
+       >
+        <div
+         class="
+          w-full
+          flex
+          justify-between
+          items-center
+          p-2
+          text-[11px]
+          bg-gray-300
+          rounded-lg
+         "
+        >
+         <!-- route گروه -->
+         <NuxtLink
+          :to="
+           `/domesticinternationaltours/${grp.id}`
+          "
+          class="flex-1"
+          @click="
+           isMobileMenuOpen=false
+          "
+         >
+          {{grp.group}}
+         </NuxtLink>
+
+         <!-- باز کردن packages -->
+         <button
+          v-if="grp.packages?.length"
+          type="button"
+          class="
+           px-3
+           text-[14px]
+           font-bold
+           text-[var(--color-primary)]
+          "
+          @click.stop="
+           toggle(
+            'group',
+            grp.id
+           )
+          "
+         >
+          {{
+           expanded.groups[grp.id]
+            ? '−'
+            : '+'
+          }}
+         </button>
+        </div>
+
+        <!-- Packages -->
+        <transition name="accordion">
+         <div
+          v-if="
+           expanded.groups[grp.id] &&
+           grp.packages?.length
+          "
+          class="
+           mt-1
+           border-r-2
+           border-[var(--color-primary)]
+           bg-white
+           p-2
+          "
+         >
+          <NuxtLink
+           v-for="pkg in grp.packages"
+           :key="pkg.id"
+           :to="
+            `/domesticinternationaltours/${grp.id}/${pkg.id}`
+           "
+           class="
+            block
+            rounded-lg
+            px-2
+            py-2
+            text-[11px]
+            text-gray-600
+            transition
+            hover:bg-gray-50
+            hover:text-[var(--color-primary)]
+           "
+           @click="
+            isMobileMenuOpen=false
+           "
+          >
+           {{pkg.package}}
+          </NuxtLink>
+         </div>
         </transition>
+       </div>
       </div>
-      <NuxtLink to="http://localhost:3000/hotels/3" class="block border-2 border-[var(--color-primary)] rounded-xl p-3 text-sm font-bold text-[var(--color-primary)]">هتل آهوان</NuxtLink>
-      <NuxtLink href="#" class="block border-2 border-[var(--color-primary)] rounded-xl p-3 text-sm font-bold text-[var(--color-primary)]">درباره ما</NuxtLink>
-      <NuxtLink href="#" class="block border-2 border-[var(--color-primary)] rounded-xl p-3 text-sm font-bold text-[var(--color-primary)]">مجله گردشگری آهوان</NuxtLink>
-      <NuxtLink href="#" class="block border-2 border-[var(--color-primary)] rounded-xl p-3 text-sm font-bold text-[var(--color-primary)]">پشتیبانی آنلاین</NuxtLink>
+     </transition>
     </div>
+   </div>
+  </transition>
+ </div>
+
+ <!-- هتل آهوان -->
+ <NuxtLink
+  to="/hotels/3"
+  class="
+   block
+   border-2
+   border-[var(--color-primary)]
+   rounded-xl
+   p-3
+   text-sm
+   font-bold
+   text-[var(--color-primary)]
+  "
+  @click="isMobileMenuOpen=false"
+ >
+  هتل آهوان
+ </NuxtLink>
+
+ <!-- درباره ما -->
+ <NuxtLink
+  to="/about"
+  class="
+   block
+   border-2
+   border-[var(--color-primary)]
+   rounded-xl
+   p-3
+   text-sm
+   font-bold
+   text-[var(--color-primary)]
+  "
+  @click="isMobileMenuOpen=false"
+ >
+  درباره ما
+ </NuxtLink>
+
+ <!-- مجله -->
+ <NuxtLink
+  to="/blog"
+  class="
+   block
+   border-2
+   border-[var(--color-primary)]
+   rounded-xl
+   p-3
+   text-sm
+   font-bold
+   text-[var(--color-primary)]
+  "
+  @click="isMobileMenuOpen=false"
+ >
+  مجله گردشگری آهوان
+ </NuxtLink>
+
+ <!-- پشتیبانی -->
+ <NuxtLink
+  to="/support"
+  class="
+   block
+   border-2
+   border-[var(--color-primary)]
+   rounded-xl
+   p-3
+   text-sm
+   font-bold
+   text-[var(--color-primary)]
+  "
+  @click="isMobileMenuOpen=false"
+ >
+  پشتیبانی آنلاین
+ </NuxtLink>
+</div>
+</transition>
   </div>
 </header>
 </template>
@@ -307,4 +591,47 @@ onMounted(() => {
 .accordion-enter-active, .accordion-leave-active{ transition:all .3s ease; overflow:hidden; }
 .accordion-enter-from, .accordion-leave-to{ max-height:0; opacity:0; transform:translateY(-6px); }
 .accordion-enter-to, .accordion-leave-from{ max-height:500px; opacity:1; transform:translateY(0); }
+/* ============================= */
+/* Mobile Menu Animation */
+/* ============================= */
+
+.mobile-menu-enter-active{
+ transition:
+  opacity .35s ease,
+  transform .4s cubic-bezier(.22,1,.36,1);
+}
+
+.mobile-menu-leave-active{
+ transition:
+  opacity .22s ease,
+  transform .25s ease;
+}
+
+.mobile-menu-enter-from{
+ opacity:0;
+ transform:
+  translateY(-20px)
+  scaleY(.92);
+}
+
+.mobile-menu-enter-to{
+ opacity:1;
+ transform:
+  translateY(0)
+  scaleY(1);
+}
+
+.mobile-menu-leave-from{
+ opacity:1;
+ transform:
+  translateY(0)
+  scaleY(1);
+}
+
+.mobile-menu-leave-to{
+ opacity:0;
+ transform:
+  translateY(-14px)
+  scaleY(.95);
+}
 </style>

@@ -78,7 +78,7 @@
    w-auto
    object-contain
    sm:h-[32px]
-   md:h-[36px]
+   md:h-[360px]
   "
  >
 </NuxtLink>
