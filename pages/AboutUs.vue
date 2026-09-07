@@ -1,6 +1,6 @@
 <template>
  <section
-  class="w-full overflow-hidden bg-white pb-8"
+  class="w-full overflow-hidden bg-white pb-8 mt-7"
   dir="rtl"
  >
   <!-- ===================================== -->
@@ -384,7 +384,7 @@
  </p>
 
  <NuxtLink
-  to="/careers"
+  to="/opportunities"
   class="
    mt-6
    inline-flex
@@ -415,7 +415,7 @@
   <!-- ===================================== -->
   <!-- Bottom decoration -->
   <!-- ===================================== -->
-  <div
+  <!-- <div
    class="
     relative
     h-[5px]
@@ -449,7 +449,7 @@
      "
     ></span>
    </div>
-  </div>
+  </div> -->
 
  </section>
 </template>

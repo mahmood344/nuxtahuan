@@ -404,7 +404,7 @@ const services=[
  },
  {
   title:'درباره ما',
-  link:'/about'
+  link:'/aboutUS'
  },
  {
   title:'خدمات ویزا',
@@ -412,11 +412,11 @@ const services=[
  },
  {
   title:'دفتر حافظ منافع مشتری',
-  link:'/customer-rights'
+  link:'/CustomerRightsOffice'
  },
  {
   title:'فرصت های شغلی',
-  link:'/careers'
+  link:'/opportunities'
  },
  {
   title:'مجله گردشگری',
@@ -428,7 +428,7 @@ const services=[
  },
  {
   title:'تماس با ما',
-  link:'/contact-us'
+  link:'/contactUs'
  }
 ]
 
