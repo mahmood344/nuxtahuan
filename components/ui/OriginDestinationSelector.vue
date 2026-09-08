@@ -26,9 +26,9 @@
           ></i>
           <span v-if="mabda" class="mr-2 truncate text-[11px]">
   {{
-    sendFlightType==='international'
-      ?mabda.nicName||mabda.cityNicName
-      :mabda.cityNicName
+    sendFlightType === 'international'
+      ? mabda.iataCode
+      : mabda.cityNicName
   }}
 </span>
           <span v-else class="text-gray-400 font-bold text-[10px] mr-2">انتخاب مبدا</span>
@@ -126,9 +126,9 @@
           ></i>
           <span v-if="maghsad" class="mr-2 truncate text-[11px]">
   {{
-    sendFlightType==='international'
-      ?maghsad.nicName||maghsad.cityNicName
-      :maghsad.cityNicName
+    sendFlightType === 'international'
+      ? maghsad.iataCode
+      : maghsad.cityNicName
   }}
 </span>
           <span v-else class="text-gray-400 font-bold text-[10px] mr-2">انتخاب مقصد</span>
@@ -193,13 +193,29 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from "vue"
+import {
+  ref,
+  computed,
+  watch,
+  onMounted,
+  nextTick
+} from "vue"
 import { useFlightStore } from "@/stores/flights"
 
 const props = defineProps({
   sendFlightType: {
     type: String,
-    default: "domestic"
+    default: 'domestic'
+  },
+
+  mabda: {
+    type: [String, Number],
+    default: null
+  },
+
+  maghsad: {
+    type: [String, Number],
+    default: null
   }
 })
 const toast=useToast()
@@ -237,7 +253,164 @@ const getCodeForEmit = (city) => {
   if (!city) return null
   return props.sendFlightType === "domestic" ? city.cityCode : city.iataCode
 }
+const normalizeCode = (value) => {
+  return String(value || '')
+    .trim()
+    .toUpperCase()
+}
 
+const findDomesticCityByCode = (code) => {
+  const normalizedCode =
+    normalizeCode(code)
+
+  if (!normalizedCode)
+    return null
+
+  const cities = [
+    ...(flightStore.popularCities || []),
+    ...(flightStore.iranAirports || [])
+  ]
+
+  return (
+    cities.find(city =>
+      normalizeCode(city?.cityCode) === normalizedCode ||
+      normalizeCode(city?.iataCode) === normalizedCode
+    ) || null
+  )
+}
+const findInternationalCityByCode =
+  async (code) => {
+
+    const normalizedCode =
+      normalizeCode(code)
+
+    if (!normalizedCode)
+      return null
+
+    try {
+
+      const res = await $fetch(
+        `https://api.ahuan.ir/api/BasicInfo/airports/${normalizedCode}`
+      )
+
+      const items =
+        Array.isArray(res)
+          ? res
+          : res
+            ? [res]
+            : []
+
+      return (
+        items.find(city =>
+          normalizeCode(city?.iataCode) === normalizedCode
+        ) ||
+        items[0] ||
+        null
+      )
+
+    }
+    catch (error) {
+
+      console.error(
+        'Resolve airport error:',
+        error
+      )
+
+      return null
+    }
+  }
+  watch(
+  [
+    () => props.mabda,
+    () => props.sendFlightType
+  ],
+  async ([code, type]) => {
+
+    if (!code) {
+      mabda.value = null
+      searchMabda.value = ''
+      isMabdaOpen.value = false
+      return
+    }
+
+    let city = null
+
+    if (type === 'international') {
+      city =
+        await findInternationalCityByCode(code)
+    }
+    else {
+      city =
+        findDomesticCityByCode(code)
+    }
+
+    if (!city) return
+
+    isSelecting.value = true
+
+    mabda.value = city
+
+    searchMabda.value =
+      city.nicName ||
+      city.cityNicName ||
+      ''
+
+    isMabdaOpen.value = false
+
+    await nextTick()
+
+    isSelecting.value = false
+  },
+  {
+    immediate: true
+  }
+)
+watch(
+  [
+    () => props.maghsad,
+    () => props.sendFlightType
+  ],
+  async ([code, type]) => {
+
+    if (!code) {
+      maghsad.value = null
+      searchMaghsad.value = ''
+      isMaghsadOpen.value = false
+      return
+    }
+
+    let city = null
+
+    if (type === 'international') {
+      city =
+        await findInternationalCityByCode(code)
+    }
+    else {
+      city =
+        findDomesticCityByCode(code)
+    }
+
+    if (!city) return
+
+    isSelecting.value = true
+
+    maghsad.value = city
+
+    searchMaghsad.value =
+      city.nicName ||
+      city.cityNicName ||
+      ''
+
+    isMaghsadOpen.value = false
+
+    await nextTick()
+
+    isSelecting.value = false
+  },
+  {
+    immediate: true
+  }
+)
 /* -----------------------
 popular cities
 ----------------------- */
@@ -361,25 +534,24 @@ watch(searchMaghsad, (val) => {
 /* -----------------------
 flightType change (تغییر نوع پرواز و پاکسازی ورودی‌ها)
 ----------------------- */
-watch(() => props.sendFlightType, async (type) => {
-  if (type === "international") {
-    await fetchInternationalPopular()
+watch(
+  () => props.sendFlightType,
+  async (type) => {
+
+    if (type === 'international') {
+      await fetchInternationalPopular()
+    }
+
+    isMabdaOpen.value = false
+    isMaghsadOpen.value = false
+
+    dropdownCities.value =
+      popularCities.value
+  },
+  {
+    immediate: true
   }
-
-  // پاک کردن مقادیر و امیت null
-  mabda.value = null
-  searchMabda.value = ""
-  emit('update:mabda', null)
-
-  maghsad.value = null
-  searchMaghsad.value = ""
-  emit('update:maghsad', null)
-
-  isMabdaOpen.value = false
-  isMaghsadOpen.value = false
-
-  dropdownCities.value = popularCities.value
-}, { immediate: true })
+)
 
 /* -----------------------
 form valid
