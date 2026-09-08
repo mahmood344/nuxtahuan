@@ -5,6 +5,16 @@ const props = defineProps({
   sendTravelType: {
     type: String,
     default: "one-way"
+  },
+
+  departDate: {
+    type: [String, null],
+    default: null
+  },
+
+  returnDate: {
+    type: [String, null],
+    default: null
   }
 })
 const disablePastDates = (date) => {
@@ -64,6 +74,27 @@ watch(departDate, (newVal) => {
 /* -----------------------
 watch برای emit تاریخ برگشت
 ----------------------- */
+watch(
+  () => props.departDate,
+  (value) => {
+    departDate.value = value || ""
+    showdepartDate.value = false
+  },
+  {
+    immediate: true
+  }
+)
+
+watch(
+  () => props.returnDate,
+  (value) => {
+    returnDate.value = value || ""
+    showreturnDate.value = false
+  },
+  {
+    immediate: true
+  }
+)
 watch(returnDate, (newVal) => {
   emit("update:returnDate", newVal || null)
 })

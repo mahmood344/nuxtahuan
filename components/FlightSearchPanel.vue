@@ -176,18 +176,31 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router'
+import {
+  ref,
+  computed,
+  onMounted,
+  watch
+} from 'vue'
+
+import {
+  useRoute,
+  useRouter
+} from 'vue-router'
 import {useHotelStore} from '~/stores/hotels'
 const router = useRouter()
-const origin = ref(null)
-const destination = ref(null)
-const departDate = ref(null)
-const returnDate = ref(null)
+const route = useRoute()
+const origin = ref('')
+const destination = ref('')
+
+const departDate = ref('')
+const returnDate = ref('')
+
 const adl = ref(1)
 const chd = ref(0)
 const inf = ref(0)
-const flightType = ref('domestic');
+
+const flightType = ref('domestic')
 const travelType = ref('one-way')
 const hotelStore=useHotelStore()
 
@@ -252,21 +265,227 @@ function searchAhuanHotel(){
  })
 
 }
-function searchFlights() {
-  router.push({
+function syncFlightFormFromRoute() {
+
+  origin.value =
+    String(
+      route.query.origin || ''
+    )
+
+  destination.value =
+    String(
+      route.query.destination || ''
+    )
+
+  departDate.value =
+    String(
+      route.query.departDate || ''
+    )
+
+  returnDate.value =
+    String(
+      route.query.returnDate || ''
+    )
+
+  const adults =
+    Number.parseInt(
+      String(route.query.adl ?? '1'),
+      10
+    )
+
+  const children =
+    Number.parseInt(
+      String(route.query.chd ?? '0'),
+      10
+    )
+
+  const infants =
+    Number.parseInt(
+      String(route.query.inf ?? '0'),
+      10
+    )
+
+  adl.value =
+    Number.isFinite(adults)
+      ? adults
+      : 1
+
+  chd.value =
+    Number.isFinite(children)
+      ? children
+      : 0
+
+  inf.value =
+    Number.isFinite(infants)
+      ? infants
+      : 0
+
+  flightType.value =
+    String(
+      route.query.flightType ||
+      'domestic'
+    )
+
+  travelType.value =
+    String(
+      route.query.travelType ||
+      'one-way'
+    )
+
+  if (
+    travelType.value === 'one-way'
+  ) {
+    returnDate.value = ''
+  }
+}
+onMounted(() => {
+
+  if (
+    route.path.startsWith('/flights')
+  ) {
+
+    syncFlightFormFromRoute()
+  }
+
+  if (
+    route.path.startsWith('/hotels/')
+  ) {
+
+    syncHotelFormFromRoute()
+  }
+})
+watch(
+  () => [
+    route.params.id,
+    route.query.checkIn,
+    route.query.checkOut
+  ],
+
+  () => {
+
+    if (
+      route.path.startsWith('/hotels/')
+    ) {
+      syncHotelFormFromRoute()
+    }
+  }
+)
+watch(
+  () => [
+    route.query.origin,
+    route.query.destination,
+    route.query.departDate,
+    route.query.returnDate,
+    route.query.adl,
+    route.query.chd,
+    route.query.inf,
+    route.query.flightType,
+    route.query.travelType
+  ],
+
+  () => {
+    syncFlightFormFromRoute()
+  }
+)
+async function searchFlights() {
+
+  if (
+    !origin.value ||
+    !destination.value ||
+    !departDate.value ||
+    !adl.value
+  ) {
+    return
+  }
+
+  await router.push({
     path: '/flights',
+
     query: {
-      origin: origin.value,
-      destination: destination.value,
-      departDate: departDate.value,
-      returnDate: travelType.value === 'round-trip' ? returnDate.value : null,
-      adl: adl.value,
-      chd: chd.value,
-      inf: inf.value,
-      flightType: flightType.value,
-      travelType: travelType.value
+      origin:
+        origin.value,
+
+      destination:
+        destination.value,
+
+      departDate:
+        departDate.value,
+
+      returnDate:
+        travelType.value === 'round-trip'
+          ? returnDate.value || undefined
+          : undefined,
+
+      adl:
+        adl.value,
+
+      chd:
+        chd.value,
+
+      inf:
+        inf.value,
+
+      flightType:
+        flightType.value,
+
+      travelType:
+        travelType.value
     }
   })
+}
+function syncHotelFormFromRoute() {
+
+  /*
+   * فقط وقتی داخل route هتل هستیم
+   */
+  if (!route.path.startsWith('/hotels/')) {
+    return
+  }
+
+  const hotelId =
+    Number(route.params.id || 0)
+
+  const checkIn =
+    String(
+      route.query.checkIn || ''
+    ).trim()
+
+  const checkOut =
+    String(
+      route.query.checkOut || ''
+    ).trim()
+
+
+  /*
+   * تب هتل آهوان فعال شود
+   */
+  activeService.value = 'hotelAhwan'
+
+
+  /*
+   * هتل انتخاب شود
+   */
+  hotelCity.value =
+    hotelId > 0
+      ? hotelId
+      : null
+
+
+  /*
+   * تاریخ ورود و خروج
+   */
+  if (checkIn && checkOut) {
+
+    hotelDate.value = [
+      checkIn,
+      checkOut
+    ]
+
+  }
+  else {
+
+    hotelDate.value = null
+  }
 }
 </script>
 
