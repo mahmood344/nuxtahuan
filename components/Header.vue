@@ -127,7 +127,7 @@ onMounted(() => {
           </div>
         </div>
         <NuxtLink to="http://localhost:3000/hotels/3" class="text-[12px] hover:text-[var(--color-primary-dark)]">هتل آهوان</NuxtLink>
-        <NuxtLink href="#" class="text-[12px] hover:text-[var(--color-primary-dark)]">درباره ما</NuxtLink>
+        <NuxtLink to="/AboutUs" class="text-[12px] hover:text-[var(--color-primary-dark)]">درباره ما</NuxtLink>
         <NuxtLink href="#" class="text-[12px] hover:text-[var(--color-primary-dark)]">مجله گردشگری آهوان</NuxtLink>
         <NuxtLink href="#" class="text-[12px] hover:text-[var(--color-primary-dark)]">پشتیبانی آنلاین</NuxtLink>
       </nav>
@@ -530,7 +530,7 @@ onMounted(() => {
 
  <!-- درباره ما -->
  <NuxtLink
-  to="/about"
+  to="/AboutUs"
   class="
    block
    border-2
