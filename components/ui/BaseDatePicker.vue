@@ -7,7 +7,16 @@ const props = defineProps({
     default: "one-way"
   }
 })
+const disablePastDates = (date) => {
+  const selected = new Date(date)
 
+  const today = new Date()
+
+  today.setHours(0, 0, 0, 0)
+  selected.setHours(0, 0, 0, 0)
+
+  return selected < today
+}
 const emit = defineEmits([
   "update:departDate",
   "update:returnDate"
@@ -109,19 +118,20 @@ watch(() => props.sendTravelType, (newType) => {
         </button>
 
         <PersianDatePicker
-          :styles="styles"
-          v-model="departDate"
-          class="hidden"
-          :auto-submit="false"
-          :show="showdepartDate"
-          format="YYYY/MM/DD"
-          mode="single"
-          locale="fa,en"
-          @close="showdepartDate=false"
-        >
-          <template #icon></template>
-          <template #footer>تاریخ رفت:</template>
-        </PersianDatePicker>
+  :styles="styles"
+  v-model="departDate"
+  class="hidden"
+  :auto-submit="false"
+  :show="showdepartDate"
+  format="YYYY/MM/DD"
+  mode="single"
+  locale="fa,en"
+  :disable="disablePastDates"
+  @close="showdepartDate=false"
+>
+  <template #icon></template>
+  <template #footer>تاریخ رفت:</template>
+</PersianDatePicker>
       </div>
 
       <!-- divider -->
@@ -164,19 +174,20 @@ watch(() => props.sendTravelType, (newType) => {
         </button>
 
         <PersianDatePicker
-          :styles="styles"
-          :auto-submit="false"
-          v-model="returnDate"
-          class="hidden"
-          format="YYYY/MM/DD"
-          mode="single"
-          locale="fa,en"
-          :show="showreturnDate"
-          @close="showreturnDate=false"
-        >
-          <template #icon></template>
-          <template #footer>تاریخ برگشت:</template>
-        </PersianDatePicker>
+  :styles="styles"
+  :auto-submit="false"
+  v-model="returnDate"
+  class="hidden"
+  format="YYYY/MM/DD"
+  mode="single"
+  locale="fa,en"
+  :show="showreturnDate"
+  :disable="disablePastDates"
+  @close="showreturnDate=false"
+>
+  <template #icon></template>
+  <template #footer>تاریخ برگشت:</template>
+</PersianDatePicker>
 
       </div>
     </div>
