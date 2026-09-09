@@ -167,8 +167,12 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue"
-
+import {
+  ref,
+  computed,
+  watch
+} from "vue"
+const isSyncingFromParent = ref(false)
 const isOpen = ref(false)
 const props = defineProps({
   adl: {
@@ -191,12 +195,57 @@ const counts = ref({
 })
 watch(
   counts,
+
   (val) => {
-    emit("update:adl", val.adult)
-    emit("update:chd", val.child)
-    emit("update:inf", val.infant)
+
+    if (isSyncingFromParent.value)
+      return
+
+    emit(
+      "update:adl",
+      val.adult
+    )
+
+    emit(
+      "update:chd",
+      val.child
+    )
+
+    emit(
+      "update:inf",
+      val.infant
+    )
   },
-  { deep: true }
+
+  {
+    deep: true
+  }
+)
+watch(
+  () => [
+    props.adl,
+    props.chd,
+    props.inf
+  ],
+
+  ([adl, chd, inf]) => {
+
+    isSyncingFromParent.value = true
+
+    counts.value = {
+      adult: Number(adl ?? 1),
+      child: Number(chd ?? 0),
+      infant: Number(inf ?? 0)
+    }
+
+    queueMicrotask(() => {
+      isSyncingFromParent.value = false
+    })
+  },
+
+  {
+    immediate: true
+  }
 )
 const MAX = 9
 const emit = defineEmits([

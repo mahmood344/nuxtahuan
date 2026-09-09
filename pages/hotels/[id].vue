@@ -1593,121 +1593,257 @@ function getUserData(){
 }
 function createHotelPaymentData(){
 
- const totalPrice=
-  Number(hotelFinalPrice.value||0)
+ const totalPrice =
+  Number(hotelFinalPrice.value || 0)
 
  if(
-  !Number.isFinite(totalPrice)||
-  totalPrice<=0
+  !Number.isFinite(totalPrice) ||
+  totalPrice <= 0
  ){
   throw new Error(
    'مبلغ کل قرارداد معتبر نیست'
   )
  }
 
- const email=String(
-  bookingData.value?.contact?.email||
+
+ const email = String(
+  bookingData.value?.contact?.email ||
   ''
  ).trim()
 
- const mobile=String(
-  bookingData.value?.contact?.mobile||
-  bookingData.value?.contact?.phone||
+
+ const mobile = String(
+  bookingData.value?.contact?.mobile ||
+  bookingData.value?.contact?.phone ||
   ''
  ).trim()
 
- const userData=getUserData()
 
- const isAgency=
-  userData?.noLimit===true
+ /* =========================
+    اطلاعات کاربر
+ ========================= */
 
- const travelCardUsed=
-  travelCardApplied.value===true
+ const userData =
+  getUserData()
 
- const travelCardNumber=
+
+ /* =========================
+    Role
+ ========================= */
+
+ const roles =
+  Array.isArray(userData?.roles)
+   ? userData.roles.map(role =>
+      String(role || '')
+       .trim()
+       .toLowerCase()
+     )
+   : []
+
+
+ const isAdmin =
+  roles.includes('admin')
+
+
+ const isHotel =
+  roles.includes('hotel')
+
+
+ /* =========================
+    اعتبار کاربر
+ ========================= */
+
+ const hasNoLimit =
+  userData?.noLimit === true
+
+
+ const userCredit =
+  Number(userData?.credit || 0)
+
+
+ const hasEnoughCredit =
+  userData?.hasCredit === true &&
+  Number.isFinite(userCredit) &&
+  userCredit >= totalPrice
+
+
+ /* =========================
+    پرداخت اعتباری / آژانسی
+ ========================= */
+
+ const isAgency =
+  isAdmin ||
+  isHotel ||
+  hasNoLimit ||
+  hasEnoughCredit
+
+
+ console.log(
+  'HOTEL PAYMENT ACCESS',
+  {
+   roles,
+   isAdmin,
+   isHotel,
+   hasNoLimit,
+   userCredit,
+   totalPrice,
+   hasEnoughCredit,
+   isAgency
+  }
+ )
+
+
+ /* =========================
+    سفرکارت
+ ========================= */
+
+ const travelCardUsed =
+  travelCardApplied.value === true
+
+
+ const travelCardNumber =
   travelCardUsed
-   ?String(
-      appliedTravelCardNumber.value||''
-    ).trim()
-   :''
+   ? String(
+      appliedTravelCardNumber.value ||
+      ''
+     ).trim()
+   : ''
 
- const availableCredit=
+
+ const availableCredit =
   Math.max(
-   Number(travelCardCredit.value||0),
+   Number(
+    travelCardCredit.value || 0
+   ),
    0
   )
 
- const travelCardAmount=
+
+ const travelCardAmount =
   travelCardUsed
-   ?Math.min(
+   ? Math.min(
       availableCredit,
       totalPrice
-    )
-   :0
+     )
+   : 0
 
- const gatewayAmount=
+
+ const gatewayAmount =
   Math.max(
-   totalPrice-travelCardAmount,
+   totalPrice - travelCardAmount,
    0
   )
+
+
+ /* =========================
+    Agency
+ ========================= */
 
  if(isAgency){
 
   return{
-   type:'agency',
+   type: 'agency',
+
    totalPrice,
-   payableAmount:totalPrice,
-   travelCardUsed:false,
-   travelCardAmount:0,
-   travelCardNumber:'',
+
+   payableAmount:
+    totalPrice,
+
+   travelCardUsed: false,
+
+   travelCardAmount: 0,
+
+   travelCardNumber: '',
+
    email,
+
    mobile
   }
  }
 
+
+ /* =========================
+    پرداخت کامل سفرکارت
+ ========================= */
+
  if(
   travelCardUsed &&
-  travelCardAmount>=totalPrice
+  travelCardAmount >= totalPrice
  ){
 
   return{
-   type:'travelcard',
+   type: 'travelcard',
+
    totalPrice,
-   payableAmount:totalPrice,
-   travelCardUsed:true,
-   travelCardAmount:totalPrice,
+
+   payableAmount:
+    totalPrice,
+
+   travelCardUsed: true,
+
+   travelCardAmount:
+    totalPrice,
+
    travelCardNumber,
+
    email,
+
    mobile
   }
  }
 
+
+ /* =========================
+    سفرکارت + بانک
+ ========================= */
+
  if(
   travelCardUsed &&
-  travelCardAmount>0 &&
-  gatewayAmount>0
+  travelCardAmount > 0 &&
+  gatewayAmount > 0
  ){
 
   return{
-   type:'travelcard-gateway',
+   type: 'travelcard-gateway',
+
    totalPrice,
-   payableAmount:gatewayAmount,
-   travelCardUsed:true,
+
+   payableAmount:
+    gatewayAmount,
+
+   travelCardUsed: true,
+
    travelCardAmount,
+
    travelCardNumber,
+
    email,
+
    mobile
   }
  }
+
+
+ /* =========================
+    پرداخت بانکی
+ ========================= */
 
  return{
-  type:'gateway',
+  type: 'gateway',
+
   totalPrice,
-  payableAmount:totalPrice,
-  travelCardUsed:false,
-  travelCardAmount:0,
-  travelCardNumber:'',
+
+  payableAmount:
+   totalPrice,
+
+  travelCardUsed: false,
+
+  travelCardAmount: 0,
+
+  travelCardNumber: '',
+
   email,
+
   mobile
  }
 }

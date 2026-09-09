@@ -2077,8 +2077,7 @@
             !row.canCancel||
             cancellingTicketKey===row.key
            "
-           @click="openCancelTicket(row)"
-          >
+@click="handleCancelTicket(row)"          >
            {{
             cancellingTicketKey===row.key
              ?'در حال بررسی جریمه...'
@@ -2299,8 +2298,7 @@
               !row.canCancel||
               cancellingTicketKey===row.key
              "
-             @click="openCancelTicket(row)"
-            >
+@click="handleCancelTicket(row)"            >
              {{
               cancellingTicketKey===row.key
                ?'در حال بررسی جریمه...'
@@ -3803,6 +3801,197 @@
     </div>
   </Transition>
 </Teleport>
+<Teleport to="body">
+  <Transition name="contract-modal">
+
+    <div
+      v-if="internationalCancelModalOpen"
+      dir="rtl"
+      class="
+        fixed
+        inset-0
+        z-[5000]
+        flex
+        items-center
+        justify-center
+        bg-black/40
+        p-4
+        backdrop-blur-[1px]
+      "
+      @click.self="closeInternationalCancelModal"
+    >
+      <div
+        class="
+          w-full
+          max-w-[430px]
+          rounded-2xl
+          bg-white
+          p-6
+          shadow-2xl
+        "
+      >
+
+        <!-- علامت هشدار -->
+        <div
+          class="
+            mx-auto
+            flex
+            h-14
+            w-14
+            items-center
+            justify-center
+            rounded-full
+            bg-red-50
+            text-2xl
+            font-black
+            text-red-600
+          "
+        >
+          !
+        </div>
+
+
+        <!-- عنوان -->
+        <h2
+          class="
+            mt-4
+            text-center
+            text-lg
+            font-black
+            text-gray-800
+          "
+        >
+          درخواست کنسلی بلیت خارجی
+        </h2>
+
+
+        <!-- توضیح -->
+        <p
+          class="
+            mt-4
+            text-center
+            text-sm
+            leading-8
+            text-gray-600
+          "
+        >
+          آیا مطمئن هستید که می‌خواهید بلیت
+
+          <strong class="text-gray-900">
+            {{
+              internationalCancelRow?.passengerName
+            }}
+          </strong>
+
+          با شماره قرارداد
+
+          <strong class="text-gray-900">
+            {{
+              toPersianDigits(
+                selectedContract?.id || '-'
+              )
+            }}
+          </strong>
+
+          را کنسل کنید؟
+        </p>
+
+
+        <!-- خطا -->
+        <p
+          v-if="internationalCancelError"
+          class="
+            mt-4
+            rounded-lg
+            bg-red-50
+            p-3
+            text-center
+            text-xs
+            font-bold
+            text-red-600
+          "
+        >
+          {{ internationalCancelError }}
+        </p>
+
+
+        <!-- دکمه‌ها -->
+        <div
+          class="
+            mt-6
+            flex
+            items-center
+            justify-center
+            gap-3
+          "
+        >
+
+          <!-- تایید -->
+          <button
+            type="button"
+            class="
+              min-w-[145px]
+              rounded-full
+              bg-red-600
+              px-6
+              py-3
+              text-sm
+              font-bold
+              text-white
+              transition
+              hover:bg-red-700
+              disabled:cursor-not-allowed
+              disabled:opacity-60
+            "
+            :disabled="
+              internationalCancelSubmitting
+            "
+            @click="
+              confirmInternationalCancel
+            "
+          >
+            {{
+              internationalCancelSubmitting
+                ? 'در حال ارسال...'
+                : 'بله، درخواست کنسلی'
+            }}
+          </button>
+
+
+          <!-- انصراف -->
+          <button
+            type="button"
+            class="
+              min-w-[90px]
+              rounded-full
+              border
+              border-gray-300
+              bg-white
+              px-6
+              py-3
+              text-sm
+              font-bold
+              text-gray-600
+              transition
+              hover:bg-gray-50
+            "
+            :disabled="
+              internationalCancelSubmitting
+            "
+            @click="
+              closeInternationalCancelModal
+            "
+          >
+            خیر
+          </button>
+
+        </div>
+
+      </div>
+    </div>
+
+  </Transition>
+</Teleport>
 </template>
 
 <script setup>
@@ -3815,7 +4004,17 @@ import {
 import {
   toGregorian
 } from 'jalaali-js'
+const internationalCancelModalOpen = ref(false)
 
+const internationalCancelRow = ref(null)
+
+const internationalCancelSubmitting = ref(false)
+
+const internationalCancelError = ref('')
+
+// شماره‌ای که درخواست کنسلی برای آن SMS می‌شود.
+// بعداً شماره واقعی را اینجا قرار می‌دهیم.
+const INTERNATIONAL_CANCEL_MOBILE = ''
 const detailsModalOpen = ref(false)
 const selectedContract = ref(null)
 const toast=useToast()
@@ -3872,6 +4071,272 @@ async function handleMenuClick(item){
 async function logout(){
  await flightStore.logout()
  await navigateTo('/')
+}
+function normalizeSupplier(value) {
+  return String(value || '')
+    .trim()
+    .toUpperCase()
+}
+
+
+function isPartoTicket(row) {
+
+  /*
+   * ابتدا خود row را بررسی می‌کنیم.
+   */
+  const rowSupplier = normalizeSupplier(
+    row?.flightSupplier ||
+    row?.flight?.flightSupplier ||
+    row?.provider
+  )
+
+  if (rowSupplier === 'PARTO')
+    return true
+
+
+  /*
+   * اگر flightSupplier داخل ticketRows
+   * قرار نگرفته بود، از contractFlights
+   * قرارداد پیدا می‌کنیم.
+   */
+  const flights = Array.isArray(
+    selectedContract.value?.contractFlights
+  )
+    ? selectedContract.value.contractFlights
+    : []
+
+
+  // اگر بتوانیم flight مربوط به row را پیدا کنیم
+  const matchedFlight = flights.find(flight => {
+
+    if (
+      row?.flightId &&
+      Number(flight?.id) === Number(row.flightId)
+    )
+      return true
+
+    if (
+      row?.flight?.id &&
+      Number(flight?.id) === Number(row.flight.id)
+    )
+      return true
+
+    return false
+  })
+
+
+  if (matchedFlight) {
+    return (
+      normalizeSupplier(
+        matchedFlight?.flightSupplier
+      ) === 'PARTO'
+    )
+  }
+
+
+  /*
+   * fallback:
+   * اگر قرارداد فقط PARTO باشد.
+   */
+  return (
+    flights.length > 0 &&
+    flights.every(
+      flight =>
+        normalizeSupplier(
+          flight?.flightSupplier
+        ) === 'PARTO'
+    )
+  )
+}
+function isConfirmedTicket() {
+
+  const status = String(
+    selectedContract.value?.ticketStatus || ''
+  )
+    .trim()
+    .toLowerCase()
+
+  return status === 'confirm'
+}
+function handleCancelTicket(row) {
+
+  if (!row)
+    return
+
+
+  // بلیت خارجی PARTO
+  if (isPartoTicket(row)) {
+
+    if (!isConfirmedTicket()) {
+
+      toast.error(
+        'این بلیت در وضعیت قابل کنسلی قرار ندارد.'
+      )
+
+      return
+    }
+
+
+    openInternationalCancelModal(row)
+
+    return
+  }
+
+
+  // سایر بلیت‌ها:
+  // همان سیستم کنسلی قبلی
+  openCancelTicket(row)
+}
+function openInternationalCancelModal(row) {
+
+  internationalCancelRow.value = row
+
+  internationalCancelError.value = ''
+
+  internationalCancelModalOpen.value = true
+}
+
+
+function closeInternationalCancelModal() {
+
+  if (internationalCancelSubmitting.value)
+    return
+
+
+  internationalCancelModalOpen.value = false
+
+  internationalCancelRow.value = null
+
+  internationalCancelError.value = ''
+}
+async function confirmInternationalCancel() {
+
+  const row =
+    internationalCancelRow.value
+
+  const contract =
+    selectedContract.value
+
+
+  if (!row || !contract)
+    return
+
+
+  // دوباره قبل از ارسال کنترل می‌کنیم
+  if (!isPartoTicket(row)) {
+
+    internationalCancelError.value =
+      'اطلاعات تأمین‌کننده بلیت معتبر نیست.'
+
+    return
+  }
+
+
+  if (!isConfirmedTicket()) {
+
+    internationalCancelError.value =
+      'این بلیت در وضعیت قابل کنسلی قرار ندارد.'
+
+    return
+  }
+
+
+  try {
+
+    internationalCancelSubmitting.value = true
+
+    internationalCancelError.value = ''
+
+
+    /*
+     * شماره مقصد SMS
+     */
+    const mobile =
+      INTERNATIONAL_CANCEL_MOBILE
+
+
+    if (!mobile) {
+
+      internationalCancelError.value =
+        'شماره دریافت‌کننده درخواست کنسلی تنظیم نشده است.'
+
+      return
+    }
+
+
+    /*
+     * نام مسافر
+     */
+    const passengerName =
+      row?.passengerName ||
+      `${row?.passenger?.fName || ''} ${row?.passenger?.lName || ''}`.trim() ||
+      'نامشخص'
+
+
+    /*
+     * شماره قرارداد
+     */
+    const contractNumber =
+      contract?.id || '-'
+
+
+    /*
+     * متن SMS
+     */
+    const smsText =
+      `مسافر ${passengerName} با شماره قرارداد ${contractNumber} درخواست کنسلی بلیت خارجی دارد.`
+
+
+    /*
+     * ارسال SMS
+     */
+    const response = await $fetch(
+      'https://api.ahuan.ir/api/Auth/Send-Sms',
+      {
+        method: 'POST',
+
+        body: {
+          mobile,
+          sms: smsText
+        }
+      }
+    )
+
+
+    console.log(
+      'International cancellation SMS:',
+      response
+    )
+
+
+    toast.success(
+      'درخواست کنسلی شما با موفقیت ارسال شد.'
+    )
+
+
+    /*
+     * بستن Modal
+     */
+    internationalCancelModalOpen.value = false
+
+    internationalCancelRow.value = null
+
+  }
+  catch (error) {
+
+    console.error(
+      'Send international cancellation SMS error:',
+      error
+    )
+
+
+    internationalCancelError.value =
+      'ارسال درخواست کنسلی با خطا مواجه شد.'
+  }
+  finally {
+
+    internationalCancelSubmitting.value = false
+  }
 }
 function getPassportIssueYearOptions(){
   const years=[]

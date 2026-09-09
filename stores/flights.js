@@ -948,15 +948,16 @@ clearPartoSessionId(){
       this.isUserLoggedIn = true
 
       const userObj = {
-        firstName: res.fName || '',
-        lastName: res.lName || '',
-        mobile: res.mobile || '',
-        companyId: res.companyId || null,
-        companyName: res.companyName || '',
-        credit: res.credit || 0,
-        hasCredit: res.hasCredit ?? false,
-        noLimit: res.noLimit || false
-      }
+  firstName: res.fName || res.firstName || '',
+  lastName: res.lName || res.lastName || '',
+  mobile: res.mobile || '',
+  companyId: res.companyId || null,
+  companyName: res.companyName || '',
+  credit: res.credit || 0,
+  hasCredit: res.hasCredit ?? false,
+  noLimit: res.noLimit ?? false,
+  roles: Array.isArray(res.roles) ? res.roles : []
+}
 
       const userCookie = useCookie('user_data', {
         maxAge: 60 * 60 * 24 * 30,
@@ -1013,15 +1014,17 @@ clearPartoSessionId(){
         })
         
         if (res) {
-          const userObj = {
-            firstName: res.fName || res.firstName || '',
-            lastName: res.lName || res.lastName || '',
-            mobile: res.mobile || '',
-            companyId: res.companyId || null,
-            companyName: res.companyName || '',
-            credit: res.credit || 0,
-            hasCredit: res.hasCredit ?? false
-          }
+        const userObj = {
+  firstName: res.fName || res.firstName || '',
+  lastName: res.lName || res.lastName || '',
+  mobile: res.mobile || '',
+  companyId: res.companyId || null,
+  companyName: res.companyName || '',
+  credit: res.credit || 0,
+  hasCredit: res.hasCredit ?? false,
+  noLimit: res.noLimit ?? false,
+  roles: Array.isArray(res.roles) ? res.roles : []
+}
           userCookie.value = userObj
           this.userData = userObj
         }
@@ -1031,50 +1034,52 @@ clearPartoSessionId(){
         this.userData = null
       }
     },
-      async fetchMe() {
-      const token = useCookie('token')
-      const userCookie = useCookie('user_data')
+//       async fetchMe() {
+//       const token = useCookie('token')
+//       const userCookie = useCookie('user_data')
       
-      // اگر توکن نبود، کوکی اطلاعات کاربر را هم پاک کن
-      if (!token.value) {
-        this.userData = null
-        userCookie.value = null
-        return
-      }
+//       // اگر توکن نبود، کوکی اطلاعات کاربر را هم پاک کن
+//       if (!token.value) {
+//         this.userData = null
+//         userCookie.value = null
+//         return
+//       }
 
-      // اولویت اول: خواندن مستقیم از کوکی ذخیره شده (بدون نیاز به ریکوئست اضافی در SSR)
-      if (userCookie.value) {
-        this.userData = userCookie.value
-        return
-      }
+//       // اولویت اول: خواندن مستقیم از کوکی ذخیره شده (بدون نیاز به ریکوئست اضافی در SSR)
+//       if (userCookie.value) {
+//         this.userData = userCookie.value
+//         return
+//       }
 
-      try {
-        // اولویت دوم: در صورتی که کوکی پریده بود ولی توکن بود، از API استعلام بگیر
-        const res = await $fetch('https://api.ahuan.ir/api/Auth/me', {
-          headers: {
-            Authorization: `Bearer ${token.value}`
-          }
-        })
+//       try {
+//         // اولویت دوم: در صورتی که کوکی پریده بود ولی توکن بود، از API استعلام بگیر
+//         const res = await $fetch('https://api.ahuan.ir/api/Auth/me', {
+//           headers: {
+//             Authorization: `Bearer ${token.value}`
+//           }
+//         })
         
-        if (res) {
-          const userObj = {
-            firstName: res.fName || res.firstName || '',
-            lastName: res.lName || res.lastName || '',
-            mobile: res.mobile || '',
-            companyId: res.companyId || null,
-            companyName: res.companyName || '',
-            credit: res.credit || 0,
-            hasCredit: res.hasCredit ?? false
-          }
-          userCookie.value = userObj
-          this.userData = userObj
-        }
-      } catch (e) {
-        token.value = null
-        userCookie.value = null
-        this.userData = null
-      }
-    },
+//         if (res) {
+//           const userObj = {
+//   firstName: res.fName || '',
+//   lastName: res.lName || '',
+//   mobile: res.mobile || '',
+//   companyId: res.companyId || null,
+//   companyName: res.companyName || '',
+//   credit: res.credit || 0,
+//   hasCredit: res.hasCredit ?? false,
+//   noLimit: res.noLimit ?? false,
+//   roles: Array.isArray(res.roles) ? res.roles : []
+// }
+//           userCookie.value = userObj
+//           this.userData = userObj
+//         }
+//       } catch (e) {
+//         token.value = null
+//         userCookie.value = null
+//         this.userData = null
+//       }
+//     },
 
    logout() {
       // پاک کردن تمامی کوکی‌ها در هنگام خروج

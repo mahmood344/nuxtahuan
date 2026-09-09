@@ -5,9 +5,28 @@ const props = defineProps({
   sendTravelType: {
     type: String,
     default: "one-way"
+  },
+
+  departDate: {
+    type: [String, null],
+    default: null
+  },
+
+  returnDate: {
+    type: [String, null],
+    default: null
   }
 })
+const disablePastDates = (date) => {
+  const selected = new Date(date)
 
+  const today = new Date()
+
+  today.setHours(0, 0, 0, 0)
+  selected.setHours(0, 0, 0, 0)
+
+  return selected < today
+}
 const emit = defineEmits([
   "update:departDate",
   "update:returnDate"
@@ -55,6 +74,27 @@ watch(departDate, (newVal) => {
 /* -----------------------
 watch برای emit تاریخ برگشت
 ----------------------- */
+watch(
+  () => props.departDate,
+  (value) => {
+    departDate.value = value || ""
+    showdepartDate.value = false
+  },
+  {
+    immediate: true
+  }
+)
+
+watch(
+  () => props.returnDate,
+  (value) => {
+    returnDate.value = value || ""
+    showreturnDate.value = false
+  },
+  {
+    immediate: true
+  }
+)
 watch(returnDate, (newVal) => {
   emit("update:returnDate", newVal || null)
 })
@@ -109,19 +149,20 @@ watch(() => props.sendTravelType, (newType) => {
         </button>
 
         <PersianDatePicker
-          :styles="styles"
-          v-model="departDate"
-          class="hidden"
-          :auto-submit="false"
-          :show="showdepartDate"
-          format="YYYY/MM/DD"
-          mode="single"
-          locale="fa,en"
-          @close="showdepartDate=false"
-        >
-          <template #icon></template>
-          <template #footer>تاریخ رفت:</template>
-        </PersianDatePicker>
+  :styles="styles"
+  v-model="departDate"
+  class="hidden"
+  :auto-submit="false"
+  :show="showdepartDate"
+  format="YYYY/MM/DD"
+  mode="single"
+  locale="fa,en"
+  :disable="disablePastDates"
+  @close="showdepartDate=false"
+>
+  <template #icon></template>
+  <template #footer>تاریخ رفت:</template>
+</PersianDatePicker>
       </div>
 
       <!-- divider -->
@@ -164,19 +205,20 @@ watch(() => props.sendTravelType, (newType) => {
         </button>
 
         <PersianDatePicker
-          :styles="styles"
-          :auto-submit="false"
-          v-model="returnDate"
-          class="hidden"
-          format="YYYY/MM/DD"
-          mode="single"
-          locale="fa,en"
-          :show="showreturnDate"
-          @close="showreturnDate=false"
-        >
-          <template #icon></template>
-          <template #footer>تاریخ برگشت:</template>
-        </PersianDatePicker>
+  :styles="styles"
+  :auto-submit="false"
+  v-model="returnDate"
+  class="hidden"
+  format="YYYY/MM/DD"
+  mode="single"
+  locale="fa,en"
+  :show="showreturnDate"
+  :disable="disablePastDates"
+  @close="showreturnDate=false"
+>
+  <template #icon></template>
+  <template #footer>تاریخ برگشت:</template>
+</PersianDatePicker>
 
       </div>
     </div>
