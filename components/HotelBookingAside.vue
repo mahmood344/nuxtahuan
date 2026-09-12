@@ -271,15 +271,11 @@ const selectedRooms=
 
 const totalPrice=computed(()=>{
 
-return selectedRooms.value.reduce(
-(sum,item)=>
-sum+
-(
- Number(item.unitPrice||0) *
- Number(item.count||1)
-),
-0
-)
+ return selectedRooms.value.reduce(
+  (sum,item)=>
+   sum+Number(item.price||0),
+  0
+ )
 
 })
 
