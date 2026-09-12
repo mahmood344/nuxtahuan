@@ -203,7 +203,9 @@ const inf = ref(0)
 const flightType = ref('domestic')
 const travelType = ref('one-way')
 const hotelStore=useHotelStore()
-
+const emit=defineEmits([
+ 'hotel-search'
+])
 const hotelCity=ref(null)
 
 const hotelDate=ref(null)
@@ -235,31 +237,68 @@ const selectService = (serviceKey, index) => {
   activeService.value = serviceKey
   currentSlide.value = index
 }
-function searchAhuanHotel(){
+async function searchAhuanHotel(){
 
- if(!hotelCity.value || !hotelDate.value)
+ if(
+  !hotelCity.value ||
+  !hotelDate.value
+ ){
   return
+ }
 
 
  const dates=
- Array.isArray(hotelDate.value)
- ?
- hotelDate.value
- :
- String(hotelDate.value).split(',')
+  Array.isArray(hotelDate.value)
+   ?hotelDate.value
+   :String(hotelDate.value).split(',')
 
 
+ const checkIn=
+  String(dates[0]||'').trim()
 
- router.push({
+ const checkOut=
+  String(dates[1]||'').trim()
 
-  path:`/hotels/${hotelCity.value}`,
+
+ if(
+  !checkIn ||
+  !checkOut
+ ){
+  return
+ }
+
+
+ const searchData={
+
+  hotelId:
+   Number(hotelCity.value),
+
+  checkIn,
+
+  checkOut
+
+ }
+
+
+ // به صفحه والد اعلام می‌کنیم
+ // که یک Search جدید زده شده
+ emit(
+  'hotel-search',
+  searchData
+ )
+
+
+ await router.push({
+
+  path:
+   `/hotels/${searchData.hotelId}`,
 
   query:{
+   checkIn:
+    searchData.checkIn,
 
-   checkIn:dates[0],
-
-   checkOut:dates[1]
-
+   checkOut:
+    searchData.checkOut
   }
 
  })

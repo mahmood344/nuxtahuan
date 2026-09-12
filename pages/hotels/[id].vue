@@ -42,25 +42,43 @@
         <aside
  class="hidden lg:block lg:col-span-4 order-1 lg:order-2"
 >
- <div class=" top-24 space-y-4 mb-4" v-if="currentStep===0">
-    <FlightSearchPanel mode="aside" :showServices="true" />
-  </div>
-<HotelBookingAside
+ <div
+ class="top-24 space-y-4 mb-4"
+ v-if="
+  currentStep===0 ||
+  currentStep===1 ||
+  currentStep===2
+ "
+>
+ <FlightSearchPanel
+ mode="aside"
+ :showServices="true"
+ @hotel-search="handleHotelSearch"
+/>
+</div>
+<!-- <HotelBookingAside
  :hotel="hotelDisplay"
  :check-in="checkIn"
  :check-out="checkOut"
  :gallery-images="galleryImages"
  @continue="continueBooking"
-/>
+/> -->
 </aside>
 
 
         <!-- ========================= -->
         <!-- Content -->
         <!-- ========================= -->
-        <div
-          class="lg:col-span-8 order-2 lg:order-1 relative px-2 md:px-0"
-        >
+       <div
+ class="order-2 lg:order-1 relative px-2 md:px-0"
+ :class="
+  currentStep===0 ||
+  currentStep===1 ||
+  currentStep===2
+   ?'lg:col-span-8'
+   :'lg:col-span-12'
+ "
+>
 
           <!-- ========================= -->
           <!-- Loading Hotel -->
@@ -112,64 +130,146 @@
  dir="rtl"
 >
 
-            <!-- ========================= -->
-            <!-- Gallery -->
-            <!-- ========================= -->
-            <section
-              v-if="galleryImages.length && currentStep===0"
-              class="flex w-full gap-2"
-            >
-              <!-- تصویر بزرگ -->
-              <div
-                class="w-1/2 h-[400px] overflow-hidden rounded-2xl"
-              >
-                <img
-                  :src="getHotelImageUrl(galleryImages[0]?.image)"
-                  :alt="hotelDisplay.name"
-                  class="block w-full h-full object-cover"
-                   @click="openHotelGallery(0)"
-                >
-              </div>
+           <!-- ========================= -->
+<!-- Hotel Gallery Slider -->
+<!-- ========================= -->
+
+<section
+ v-if="
+  galleryImages.length &&
+  currentStep===0
+ "
+ class="relative w-full"
+>
+
+ <div
+  class="relative h-[280px] overflow-hidden rounded-2xl bg-gray-100 md:h-[430px]"
+ >
+
+  <!-- تصویر اصلی -->
+  <img
+   :src="
+    getHotelImageUrl(
+     galleryImages[
+      hotelGalleryIndex
+     ]?.image
+    )
+   "
+   :alt="
+    galleryImages[
+     hotelGalleryIndex
+    ]?.description ||
+    hotelDisplay.name
+   "
+   class="h-full w-full cursor-pointer object-cover transition-all duration-300"
+   @click="
+    openHotelGallery(
+     hotelGalleryIndex
+    )
+   "
+  >
 
 
-              <!-- چهار تصویر کوچک -->
-              <div
-                class="w-1/2 h-[400px] grid grid-cols-2 grid-rows-2 gap-2"
-              >
-                <div
-                  v-for="(image,index) in galleryImages.slice(1,5)"
-                  :key="image.id||index"
-                  class="relative overflow-hidden rounded-xl"
-                  @click="openHotelGallery(index+1)"
-                >
-                  <img
-                    :src="getHotelImageUrl(image.image)"
-                    :alt="image.description||hotelDisplay.name"
-                    class="block w-full h-full object-cover"
-                  >
+  <!-- سایه پایین -->
+  <div
+   class="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/50 to-transparent"
+  ></div>
 
-                  <div
-                    v-if="
-                      index===3&&
-                      remainingImagesCount>0
-                    "
-                    class="absolute inset-0 flex items-end justify-end p-3"
-                  >
-                    <button
-                      type="button"
-                      class="flex items-center gap-2 rounded-xl bg-slate-900/90 px-4 py-2 text-[11px] font-bold text-white"
-                      @click="openHotelGallery(5)"
-                    >
-                      <i
-                        class="bi bi-grid-3x3-gap-fill"
-                      ></i>
 
-                      {{remainingImagesCount}}
-                      تصویر دیگر
-                    </button>
-                  </div>
-                </div>
-              </div>
+  <!-- ===================== -->
+  <!-- قبلی -->
+  <!-- ===================== -->
+
+  <button
+   v-if="galleryImages.length>1"
+   type="button"
+   class="absolute right-4 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm transition hover:bg-black/65"
+   @click.stop="prevHotelGallery"
+  >
+   <i
+    class="bi bi-chevron-right text-lg"
+   ></i>
+  </button>
+
+
+  <!-- ===================== -->
+  <!-- بعدی -->
+  <!-- ===================== -->
+
+  <button
+   v-if="galleryImages.length>1"
+   type="button"
+   class="absolute left-4 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm transition hover:bg-black/65"
+   @click.stop="nextHotelGallery"
+  >
+   <i
+    class="bi bi-chevron-left text-lg"
+   ></i>
+  </button>
+
+
+  <!-- ===================== -->
+  <!-- شمارنده -->
+  <!-- ===================== -->
+
+  <div
+   v-if="galleryImages.length>1"
+   class="absolute bottom-4 left-4 z-10 rounded-full bg-black/60 px-3 py-1.5 text-[11px] font-bold text-white backdrop-blur-sm"
+   dir="ltr"
+  >
+   {{hotelGalleryIndex+1}}
+   /
+   {{galleryImages.length}}
+  </div>
+
+
+  <!-- ===================== -->
+  <!-- مشاهده همه تصاویر -->
+  <!-- ===================== -->
+
+  <button
+   type="button"
+   class="absolute bottom-4 right-4 z-10 flex items-center gap-2 rounded-xl bg-black/60 px-4 py-2 text-[11px] font-bold text-white backdrop-blur-sm transition hover:bg-black/75"
+   @click.stop="
+    openHotelGallery(
+     hotelGalleryIndex
+    )
+   "
+  >
+   <i class="bi bi-grid-3x3-gap-fill"></i>
+
+   مشاهده همه تصاویر
+  </button>
+
+ </div>
+
+
+ <!-- ===================== -->
+ <!-- نقطه‌های اسلایدر -->
+ <!-- ===================== -->
+
+ <div
+  v-if="galleryImages.length>1"
+  class="mt-3 flex items-center justify-center gap-2"
+ >
+
+  <button
+   v-for="(image,index) in galleryImages"
+   :key="image.id||index"
+   type="button"
+   class="h-2 rounded-full transition-all duration-300"
+   :class="
+    hotelGalleryIndex===index
+     ?'w-7 bg-[#5865ff]'
+     :'w-2 bg-gray-300 hover:bg-gray-400'
+   "
+   @click="
+    hotelGalleryIndex=index
+   "
+  ></button>
+
+ </div>
+
               <Teleport to="body">
 
 <div
@@ -471,13 +571,60 @@
  class="space-y-6"
 >
 
-<PassengerInfoForm ref="passengerFormRef"/>
+ <!-- ========================= -->
+ <!-- اتاق انتخاب‌شده از Store -->
+ <!-- ========================= -->
 
-<ContactInfoForm
- ref="contactFormRef"
- :loading="continueShoppingLoading"
- @submit="continueHotelBooking"
-/>
+ <div
+  v-if="showSelectedRoomSection"
+  class="rounded-3xl bg-white p-4 shadow-sm border border-gray-100"
+ >
+
+  <HotelRooms
+   :hotel="hotelDisplay"
+   :rooms="selectedRoomsForView"
+   :rooms-loading="false"
+   :rooms-error="''"
+   :check-in="checkIn"
+   :check-out="checkOut"
+   :selected-view="true"
+   @open-room-modal="openRoomModal"
+  />
+
+
+  <!-- تغییر اتاق -->
+  <div
+   class="mt-3 flex items-center justify-start"
+   dir="ltr"
+  >
+
+   <UiBaseButton
+    label="تغییر اتاق انتخابی"
+    variant="filled"
+    color="primary"
+    class="!rounded-3xl !px-6 h-12 text-sm"
+    @click="handleEditHotelRoom"
+   />
+
+  </div>
+
+ </div>
+
+
+ <!-- ========================= -->
+ <!-- فرم اطلاعات -->
+ <!-- ========================= -->
+
+ <PassengerInfoForm
+  ref="passengerFormRef"
+ />
+
+
+ <ContactInfoForm
+  ref="contactFormRef"
+  :loading="continueShoppingLoading"
+  @submit="continueHotelBooking"
+ />
 
 </div>
 <div
@@ -485,22 +632,57 @@
  class="space-y-6"
 >
 
-<BookingInfoTable
- mode="passengers"
- :flight-type="flightType"
- :passengers="bookingData.passengers"
- @update:passengers="bookingData.passengers=$event"
-/>
+ <!-- ========================= -->
+ <!-- اتاق انتخاب‌شده -->
+ <!-- ========================= -->
+
+ <div
+  v-if="showSelectedRoomSection"
+  class="rounded-3xl bg-white p-4 shadow-sm border border-gray-100"
+ >
+
+  <HotelRooms
+   :hotel="hotelDisplay"
+   :rooms="selectedRoomsForView"
+   :rooms-loading="false"
+   :rooms-error="''"
+   :check-in="checkIn"
+   :check-out="checkOut"
+   :selected-view="true"
+   @open-room-modal="openRoomModal"
+  />
+
+ </div>
 
 
-<BookingInfoTable
- mode="contact"
- :contact="bookingData.contact"
- @update:contact="bookingData.contact=$event"
-/>
+ <!-- ========================= -->
+ <!-- اطلاعات مسافر -->
+ <!-- ========================= -->
+
+ <BookingInfoTable
+  mode="passengers"
+  :flight-type="flightType"
+  :passengers="bookingData.passengers"
+  @update:passengers="bookingData.passengers=$event"
+ />
 
 
-<PaymentSummary
+ <!-- ========================= -->
+ <!-- اطلاعات تماس -->
+ <!-- ========================= -->
+
+ <BookingInfoTable
+  mode="contact"
+  :contact="bookingData.contact"
+  @update:contact="bookingData.contact=$event"
+ />
+
+
+ <!-- ========================= -->
+ <!-- پرداخت -->
+ <!-- ========================= -->
+
+ <PaymentSummary
   :original-price="hotelFinalPrice"
   :final-price="priceAfterTravelCard"
   :loading="paymentLoading"
@@ -513,8 +695,9 @@
   @submit="handleFinalPayment"
   @apply-travel-card="handleApplyTravelCard"
   @clear-travel-card-error="travelCardError = ''"
-  @reset-travel-card="handleResetTravelCard"  
-/>
+  @reset-travel-card="handleResetTravelCard"
+ />
+
 </div>
           </div>
 
@@ -874,6 +1057,18 @@ const route=useRoute()
 const router=useRouter()
 const flightStore=useFlightStore()
 const selectedRooms = computed(()=>hotelStore.selectedRooms)
+const selectedRoomsForView=
+ computed(()=>
+  hotelStore.selectedRooms||[]
+ )
+const showSelectedRoomSection=
+ computed(()=>
+  (
+   currentStep.value===1 ||
+   currentStep.value===2
+  ) &&
+  selectedRoomsForView.value.length>0
+ )
 const currentStep = computed(()=>flightStore.currentStep)
 const BASE_URL='https://api.ahuan.ir/api'
 const HOTEL_IMAGE_BASE='https://panel.ahuan.ir/uploads'
@@ -1186,7 +1381,20 @@ function buildHotelContractPayload(
 
  const room =
    selectedRooms.value[0]
+const totalExtraBedCount=
+ selectedRooms.value.reduce(
+  (sum,room)=>
+   sum+Number(room?.extraBedCount||0),
+  0
+ )
 
+
+const totalNoBedCount=
+ selectedRooms.value.reduce(
+  (sum,room)=>
+   sum+Number(room?.noBedCount||0),
+  0
+ )
 
  return {
 
@@ -1263,10 +1471,11 @@ function buildHotelContractPayload(
   adultNo:1,
 
 
-  childExtraBedNo:0,
+  childExtraBedNo:
+ totalExtraBedCount,
 
-
-  childNoBedNo:0,
+childNoBedNo:
+ totalNoBedCount,
 
 
   infantNo:"0",
@@ -1338,28 +1547,68 @@ function buildHotelContractPayload(
 
 
 
-  contractRoutes:
+ contractRoutes:
  selectedRooms.value.map(room=>({
 
   id:0,
+
   contractId:0,
 
   checkIn:
-    normalizeDate(checkIn.value),
+   normalizeDate(checkIn.value),
 
   checkOut:
-    normalizeDate(checkOut.value),
+   normalizeDate(checkOut.value),
 
-  cityId:Number(route.params.id),
+  cityId:
+   Number(route.params.id),
 
-  hotelId:String(hotelId.value),
+  hotelId:
+   Number(hotelId.value),
 
-  roomId:room.roomId,
+  roomId:
+   Number(room.roomId),
 
-  nights:calculateNights(),
+  nights:
+   calculateNights(),
 
-  description:
-    `${room.count} اتاق`
+
+  // تعداد تخت اضافه
+  extBedNo:
+   Number(room.extraBedCount||0),
+
+
+  // تعداد بدون تخت
+  noBedNo:
+   Number(room.noBedCount||0),
+
+
+  // تعداد نفر پایه
+  adultNo:
+   Number(room.count||1),
+
+
+  infantNo:
+   0,
+
+  tourPriceId:
+   0,
+
+
+  description:[
+   `${room.count} اتاق`,
+
+   Number(room.extraBedCount||0)>0
+    ?`${room.extraBedCount} تخت اضافه`
+    :'',
+
+   Number(room.noBedCount||0)>0
+    ?`${room.noBedCount} بدون تخت`
+    :''
+
+  ]
+  .filter(Boolean)
+  .join(' - ')
 
  }))
 
@@ -1431,6 +1680,13 @@ console.log(
 
 flightStore.setCurrentStep(2)
 
+await nextTick()
+
+window.scrollTo({
+ top:0,
+ behavior:'smooth'
+})
+
 
 
  }
@@ -1483,12 +1739,18 @@ function buildHotelUpdateContractPayload({
 }){
 
  const addPayload=
-  currentContractData.value?.addPayload||{}
+  currentContractData.value?.addPayload||
+  {}
 
  const addResponse=
   currentContractData.value?.addResponse?.data||
   currentContractData.value?.addResponse||
   {}
+
+
+ // =========================
+ // Contract Id
+ // =========================
 
  const contractId=
   Number(
@@ -1498,49 +1760,292 @@ function buildHotelUpdateContractPayload({
    0
   )
 
+
+ // =========================
+ // Passengers قبلی
+ // =========================
+
  const savedPassengers=
-  Array.isArray(addResponse?.contractPassengers)
+  Array.isArray(
+   addResponse?.contractPassengers
+  )
    ?addResponse.contractPassengers
    :[]
 
+
+ // =========================
+ // Routes قبلی
+ // =========================
+
+ const savedRoutes=
+  Array.isArray(
+   addResponse?.contractRoutes
+  )
+   ?addResponse.contractRoutes
+   :[]
+
+
+ // =========================
+ // تعداد کل تخت اضافه
+ // =========================
+
+ const totalExtraBedCount=
+  selectedRooms.value.reduce(
+   (sum,room)=>
+    sum+Number(
+     room?.extraBedCount||0
+    ),
+   0
+  )
+
+
+ // =========================
+ // تعداد کل بدون تخت
+ // =========================
+
+ const totalNoBedCount=
+  selectedRooms.value.reduce(
+   (sum,room)=>
+    sum+Number(
+     room?.noBedCount||0
+    ),
+   0
+  )
+
+
+ // =========================
+ // Passenger Mapping
+ // =========================
+
  const mappedPassengers=
-  passengers.map(passenger=>({
-   fName:passenger.firstName||'',
-   lName:passenger.lastName||'',
-   age:passenger.type||'ADL',
-   gender:passenger.gender==='male',
-   birthDate:toIsoBirthDate(passenger.birthDate),
-   codeMelli:passenger.nationalCode||'',
-   nationality:passenger.nationality||''
-  }))
+  passengers.map(
+   passenger=>({
+
+    fName:
+     passenger.firstName||'',
+
+    lName:
+     passenger.lastName||'',
+
+    age:
+     passenger.type||'ADL',
+
+    gender:
+     passenger.gender==='male',
+
+    birthDate:
+     toIsoBirthDate(
+      passenger.birthDate
+     ),
+
+    codeMelli:
+     passenger.nationalCode||'',
+
+    nationality:
+     passenger.nationality||''
+
+   })
+  )
+
+
+ // =========================
+ // Contract Passengers
+ // =========================
 
  const contractPassengers=
   mappedPassengers.map(
    (passenger,index)=>({
+
     ...savedPassengers[index],
+
     ...passenger,
-    id:Number(savedPassengers[index]?.id||0),
+
+    id:
+     Number(
+      savedPassengers[index]?.id||
+      0
+     ),
+
     contractId
+
    })
   )
 
+
+ // =========================
+ // Contract Routes
+ // =========================
+
+ const contractRoutes=
+  selectedRooms.value.map(
+   (room,index)=>{
+
+    const savedRoute=
+     savedRoutes[index]||{}
+
+    return{
+
+     ...savedRoute,
+
+     id:
+      Number(
+       savedRoute?.id||0
+      ),
+
+     contractId,
+
+     checkIn:
+      normalizeDate(
+       checkIn.value
+      ),
+
+     checkOut:
+      normalizeDate(
+       checkOut.value
+      ),
+
+     cityId:
+      Number(
+       route.params.id
+      ),
+
+     hotelId:
+      Number(
+       hotelId.value
+      ),
+
+     roomId:
+      Number(
+       room.roomId
+      ),
+
+     nights:
+      calculateNights(),
+
+
+     // =====================
+     // تعداد تخت اضافه
+     // =====================
+
+     extBedNo:
+      Number(
+       room.extraBedCount||0
+      ),
+
+
+     // =====================
+     // تعداد بدون تخت
+     // =====================
+
+     noBedNo:
+      Number(
+       room.noBedCount||0
+      ),
+
+
+     // تعداد پایه
+     adultNo:
+      Number(
+       room.count||1
+      ),
+
+     infantNo:
+      0,
+
+     tourPriceId:
+      Number(
+       savedRoute?.tourPriceId||
+       0
+      ),
+
+
+     description:[
+      `${room.count} اتاق`,
+
+      Number(
+       room.extraBedCount||0
+      )>0
+       ?`${room.extraBedCount} تخت اضافه`
+       :'',
+
+      Number(
+       room.noBedCount||0
+      )>0
+       ?`${room.noBedCount} بدون تخت`
+       :''
+
+     ]
+     .filter(Boolean)
+     .join(' - ')
+
+    }
+
+   }
+  )
+
+
+ // =========================
+ // Update Payload
+ // =========================
+
  return{
+
   ...addPayload,
+
   ...addResponse,
-  id:contractId,
 
-  userName:String(
-   contact?.phone||
-   contact?.mobile||
-   ''
-  ).trim(),
+  id:
+   contractId,
 
-  email:String(
-   contact?.email||''
-  ).trim(),
 
-  contractPassengers
+  // =========================
+  // Contact
+  // =========================
+
+  userName:
+   String(
+    contact?.phone||
+    contact?.mobile||
+    ''
+   ).trim(),
+
+  email:
+   String(
+    contact?.email||
+    ''
+   ).trim(),
+
+
+  // =========================
+  // تعداد سرویس‌ها
+  // =========================
+
+  childExtraBedNo:
+   totalExtraBedCount,
+
+  childNoBedNo:
+   totalNoBedCount,
+
+
+  // =========================
+  // Passengers
+  // =========================
+
+  passengersNo:
+   contractPassengers.length,
+
+  contractPassengers,
+
+
+  // =========================
+  // Routes
+  // حتماً بعد از ...addResponse باشد
+  // =========================
+
+  contractRoutes
+
  }
+
 }
 function extractHotelContractId(
  updateResponse
@@ -1590,6 +2095,87 @@ function getUserData(){
  }
 
  return userData
+}
+async function handleHotelSearch(data){
+
+ const newHotelId=
+  Number(data?.hotelId||0)
+
+ const newCheckIn=
+  String(data?.checkIn||'').trim()
+
+ const newCheckOut=
+  String(data?.checkOut||'').trim()
+
+
+ if(
+  !newHotelId ||
+  !newCheckIn ||
+  !newCheckOut
+ ){
+  return
+ }
+
+
+ // آیا دقیقاً همان Search فعلی است؟
+ const sameSearch=
+  newHotelId===hotelId.value &&
+  newCheckIn===checkIn.value &&
+  newCheckOut===checkOut.value
+
+
+ // =========================
+ // Search جدید یعنی رزرو قبلی پاک
+ // =========================
+
+ hotelStore.clearRooms()
+
+
+ // =========================
+ // هر جا هستیم برگردیم Step 0
+ // =========================
+
+ flightStore.setCurrentStep(0)
+
+
+ await nextTick()
+
+
+ window.scrollTo({
+  top:0,
+  behavior:'smooth'
+ })
+
+
+ // =========================
+ // اگر URL عوض نمی‌شود
+ // Watch اجرا نمی‌شود
+ // پس API را دستی دوباره بزن
+ // =========================
+
+ if(sameSearch){
+
+  await loadHotelAvailability()
+
+ }
+
+}
+function handleEditHotelRoom(){
+
+ hotelStore.clearRooms()
+
+ flightStore.setCurrentStep(0)
+
+
+ nextTick(()=>{
+
+  window.scrollTo({
+   top:0,
+   behavior:'smooth'
+  })
+
+ })
+
 }
 function createHotelPaymentData(){
 
@@ -2468,10 +3054,13 @@ function nextHotelGallery(){
 }
 function reserveRoom(data){
 
- const room=data?.room
- const count=Number(data?.count||1)
+ const room=
+  data?.room
 
- // اتاق‌های fallback صرفاً جهت معرفی هستند و نباید رزرو شوند.
+ const count=
+  Number(data?.count||1)
+
+
  if(
   !room||
   room.forShow===true||
@@ -2480,19 +3069,69 @@ function reserveRoom(data){
   return
  }
 
- hotelStore.addRoom({
-  key:`${room.id||room.roomId}-${Date.now()}`,
-  roomId:room.id||room.roomId,
-  roomName:room.type||room.name||'اتاق',
-  count,
-  unitPrice:Number(room.calculatedPrice||0),
-  price:Number(room.calculatedPrice||0)*count
- })
+hotelStore.clearRooms()
 
+hotelStore.addRoom({
+
+ // خود اطلاعات کامل اتاق
+ ...room,
+
+ key:
+  `${room.id||room.roomId}-${Date.now()}`,
+
+ roomId:
+  room.id||room.roomId,
+
+ roomName:
+  room.type||room.name||'اتاق',
+
+ count,
+
+ unitPrice:
+  Number(room.calculatedPrice||0),
+
+ basePrice:
+  Number(data?.basePrice||0),
+
+ extraBedCount:
+  Number(data?.extraBedCount||0),
+
+ extraBedService:
+  data?.extraBedService||'',
+
+ extraBedUnitPrice:
+  Number(data?.extraBedUnitPrice||0),
+
+ extraBedPrice:
+  Number(data?.extraBedPrice||0),
+
+ noBedCount:
+  Number(data?.noBedCount||0),
+
+ noBedService:
+  data?.noBedService||'',
+
+ noBedUnitPrice:
+  Number(data?.noBedUnitPrice||0),
+
+ noBedPrice:
+  Number(data?.noBedPrice||0),
+
+ price:
+  Number(data?.finalPrice||0)
+
+})
+
+
+ flightStore.setCurrentStep(1)
+
+nextTick(()=>{
  window.scrollTo({
   top:0,
   behavior:'smooth'
  })
+})
+
 }
 function removeSelectedRoom(room){
 
@@ -2684,183 +3323,672 @@ function isPublicFallbackRoom(room){
  return true
 }
 
-async function loadAllHotelRooms(){
+// async function loadAllHotelRooms(){
 
- if(!hotelId.value)
-  return false
+//  if(!hotelId.value)
+//   return false
 
- try{
+//  try{
 
-  const response=
-   await $fetch(
-    `${BASE_URL}/Hotel/rooms/${hotelId.value}`
-   )
+//   const response=
+//    await $fetch(
+//     `${BASE_URL}/Hotel/rooms/${hotelId.value}`
+//    )
 
-  // تمام اتاق‌هایی که API برمی‌گرداند نمایش داده می‌شوند
-  // حتی رکوردهایی مثل «تست غیرقابل فروش»
-  const rooms=
-   normalizeRoomApiResponse(response)
+//   // تمام اتاق‌هایی که API برمی‌گرداند نمایش داده می‌شوند
+//   // حتی رکوردهایی مثل «تست غیرقابل فروش»
+//   const rooms=
+//    normalizeRoomApiResponse(response)
 
-  roomsFallbackMode.value=true
+//   roomsFallbackMode.value=true
 
-  hotelRooms.value=
-   rooms.map(room=>({
+//   hotelRooms.value=
+//    rooms.map(room=>({
+//     ...room,
+
+//     forShow:true,
+//     displayOnly:true,
+
+//     calculatedPrice:0,
+//     availableCount:0,
+
+//     hotelRoomImages:
+//      Array.isArray(room?.hotelRoomImages)
+//       ?room.hotelRoomImages
+//       :[]
+//    }))
+
+//   console.log(
+//    'Hotel Rooms Fallback:',
+//    hotelRooms.value
+//   )
+
+//   console.log(
+//    'Fallback Room IDs:',
+//    hotelRooms.value.map(room=>({
+//     id:room.id,
+//     name:room.name,
+//     type:room.type
+//    }))
+//   )
+
+//   return hotelRooms.value.length>0
+
+//  }
+//  catch(error){
+
+//   console.error(
+//    'Hotel rooms fallback error:',
+//    error
+//   )
+
+//   hotelRooms.value=[]
+
+//   return false
+//  }
+
+// }
+// function hasSellableAvailabilityRoom(rooms){
+//  if(!Array.isArray(rooms)||!rooms.length)
+//   return false
+
+//  return rooms.some(room=>{
+//   const price=getRoomTotalPrice(room)
+//   const available=getRoomAvailableCount(room)
+
+//   return price>0&&available>0
+//  })
+// }
+
+// async function loadHotelAvailability(){
+//  if(!hotelId.value){
+//   errorMessage.value='شناسه هتل معتبر نیست.'
+//   return
+//  }
+
+//  if(!checkIn.value||!checkOut.value){
+//   hotelAvailability.value=null
+//   hotelRooms.value=[]
+//   roomsFallbackMode.value=false
+//   roomsError.value=''
+//   roomsLoading.value=false
+//   return
+//  }
+
+//  loading.value=true
+//  roomsLoading.value=true
+//  errorMessage.value=''
+//  roomsError.value=''
+//  hotelRooms.value=[]
+//  roomsFallbackMode.value=false
+
+//  try{
+//   const response=await $fetch(
+//    `${BASE_URL}/Hotel/hotel-availability`,
+//    {
+//     params:{
+//      HotelId:hotelId.value,
+//      CheckIn:checkIn.value,
+//      CheckOut:checkOut.value
+//     }
+//    }
+//   )
+
+//   hotelAvailability.value=response||null
+
+//   if(response)
+//    hotel.value=response
+
+//   const availabilityRooms=
+//    Array.isArray(response?.hotelRooms)
+//     ?response.hotelRooms
+//     :[]
+
+//   hotelRooms.value=availabilityRooms
+
+//   console.log(
+//    'Hotel Availability:',
+//    hotelAvailability.value
+//   )
+
+//   console.log(
+//    'Hotel Availability Rooms:',
+//    availabilityRooms
+//   )
+
+//   // ابتدا اتاق‌های availability بررسی می‌شوند.
+//   // فقط اگر هیچ اتاق دارای قیمت و ظرفیت نبود، /Hotel/rooms/{id} صدا زده می‌شود.
+//   if(!hasSellableAvailabilityRoom(availabilityRooms)){
+//    const fallbackLoaded=
+//     await loadAllHotelRooms()
+
+//    if(fallbackLoaded){
+//     roomsError.value=''
+//    }
+//    else{
+//     roomsError.value=
+//      'در تاریخ انتخابی اتاق قابل رزرو یافت نشد.'
+//    }
+//   }
+//  }
+//  catch(error){
+//   console.error(
+//    'Hotel Availability Error:',
+//    error
+//   )
+
+//   hotelAvailability.value=null
+//   hotelRooms.value=[]
+//   errorMessage.value=''
+
+//   // حتی اگر availability خطا بدهد، اطلاعات عمومی اتاق‌ها
+//   // را فقط برای نمایش امتحان می‌کنیم.
+//   const fallbackLoaded=
+//    await loadAllHotelRooms()
+
+//   if(fallbackLoaded){
+//    roomsError.value=''
+//   }
+//   else{
+//    roomsError.value=
+//     'دریافت اطلاعات اتاق‌ها با خطا مواجه شد.'
+//   }
+//  }
+//  finally{
+//   loading.value=false
+//   roomsLoading.value=false
+//  }
+// }
+function getRoomId(room){
+
+ return Number(
+  room?.id||
+  room?.roomId||
+  room?.hotelRoomId||
+  0
+ )
+
+}
+
+
+// =========================
+// ادغام Rooms + Availability
+// =========================
+
+function mergeHotelRooms({
+ availabilityRooms,
+ allRooms
+}){
+
+ const normalizedAvailability=
+  Array.isArray(availabilityRooms)
+   ?availabilityRooms
+   :[]
+
+
+ const normalizedAllRooms=
+  Array.isArray(allRooms)
+   ?allRooms
+   :[]
+
+
+ // =========================
+ // Rooms را بر اساس ID نگه می‌داریم
+ // =========================
+
+ const allRoomsMap=
+  new Map(
+   normalizedAllRooms
+    .map(room=>[
+     getRoomId(room),
+     room
+    ])
+    .filter(([id])=>id>0)
+  )
+
+
+ // =========================
+ // ID اتاق‌های Availability
+ // =========================
+
+ const availabilityIds=
+  new Set(
+   normalizedAvailability
+    .map(room=>getRoomId(room))
+    .filter(id=>id>0)
+  )
+
+
+ // =========================
+ // اتاق‌های Availability
+ // قابل رزرو
+ // =========================
+
+ const sellableRooms=
+  normalizedAvailability.map(
+   availabilityRoom=>{
+
+    const roomId=
+     getRoomId(availabilityRoom)
+
+
+    const publicRoom=
+     allRoomsMap.get(roomId)||
+     {}
+
+
+    /*
+     * اطلاعات عمومی Rooms را می‌گیریم،
+     * ولی اطلاعات Availability اولویت دارد.
+     *
+     * در نتیجه:
+     * name / image / description از rooms
+     * price / load / availability از availability
+     */
+
+    return{
+
+     ...publicRoom,
+
+     ...availabilityRoom,
+
+     id:
+      roomId||availabilityRoom.id,
+
+     roomId:
+      roomId||availabilityRoom.roomId,
+
+
+     // این اتاق قابل رزرو است
+     forShow:false,
+
+     displayOnly:false,
+
+     source:'availability',
+
+
+     // اگر availability عکس نداشت
+     // عکس Rooms استفاده شود
+     hotelRoomImages:
+      Array.isArray(
+       availabilityRoom?.hotelRoomImages
+      ) &&
+      availabilityRoom.hotelRoomImages.length
+       ?availabilityRoom.hotelRoomImages
+       :Array.isArray(
+        publicRoom?.hotelRoomImages
+       )
+        ?publicRoom.hotelRoomImages
+        :[]
+
+    }
+
+   }
+  )
+
+
+ // =========================
+ // اتاق‌هایی که فقط در Rooms هستند
+ // =========================
+
+ const displayOnlyRooms=
+  normalizedAllRooms
+   .filter(room=>{
+
+    const roomId=
+     getRoomId(room)
+
+
+    if(!roomId)
+     return false
+
+
+    // اگر در Availability هست
+    // دوباره نمایش نده
+    if(
+     availabilityIds.has(roomId)
+    ){
+     return false
+    }
+
+
+    // اگر فیلتر عمومی داری
+    return isPublicFallbackRoom(room)
+
+   })
+   .map(room=>({
+
     ...room,
 
+    id:
+     getRoomId(room)||room.id,
+
+    roomId:
+     getRoomId(room)||room.roomId,
+
+
+    // فقط برای نمایش
     forShow:true,
+
     displayOnly:true,
 
+    source:'rooms',
+
     calculatedPrice:0,
+
     availableCount:0,
 
     hotelRoomImages:
-     Array.isArray(room?.hotelRoomImages)
+     Array.isArray(
+      room?.hotelRoomImages
+     )
       ?room.hotelRoomImages
       :[]
+
    }))
 
-  console.log(
-   'Hotel Rooms Fallback:',
-   hotelRooms.value
-  )
 
-  console.log(
-   'Fallback Room IDs:',
-   hotelRooms.value.map(room=>({
-    id:room.id,
-    name:room.name,
-    type:room.type
-   }))
-  )
+ // =========================
+ // Availability اول
+ // Rooms بعد
+ // =========================
 
-  return hotelRooms.value.length>0
-
- }
- catch(error){
-
-  console.error(
-   'Hotel rooms fallback error:',
-   error
-  )
-
-  hotelRooms.value=[]
-
-  return false
- }
+ return[
+  ...sellableRooms,
+  ...displayOnlyRooms
+ ]
 
 }
-function hasSellableAvailabilityRoom(rooms){
- if(!Array.isArray(rooms)||!rooms.length)
-  return false
 
- return rooms.some(room=>{
-  const price=getRoomTotalPrice(room)
-  const available=getRoomAvailableCount(room)
 
-  return price>0&&available>0
- })
-}
+// =========================
+// Load Availability + Rooms
+// =========================
 
 async function loadHotelAvailability(){
+
  if(!hotelId.value){
-  errorMessage.value='شناسه هتل معتبر نیست.'
+
+  errorMessage.value=
+   'شناسه هتل معتبر نیست.'
+
   return
+
  }
 
- if(!checkIn.value||!checkOut.value){
+
+ if(
+  !checkIn.value||
+  !checkOut.value
+ ){
+
   hotelAvailability.value=null
+
   hotelRooms.value=[]
+
   roomsFallbackMode.value=false
+
   roomsError.value=''
+
   roomsLoading.value=false
+
   return
+
  }
+
 
  loading.value=true
+
  roomsLoading.value=true
+
  errorMessage.value=''
+
  roomsError.value=''
+
  hotelRooms.value=[]
+
  roomsFallbackMode.value=false
 
+
  try{
-  const response=await $fetch(
-   `${BASE_URL}/Hotel/hotel-availability`,
-   {
-    params:{
-     HotelId:hotelId.value,
-     CheckIn:checkIn.value,
-     CheckOut:checkOut.value
-    }
-   }
-  )
 
-  hotelAvailability.value=response||null
+  // =========================
+  // هر دو درخواست همزمان
+  // =========================
 
-  if(response)
-   hotel.value=response
+  const[
+   availabilityResult,
+   roomsResult
+  ]=
+   await Promise.allSettled([
+
+    $fetch(
+     `${BASE_URL}/Hotel/hotel-availability`,
+     {
+      params:{
+       HotelId:
+        hotelId.value,
+
+       CheckIn:
+        checkIn.value,
+
+       CheckOut:
+        checkOut.value
+      }
+     }
+    ),
+
+    $fetch(
+     `${BASE_URL}/Hotel/rooms/${hotelId.value}`
+    )
+
+   ])
+
+
+  // =========================
+  // Availability Response
+  // =========================
+
+  const availabilityResponse=
+   availabilityResult.status==='fulfilled'
+    ?availabilityResult.value
+    :null
+
+
+  // =========================
+  // Rooms Response
+  // =========================
+
+  const roomsResponse=
+   roomsResult.status==='fulfilled'
+    ?roomsResult.value
+    :null
+
+
+  // =========================
+  // خطاهای جداگانه
+  // =========================
+
+  if(
+   availabilityResult.status==='rejected'
+  ){
+
+   console.error(
+    'Hotel Availability Error:',
+    availabilityResult.reason
+   )
+
+  }
+
+
+  if(
+   roomsResult.status==='rejected'
+  ){
+
+   console.error(
+    'Hotel Rooms Error:',
+    roomsResult.reason
+   )
+
+  }
+
+
+  // =========================
+  // اطلاعات هتل
+  // =========================
+
+  hotelAvailability.value=
+   availabilityResponse||null
+
+
+  if(availabilityResponse){
+
+   hotel.value=
+    availabilityResponse
+
+  }
+
+
+  // =========================
+  // Rooms داخل Availability
+  // =========================
 
   const availabilityRooms=
-   Array.isArray(response?.hotelRooms)
-    ?response.hotelRooms
+   Array.isArray(
+    availabilityResponse?.hotelRooms
+   )
+    ?availabilityResponse.hotelRooms
     :[]
 
-  hotelRooms.value=availabilityRooms
+
+  // =========================
+  // همه Rooms
+  // =========================
+
+  const allRooms=
+   normalizeRoomApiResponse(
+    roomsResponse
+   )
+
+
+  // =========================
+  // Merge
+  // =========================
+
+  const mergedRooms=
+   mergeHotelRooms({
+    availabilityRooms,
+    allRooms
+   })
+
+
+  hotelRooms.value=
+   mergedRooms
+
+
+  /*
+   * دیگر fallback mode نداریم.
+   * چون هر Room خودش مشخص می‌کند:
+   *
+   * forShow:false => Availability
+   * forShow:true  => Rooms Only
+   */
+  roomsFallbackMode.value=false
+
 
   console.log(
    'Hotel Availability:',
-   hotelAvailability.value
+   availabilityResponse
   )
+
 
   console.log(
-   'Hotel Availability Rooms:',
-   availabilityRooms
+   'Availability Rooms:',
+   availabilityRooms.map(room=>({
+    id:getRoomId(room),
+    name:room?.name,
+    type:room?.type
+   }))
   )
 
-  // ابتدا اتاق‌های availability بررسی می‌شوند.
-  // فقط اگر هیچ اتاق دارای قیمت و ظرفیت نبود، /Hotel/rooms/{id} صدا زده می‌شود.
-  if(!hasSellableAvailabilityRoom(availabilityRooms)){
-   const fallbackLoaded=
-    await loadAllHotelRooms()
 
-   if(fallbackLoaded){
-    roomsError.value=''
-   }
-   else{
-    roomsError.value=
-     'در تاریخ انتخابی اتاق قابل رزرو یافت نشد.'
-   }
+  console.log(
+   'All Hotel Rooms:',
+   allRooms.map(room=>({
+    id:getRoomId(room),
+    name:room?.name,
+    type:room?.type
+   }))
+  )
+
+
+  console.log(
+   'Merged Hotel Rooms:',
+   mergedRooms.map(room=>({
+
+    id:
+     getRoomId(room),
+
+    name:
+     room?.name,
+
+    type:
+     room?.type,
+
+    source:
+     room?.source,
+
+    forShow:
+     room?.forShow,
+
+    displayOnly:
+     room?.displayOnly
+
+   }))
+  )
+
+
+  // =========================
+  // هیچ داده‌ای نداریم
+  // =========================
+
+  if(!mergedRooms.length){
+
+   roomsError.value=
+    'اتاقی برای این هتل یافت نشد.'
+
   }
+  else{
+
+   roomsError.value=''
+
+  }
+
  }
  catch(error){
+
   console.error(
-   'Hotel Availability Error:',
+   'Hotel rooms loading error:',
    error
   )
 
   hotelAvailability.value=null
+
   hotelRooms.value=[]
-  errorMessage.value=''
 
-  // حتی اگر availability خطا بدهد، اطلاعات عمومی اتاق‌ها
-  // را فقط برای نمایش امتحان می‌کنیم.
-  const fallbackLoaded=
-   await loadAllHotelRooms()
+  roomsError.value=
+   'دریافت اطلاعات اتاق‌ها با خطا مواجه شد.'
 
-  if(fallbackLoaded){
-   roomsError.value=''
-  }
-  else{
-   roomsError.value=
-    'دریافت اطلاعات اتاق‌ها با خطا مواجه شد.'
-  }
  }
  finally{
-  loading.value=false
-  roomsLoading.value=false
- }
-}
 
+  loading.value=false
+
+  roomsLoading.value=false
+
+ }
+
+}
 // =========================
 // Init / Route Changes
 // =========================
@@ -2893,23 +4021,91 @@ watch(
 )
 watch(
  [hotelId,checkIn,checkOut],
- ()=>{
+
+ (
+  [
+   newHotelId,
+   newCheckIn,
+   newCheckOut
+  ],
+
+  oldValues
+ )=>{
+
+  const[
+   oldHotelId,
+   oldCheckIn,
+   oldCheckOut
+  ]=
+   oldValues||[]
+
+
+  // =========================
+  // آیا جستجو تغییر کرده؟
+  // =========================
+
+  const hasPreviousSearch=
+   oldHotelId!==undefined
+
+
+  const searchChanged=
+   hasPreviousSearch &&
+   (
+    Number(newHotelId)!==
+     Number(oldHotelId) ||
+
+    String(newCheckIn||'')!==
+     String(oldCheckIn||'') ||
+
+    String(newCheckOut||'')!==
+     String(oldCheckOut||'')
+   )
+
+
+  // =========================
+  // جستجوی جدید =
+  // اتاق قبلی دیگر معتبر نیست
+  // =========================
+
+  if(searchChanged){
+
+   hotelStore.clearRooms()
+
+   flightStore.setCurrentStep(0)
+
+  }
+
+
+  // =========================
+  // اطلاعات ناقص
+  // =========================
+
   if(
-   !hotelId.value||
-   !checkIn.value||
-   !checkOut.value
+   !newHotelId||
+   !newCheckIn||
+   !newCheckOut
   ){
+
    hotelAvailability.value=null
    hotelRooms.value=[]
    roomsFallbackMode.value=false
    roomsError.value=''
    roomsLoading.value=false
+
    return
   }
 
+
+  // =========================
+  // دریافت اتاق‌های جستجوی جدید
+  // =========================
+
   loadHotelAvailability()
+
  },
- {immediate:true}
+ {
+  immediate:true
+ }
 )
 function getRoomPriceDetails(room){
 
@@ -2976,138 +4172,157 @@ function getRoomTotalPrice(room){
  if(!details.length)
   return 0
 
+
  const capacity=
   Math.max(
    1,
    Number(room?.capacity||1)
   )
 
+
  let roomPrice=0
+
 
  for(const detail of details){
 
   const dbl=
    Number(detail?.dbl||0)
 
-  const extBed=
-   Number(detail?.extBed||0)
+  const sgl=
+   Number(detail?.sgl||0)
 
-  if(!dbl)
-   continue
+  const trp=
+   Number(detail?.trp||0)
 
-  if(room.isStandard===true){
+  const quad=
+   Number(detail?.quad||0)
 
-   const rule=
-    getRoomRule(room)
 
-   const adultNumber=
-    Number(rule.substring(0,1)||0)
-
-   const childNumber=
-    Number(rule.substring(1,2)||0)
-
-   const child2Number=
-    Number(rule.substring(2,3)||0)
-
-   const infantNumber=
-    Number(route.query.inf||0)
-
-   const adultPrice=
-    adultNumber%2===0
-     ?adultNumber*dbl
-     :adultNumber*Number(detail.sgl||dbl)
+  if(capacity===1){
 
    roomPrice+=
-    adultPrice+
-    childNumber*extBed+
-    child2Number*Number(detail.noBed||0)+
-    infantNumber*Number(detail.inf||0)
+    sgl||
+    dbl
 
    continue
   }
 
-  for(let i=0;i<capacity;i++){
 
-   const isOdd=
-    capacity%2
+  if(capacity===2){
 
-   if(
-    isOdd &&
-    i===capacity-1
-   ){
-    roomPrice+=extBed
-   }
-   else{
-    roomPrice+=dbl
-   }
+   roomPrice+=
+    dbl*2
+
+   continue
   }
+
+
+  if(capacity===3){
+
+   const price=
+    trp||
+    dbl
+
+   roomPrice+=
+    price*3
+
+   continue
+  }
+
+
+  if(capacity>=4){
+
+   const price=
+    quad||
+    dbl
+
+   roomPrice+=
+    price*capacity
+
+  }
+
  }
 
+
  return roomPrice
+
 }
 
 const roomsWithPrice=computed(()=>{
 
  return hotelRooms.value.map(room=>{
 
+  // =========================
+  // اتاقی که فقط از Rooms آمده
+  // =========================
+
   if(
-   roomsFallbackMode.value||
    room?.forShow===true||
    room?.displayOnly===true
   ){
+
    return{
+
     ...room,
+
     forShow:true,
+
     displayOnly:true,
+
     calculatedPrice:0,
+
     availableCount:0,
-    nightCount:Math.max(
-     0,
-     calculateNights()
-    )
+
+    nightCount:
+     Math.max(
+      0,
+      calculateNights()
+     )
+
    }
+
   }
+
+
+  // =========================
+  // اتاق Availability
+  // =========================
 
   const details=
    getRoomPriceDetails(room)
 
+
   const price=
    getRoomTotalPrice(room)
+
 
   const availableCount=
    getRoomAvailableCount(room)
 
-  console.log(
-   'ROOM DEBUG',
-   {
-    id:room.id,
-    type:room.type,
-    checkIn:checkIn.value,
-    checkOut:checkOut.value,
-    detailsCount:details.length,
-    details:details.map(x=>({
-     date:x.date,
-     dbl:x.dbl,
-     loadNo:x.loadNo,
-     bookNo:x.bookNo
-    })),
-    price,
-    availableCount
-   }
-  )
 
   return{
+
    ...room,
+
    forShow:false,
+
    displayOnly:false,
-   calculatedPrice:price,
+
+   calculatedPrice:
+    price,
+
    availableCount,
-   nightCount:Math.max(
-    0,
-    calculateNights()
-   )
+
+   nightCount:
+    Math.max(
+     0,
+     calculateNights()
+    )
+
   }
+
  })
+
 })
 
 function getRoomNightCount(room){
