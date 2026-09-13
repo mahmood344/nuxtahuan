@@ -30,7 +30,7 @@
 </th>
               <th class="px-3 py-2 text-center">جنسیت</th>
               <th class="px-3 py-2 text-center">تاریخ تولد</th>
-              <th class="px-3 py-2 text-center">عملیات</th>
+              <th class="px-3 py-2 text-end">عملیات</th>
             </tr>
           </thead>
 
@@ -73,7 +73,7 @@
               <td class="px-3 py-3 text-center">{{ formatGender(passenger.gender) }}</td>
               <td class="px-3 py-3 text-center">{{ formatBirthDate(passenger.birthDate) }}</td>
 
-              <td class="rounded-l-2xl px-3 py-3 text-center">
+              <td class="rounded-l-2xl px-3 py-3 text-end">
                 <button
                   type="button"
                   class="rounded-xl bg-primary px-3 py-2 text-xs font-bold text-white"

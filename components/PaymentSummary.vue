@@ -73,7 +73,7 @@
     <!-- اطلاعات سفر کارت -->
     <div
       v-if="travelCardApplied"
-      class="mb-6 rounded-2xl border border-green-100 bg-green-50/50 p-4 text-right"
+      class="mb-6 rounded-2xl border border-green-100 bg-green-50/50 p-4 text-center"
     >
       <p class="text-sm font-bold text-green-600">
         سفر کارت با موفقیت اعمال شد
@@ -106,49 +106,77 @@
       />
     </div>
 
-    <!-- فوتر -->
-    <div class="flex flex-col gap-4 border-t border-gray-100 pt-6 md:flex-row md:items-end md:justify-between">
-      <UiBaseButton
-        label="بازگشت به مرحله قبل"
-        variant="filled"
-        color="primary"
-        class="h-[52px] !rounded-full px-8 text-sm font-bold"
-        @click="$emit('back')"
-      />
+   <!-- فوتر -->
+<div
+  class="flex flex-col gap-5 border-t border-gray-100 pt-6"
+>
+  <!-- قیمت -->
+  <div
+    class="flex w-full flex-col items-center text-center md:items-end md:text-right"
+  >
+    <div
+      v-if="
+        travelCardApplied &&
+        Number(originalPrice) !== Number(finalPrice)
+      "
+      class="mb-1 flex items-center gap-1 text-right text-sm text-gray-500 line-through"
+    >
+      <span>
+        {{ formatPrice(originalPrice) }}
+      </span>
 
-      <div class="flex flex-col items-end">
-        <div
-          v-if="travelCardApplied && Number(originalPrice) !== Number(finalPrice)"
-          class="mb-1 flex items-center gap-1 text-right text-sm text-gray-500 line-through"
-        >
-          <span>{{ formatPrice(originalPrice) }}</span>
-          <span>ریال</span>
-        </div>
-
-        <div class="mb-1 flex items-center gap-1 text-right text-2xl font-black text-primary">
-          <span>{{ formatPrice(finalPrice) }}</span>
-          <span class="text-sm font-medium">ریال</span>
-        </div>
-
-        <div
-          v-if="travelCardApplied && travelCardCredit > 0"
-          class="mb-3 text-xs text-green-600"
-        >
-          مبلغ کسر شده از سفر کارت:
-          {{ formatPrice(deductedAmount) }}
-          ریال
-        </div>
-
-        <UiBaseButton
-          :label="submitLabel"
-          variant="filled"
-          color="primary"
-          :disabled="!acceptRules || loading"
-          class="h-[52px] !rounded-full px-8 text-sm font-bold"
-          @click="handlePayment"
-        />
-      </div>
+      <span>
+        ریال
+      </span>
     </div>
+
+    <div
+      class="mb-1 flex items-center gap-1 text-right text-2xl font-black text-primary"
+    >
+      <span>
+        {{ formatPrice(finalPrice) }}
+      </span>
+
+      <span class="text-sm font-medium">
+        ریال
+      </span>
+    </div>
+
+    <div
+      v-if="
+        travelCardApplied &&
+        travelCardCredit > 0
+      "
+      class="text-xs text-green-600"
+    >
+      مبلغ کسر شده از سفر کارت:
+      {{ formatPrice(deductedAmount) }}
+      ریال
+    </div>
+  </div>
+
+  <!-- دکمه‌ها -->
+  <div
+    class="flex w-full flex-col gap-3 md:flex-row md:items-center md:justify-between"
+  >
+    <UiBaseButton
+      label="بازگشت به مرحله قبل"
+      variant="filled"
+      color="primary"
+      class="h-[52px] w-full !rounded-full px-8 text-sm font-bold md:w-auto"
+      @click="$emit('back')"
+    />
+
+    <UiBaseButton
+      :label="submitLabel"
+      variant="filled"
+      color="primary"
+      :disabled="!acceptRules || loading"
+      class="h-[52px] w-full !rounded-full px-8 text-sm font-bold md:w-auto"
+      @click="handlePayment"
+    />
+  </div>
+</div>
   </div>
 </template>
 
