@@ -22,13 +22,35 @@ export const useHotelStore=defineStore(
 
    selectedRoomsFinalPricing:[],
 
-   finalBookingPrice:0
+   finalBookingPrice:0,
+ // =========================
+ // Search Results
+ // =========================
 
+ searchRooms:[],
+
+ loading:false,
+
+ backgroundLoading:false,
+
+ searchFinished:false,
+
+
+ // =========================
+ // Booking
+ // =========================
+
+ selectedRooms:[],
+
+ selectedRoomsFinalPricing:[],
+
+ finalBookingPrice:0
   }),
 
 
   getters:{
-
+getSearchRooms:(state)=>
+ state.searchRooms,
    getSelectedRooms:(state)=>
     state.selectedRooms,
 
@@ -47,7 +69,46 @@ export const useHotelStore=defineStore(
 
 
   actions:{
+setSearchRooms(rooms){
 
+ this.searchRooms=
+  Array.isArray(rooms)
+   ?rooms
+   :[]
+
+},
+
+
+addSearchRooms(rooms){
+
+ if(!Array.isArray(rooms))
+  return
+
+ this.searchRooms.push(
+  ...rooms
+ )
+
+},
+
+
+clearSearchRooms(){
+
+ this.searchRooms=[]
+
+},
+
+
+clearHotelSearch(){
+
+ this.searchRooms=[]
+
+ this.loading=false
+
+ this.backgroundLoading=false
+
+ this.searchFinished=false
+
+},
    // =========================
    // محاسبه قیمت نهایی یک اتاق
    // =========================
@@ -134,7 +195,17 @@ console.log(room , 'room');
       Number(room.noBedUnitPrice||0),
 
      noBedPrice:
-      Number(room.noBedPrice||0)
+      Number(room.noBedPrice||0),
+      provider:
+ room.provider||
+ 'AHUAN',
+
+providerRoomId:
+ String(
+  room.providerRoomId||
+  room.roomId||
+  ''
+ ),
 
     }
 
@@ -144,13 +215,24 @@ console.log(room , 'room');
       normalizedRoom
      )
 
+const exist=
+ this.selectedRooms.find(
+  item=>
+   item.provider===
+    normalizedRoom.provider&&
 
-    const exist=
-     this.selectedRooms.find(
-      item=>
-       item.roomId===
-       normalizedRoom.roomId
-     )
+   String(
+    item.providerRoomId||
+    item.roomId||
+    ''
+   )===
+   String(
+    normalizedRoom.providerRoomId||
+    normalizedRoom.roomId||
+    ''
+   )
+ )
+    
 
 
     if(exist){

@@ -1351,8 +1351,8 @@ defineExpose({
     >
       <div class="flex flex-col gap-6 md:flex-row">
         <div class="order-1 flex shrink-0 flex-col items-center justify-between py-1 md:w-44">
-        <h3 class="mb-4 w-full text-right text-lg font-bold text-gray-800 md:mb-0">
- {{isHotelBooking ? 'مشخصات رزرو کننده' : 'مشخصات فردی'}}
+        <h3 class="mb-4 w-full text-center text-lg font-bold  text-gray-800 md:mb-0">
+ {{isHotelBooking ? 'مشخصات  سرپرست اتاق' : 'مشخصات فردی'}}
 </h3>
 
           <div class="my-auto flex flex-col items-center justify-center">

@@ -1,9 +1,29 @@
 <script setup>
 
-import { ref } from 'vue'
 
+import {
+ ref,
+ computed
+} from 'vue'
+
+import {
+ useRoute
+} from '#app'
+const route=
+ useRoute()
+const isHotelBooking=
+ computed(()=>
+  route.path.startsWith('/hotels')
+ )
 const emit = defineEmits(['submit'])
+const contactDescription=
+ computed(()=>{
 
+  return isHotelBooking.value
+   ?'لطفا توجه داشته باشید که لینک دانلود واچر به این اطلاعات تماس ارسال خواهد شد.'
+   :'لطفا توجه داشته باشید که لینک دانلود بلیط به این اطلاعات تماس ارسال خواهد شد.'
+
+ })
 const phone = ref('')
 const email = ref('')
 
@@ -92,8 +112,9 @@ defineExpose({
 
       <div class="mt-3 flex items-start gap-2 text-sm text-gray-600">
         <i class="bi bi-info-circle mt-0.5 text-lg text-gray-800"></i>
-        <p>لطفا توجه داشته باشید که لینک دانلود بلیط به این اطلاعات تماس ارسال خواهد شد.</p>
-      </div>
+<p>
+ {{contactDescription}}
+</p>      </div>
     </div>
 
     <div class="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1fr_auto] lg:gap-4">

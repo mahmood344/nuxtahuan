@@ -11,7 +11,7 @@ export const useFlightStore = defineStore('flights', {
         cityName: 'Tehran',
         cityNicName: 'تی تی کیو',
         cityCode: 'TTQ',
-        iataCode: 'THR',
+        iataCode: 'TTQ',
         name: 'Mehrabad Arpt',
         nicName: 'فرودگاه مهرآباد',
         isCity: false,
@@ -26,7 +26,7 @@ export const useFlightStore = defineStore('flights', {
         cityName: 'Tehran',
         cityNicName: 'یوجی تی',
         cityCode: 'UGT',
-        iataCode: 'THR',
+        iataCode: 'UGT',
         name: 'Mehrabad Arpt',
         nicName: 'فرودگاه مهرآباد',
         isCity: false,
@@ -348,6 +348,13 @@ airportLoading:{},
         logo: '/imgs/flight/airlines/ata.png',
         website:'http://ra.ataair.ir'
       },
+    {
+        code: 'W5',
+        name: 'ماهان',
+        credentials: { username: 'THR0498.WS', password: '04479F' },
+        logo: '/imgs/flight/airlines/mahan.png',
+        website:'http://ra.ataair.ir'
+      },
       {
         code: 'Y9',
         name: 'کیش‌ایر',
@@ -419,7 +426,7 @@ airportLoading:{},
         website:'http://fp.nirasoft.ir'
       },
       {
-        code: 'IV',
+        code: 'CPN',
         name: 'کاسپین',
         credentials: { username: 'THR100.WS', password: 'Ahuan1348' },
         logo: '/imgs/flight/airlines/caspian.png',

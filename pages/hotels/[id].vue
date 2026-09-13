@@ -1,13 +1,13 @@
 <template>
   <div
-    class="min-h-screen bg-gray-100 pb-24 md:bg-white md:pb-10 mt-[60px]"
+    class="min-h-screen bg-[var(--color-gray-100)] pb-24 md:bg-white md:pb-10 mt-[60px]"
     dir="ltr"
   >
     <!-- ========================= -->
     <!-- Header -->
     <!-- ========================= -->
     <header
-      class="hidden md:block relative h-[97px] w-full bg-secondary -mt-10"
+      class="hidden md:block relative h-[97px] w-full bg-[var(--color-secondary)] -mt-10"
     >
       <div
         class="absolute inset-0"
@@ -20,7 +20,7 @@
         <Stepper
           :steps="flightSteps"
           :active-step="flightStore.currentStep"
-          active-color="#1a237e"
+          active-color="var(--color-primary-dark)"
         />
       </div>
     </header>
@@ -55,6 +55,12 @@
  :showServices="true"
  @hotel-search="handleHotelSearch"
 />
+
+ <FilterHotel
+  v-if="currentStep===0"
+  v-model:filters="activeHotelFilters"
+  :all-rooms-data="roomsWithPrice"
+/>
 </div>
 <!-- <HotelBookingAside
  :hotel="hotelDisplay"
@@ -85,17 +91,21 @@
           <!-- ========================= -->
           <div
             v-if="loading"
-            class="min-h-[400px] flex items-center justify-center"
+            class="fixed inset-0 z-[999] flex items-center justify-center bg-[color:var(--color-gray-800)]/10 backdrop-blur-[3px] transition-all duration-300"
           >
-            <div class="text-center">
+            <div
+              class="bg-white/95 p-8 rounded-3xl shadow-2xl border border-[var(--color-gray-100)] flex flex-col items-center text-center max-w-sm mx-4"
+            >
               <div
-                class="w-10 h-10 mx-auto rounded-full border-4 border-gray-200 border-t-[var(--color-primary)] animate-spin"
+                class="animate-spin rounded-full h-14 w-14 border-4 border-[var(--color-primary-light)] bg-[var(--color-primary)] mb-4"
               ></div>
 
-              <p
-                class="mt-4 text-[12px] text-gray-500"
-              >
+              <h4 class="font-bold text-[var(--color-gray-800)] text-base">
                 در حال دریافت اطلاعات هتل...
+              </h4>
+
+              <p class="text-xs text-[var(--color-gray-500)] mt-2 leading-relaxed">
+                اطلاعات هتل و اتاق‌ها در حال بارگذاری است.
               </p>
             </div>
           </div>
@@ -109,7 +119,7 @@
             class="min-h-[300px] flex items-center justify-center"
           >
             <p
-              class="text-[13px] font-bold text-red-500"
+              class="text-[13px] font-bold text-[var(--color-red-500)]"
             >
               {{errorMessage}}
             </p>
@@ -143,7 +153,7 @@
 >
 
  <div
-  class="relative h-[280px] overflow-hidden rounded-2xl bg-gray-100 md:h-[430px]"
+  class="relative h-[280px] overflow-hidden rounded-2xl bg-[var(--color-gray-100)] md:h-[430px]"
  >
 
   <!-- تصویر اصلی -->
@@ -227,19 +237,14 @@
   <!-- مشاهده همه تصاویر -->
   <!-- ===================== -->
 
-  <button
-   type="button"
-   class="absolute bottom-4 right-4 z-10 flex items-center gap-2 rounded-xl bg-black/60 px-4 py-2 text-[11px] font-bold text-white backdrop-blur-sm transition hover:bg-black/75"
-   @click.stop="
-    openHotelGallery(
-     hotelGalleryIndex
-    )
-   "
-  >
-   <i class="bi bi-grid-3x3-gap-fill"></i>
-
-   مشاهده همه تصاویر
-  </button>
+  <UiBaseButton
+   label="مشاهده همه تصاویر"
+   variant="filled"
+   color="primary"
+   icon='<i class="bi bi-grid-3x3-gap-fill"></i>'
+   class="absolute bottom-4 right-4 z-10 !rounded-xl !bg-black/60 !px-4 !py-2 text-[11px] font-bold !text-white backdrop-blur-sm transition hover:!bg-black/75"
+   @click="openHotelGallery(hotelGalleryIndex)"
+  />
 
  </div>
 
@@ -260,8 +265,8 @@
    class="h-2 rounded-full transition-all duration-300"
    :class="
     hotelGalleryIndex===index
-     ?'w-7 bg-[#5865ff]'
-     :'w-2 bg-gray-300 hover:bg-gray-400'
+     ?'w-7 bg-[var(--color-primary)]'
+     :'w-2 bg-[var(--color-gray-300)] hover:bg-[var(--color-gray-400)]'
    "
    @click="
     hotelGalleryIndex=index
@@ -342,7 +347,7 @@
  class="bg-white rounded-2xl p-4 md:p-6"
 >
               <h1
-                class="text-[20px] md:text-[22px] font-black text-gray-900"
+                class="text-[20px] md:text-[22px] font-black text-[var(--color-gray-800)]"
               >
                 هتل {{hotelDisplay.name}}
               </h1>
@@ -353,7 +358,7 @@
                 class="mt-3 flex flex-wrap items-center gap-3"
               >
                 <div
-                  class="flex items-center gap-1 text-yellow-500"
+                  class="flex items-center gap-1 text-[var(--color-secondary)]"
                   dir="ltr"
                 >
                   <i
@@ -364,7 +369,7 @@
                 </div>
 
                 <span
-                  class="text-[12px] text-gray-500"
+                  class="text-[12px] text-[var(--color-gray-500)]"
                 >
                   {{hotelDisplay.star||4}}
                   ستاره
@@ -372,7 +377,7 @@
 
                 <span
                   v-if="hotelDisplay.score"
-                  class="text-[12px] text-gray-500"
+                  class="text-[12px] text-[var(--color-gray-500)]"
                 >
                   امتیاز
                   {{hotelDisplay.score}}
@@ -383,7 +388,7 @@
               <!-- Description -->
               <p
  v-if="hotelDescription"
- class="mt-5 text-[12px] leading-8 text-gray-600 text-justify"
+ class="mt-5 text-[12px] leading-8 text-[var(--color-gray-600)] text-justify"
 >
  {{hotelDescription}}
 </p>
@@ -391,9 +396,9 @@
 
               <!-- Extra info -->
               <div
-                class="mt-5 flex flex-wrap gap-5 text-[11px] text-gray-500"
+                class="mt-5 flex flex-wrap gap-5 text-[11px] text-[var(--color-gray-500)]"
               >
-                <span
+                <!-- <span
                   v-if="hotelDisplay.checkInTime"
                   class="flex items-center gap-2"
                 >
@@ -401,7 +406,7 @@
 
                   ساعت ورود:
                   {{hotelDisplay.checkInTime}}
-                </span>
+                </span> -->
 
                 <span
                   v-if="hotelDisplay.checkOutTime"
@@ -435,7 +440,7 @@
               class="bg-white rounded-2xl p-4 md:p-6"
             >
               <h2
-                class="text-[15px] font-black text-gray-900"
+                class="text-[15px] font-black text-[var(--color-gray-800)]"
               >
                 امکانات هتل
               </h2>
@@ -446,10 +451,10 @@
                 <div
                   v-for="facility in hotelFacilities"
                   :key="getFacilityKey(facility)"
-                  class="flex items-center gap-2 text-[12px] text-gray-600"
+                  class="flex items-center gap-2 text-[12px] text-[var(--color-gray-600)]"
                 >
                   <span
-                    class="w-7 h-7 flex items-center justify-center rounded-lg bg-gray-50 text-[var(--color-primary)]"
+                    class="w-7 h-7 flex items-center justify-center rounded-lg bg-[var(--color-gray-100)] text-[var(--color-primary)]"
                   >
                     <i class="bi bi-check2"></i>
                   </span>
@@ -465,6 +470,86 @@
      
 
 <!-- ========================= -->
+<!-- Room Filter / Sort -->
+<!-- ========================= -->
+
+<div
+ v-if="currentStep===0 && roomsWithPrice.length"
+ class="mb-4"
+>
+ <!-- Mobile controls -->
+ <div
+  class="mb-4 flex items-center justify-start gap-2 lg:hidden"
+  dir="rtl"
+ >
+  <div class="relative">
+
+   <UiBaseButton
+    label="مرتب‌سازی"
+    variant="soft"
+    color="primary"
+    icon="↕️"
+    class="inline-flex items-center gap-1.5 !rounded-full bg-white !px-5 !py-3 text-[11px] font-bold shadow-sm"
+    @click="isHotelSortDropdownOpen=!isHotelSortDropdownOpen"
+   />
+
+   <transition name="fade">
+    <div
+     v-if="isHotelSortDropdownOpen"
+     class="absolute right-0 top-full z-50 mt-2 min-w-[170px] rounded-2xl bg-white p-2 shadow-xl"
+    >
+     <button
+      v-for="item in hotelSortOptions"
+      :key="item"
+      type="button"
+      class="w-full rounded-xl px-3 py-2 text-right text-[11px] font-bold transition-all"
+      :disabled="!isHotelSortEnabled(item)"
+      :class="
+       !isHotelSortEnabled(item)
+        ?'cursor-not-allowed text-[var(--color-gray-300)] opacity-50'
+        :activeHotelSort===item
+          ?'bg-[var(--color-primary-dark)] text-white'
+          :'text-[var(--color-gray-600)] hover:bg-[var(--color-gray-100)]'
+      "
+      @click="selectHotelSort(item)"
+     >
+      {{item}}
+     </button>
+    </div>
+   </transition>
+
+  </div>
+
+  <UiBaseButton
+   label="فیلترها"
+   variant="soft"
+   color="primary"
+   icon="⚙️"
+   class="inline-flex items-center gap-1.5 !rounded-full bg-white !px-5 !py-3 text-[11px] font-bold shadow-sm"
+   @click="isHotelFilterModalOpen=true"
+  />
+ </div>
+
+ <!-- Result count -->
+ <!-- <div
+  class="mb-4 text-center text-[11px] font-medium text-[var(--color-gray-400)]"
+ >
+  تعداد {{filteredSortedRooms.length}} اتاق یافت شد
+ </div> -->
+
+ <!-- Desktop Tabs -->
+ <div
+  class="mb-5 hidden items-center lg:flex"
+ >
+  <UiBaseTabs
+   :items="hotelSortOptions"
+   :model-value="activeHotelSort"
+   @update:model-value="selectHotelSort"
+  />
+ </div>
+</div>
+
+<!-- ========================= -->
 <!-- Rooms -->
 <!-- ========================= -->
 <HotelRooms
@@ -474,7 +559,7 @@
   checkOut
  "
  :hotel="hotelDisplay"
- :rooms="roomsWithPrice"
+ :rooms="filteredSortedRooms"
  :rooms-loading="roomsLoading"
  :rooms-error="roomsError"
  :display-only="roomsFallbackMode"
@@ -491,25 +576,25 @@
 <!-- ========================= -->
 <section
  v-if="currentStep===0&&hasHotelLocation"
- class="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm md:p-6"
+ class="rounded-2xl border border-[var(--color-gray-100)] bg-white p-4 shadow-sm md:p-6"
 >
  <!-- Header -->
  <div
-  class="mb-5 flex items-center justify-between border-b border-gray-100 pb-4"
+  class="mb-5 flex items-center justify-between border-b border-[var(--color-gray-100)] pb-4"
  >
   <div class="flex items-center gap-3">
    <!-- <div
-    class="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-50 text-[var(--color-primary)]"
+    class="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-gray-100)] text-[var(--color-primary)]"
    >
     <i class="bi bi-geo-alt-fill text-lg"></i>
    </div> -->
 
    <div>
-    <h2 class="text-[14px] font-black text-gray-900">
+    <h2 class="text-[14px] font-black text-[var(--color-gray-800)]">
      موقعیت هتل
     </h2>
 
-    <p class="mt-1 text-[11px] text-gray-400">
+    <p class="mt-1 text-[11px] text-[var(--color-gray-400)]">
      هتل {{hotelDisplay.name}}
     </p>
    </div>
@@ -519,7 +604,7 @@
    :href="hotelMapLink"
    target="_blank"
    rel="noopener noreferrer"
-   class="hidden items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-[11px] font-bold text-gray-600 transition hover:bg-gray-50 md:flex"
+   class="hidden items-center gap-2 rounded-xl border border-[var(--color-gray-200)] px-3 py-2 text-[11px] font-bold text-[var(--color-gray-600)] transition hover:bg-[var(--color-gray-100)] md:flex"
   >
    <i class="bi bi-box-arrow-up-left"></i>
    نمایش در نقشه
@@ -528,7 +613,7 @@
 
  <!-- Map -->
  <div
-  class="relative h-[300px] overflow-hidden rounded-xl border border-gray-200 bg-gray-50 md:h-[380px]"
+  class="relative h-[300px] overflow-hidden rounded-xl border border-[var(--color-gray-200)] bg-[var(--color-gray-100)] md:h-[380px]"
  >
   <iframe
    :src="hotelMapUrl"
@@ -543,7 +628,7 @@
  <div
   class="mt-4 flex items-center justify-between gap-3"
  >
-  <div class="flex items-center gap-2 text-[11px] text-gray-500">
+  <div class="flex items-center gap-2 text-[11px] text-[var(--color-gray-500)]">
    <i class="bi bi-geo-alt text-[var(--color-primary)]"></i>
 
    <span v-if="hotelDisplay.address">
@@ -577,7 +662,7 @@
 
  <div
   v-if="showSelectedRoomSection"
-  class="rounded-3xl bg-white p-4 shadow-sm border border-gray-100"
+  class="rounded-3xl bg-white p-4 shadow-sm border border-[var(--color-gray-100)]"
  >
 
   <HotelRooms
@@ -602,7 +687,7 @@
     label="تغییر اتاق انتخابی"
     variant="filled"
     color="primary"
-    class="!rounded-3xl !px-6 h-12 text-sm"
+    class="w-full md:w-auto !rounded-3xl !px-6 h-12 text-sm"
     @click="handleEditHotelRoom"
    />
 
@@ -638,7 +723,7 @@
 
  <div
   v-if="showSelectedRoomSection"
-  class="rounded-3xl bg-white p-4 shadow-sm border border-gray-100"
+  class="rounded-3xl bg-white p-4 shadow-sm border border-[var(--color-gray-100)]"
  >
 
   <HotelRooms
@@ -706,6 +791,73 @@
     </main>
   </div>
   <!-- ====================== -->
+  <!-- Mobile Hotel Filters -->
+  <!-- ====================== -->
+  <transition name="fade">
+   <div
+    v-if="isHotelFilterModalOpen"
+    class="fixed inset-0 z-[9999] flex items-end justify-center bg-[color:var(--color-gray-800)]/50 backdrop-blur-sm lg:hidden"
+    @click.self="isHotelFilterModalOpen=false"
+   >
+    <div
+     dir="rtl"
+     class="flex max-h-[90vh] w-full flex-col rounded-t-[2rem] bg-white shadow-2xl"
+    >
+     <div
+      class="flex shrink-0 items-center justify-between border-b border-[var(--color-gray-100)] px-5 py-4"
+     >
+      <div>
+       <h3 class="text-[16px] font-black text-[var(--color-gray-800)]">
+        فیلتر اتاق‌ها
+       </h3>
+
+       <p class="mt-1 text-[11px] text-[var(--color-gray-400)]">
+        نتایج اتاق‌ها را دقیق‌تر کنید
+       </p>
+      </div>
+
+      <button
+       type="button"
+       class="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--color-gray-100)] text-2xl text-[var(--color-gray-500)]"
+       @click="isHotelFilterModalOpen=false"
+      >
+       ×
+      </button>
+     </div>
+
+     <div class="flex-1 overflow-y-auto px-4 py-5">
+      <div class="space-y-5">
+
+       <FlightSearchPanel
+        mode="aside"
+        :showServices="true"
+        @hotel-search="handleHotelSearch"
+       />
+
+       <FilterHotel
+        v-model:filters="activeHotelFilters"
+        :all-rooms-data="roomsWithPrice"
+       />
+
+      </div>
+     </div>
+
+     <div
+      class="shrink-0 border-t border-[var(--color-gray-100)] bg-white p-4"
+     >
+      <UiBaseButton
+       label="اعمال فیلترها"
+       variant="filled"
+       color="primary"
+       class="w-full !rounded-2xl !py-4 text-[13px] font-bold"
+       @click="isHotelFilterModalOpen=false"
+      />
+     </div>
+    </div>
+   </div>
+  </transition>
+
+  <!-- ====================== -->
 <!-- Room Detail Modal -->
 <!-- ====================== -->
 <Teleport to="body">
@@ -720,11 +872,11 @@
     >
       <!-- Header -->
       <div
-        class="sticky top-0 z-20 flex items-center justify-between border-b border-gray-100 bg-white px-5 py-4"
+        class="sticky top-0 z-20 flex items-center justify-between border-b border-[var(--color-gray-100)] bg-white px-5 py-4"
       >
         <div>
           <h3
-            class="text-[17px] font-black text-gray-900"
+            class="text-[17px] font-black text-[var(--color-gray-800)]"
           >
             {{
               selectedRoom.type||
@@ -735,7 +887,7 @@
 
           <p
             v-if="selectedRoom.name"
-            class="mt-1 text-[11px] text-gray-400"
+            class="mt-1 text-[11px] text-[var(--color-gray-400)]"
           >
             {{selectedRoom.name}}
           </p>
@@ -743,7 +895,7 @@
 
         <button
           type="button"
-          class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center"
+          class="w-9 h-9 rounded-full bg-[var(--color-gray-100)] flex items-center justify-center"
           @click="closeRoomModal"
         >
           <i class="bi bi-x-lg"></i>
@@ -804,9 +956,9 @@
           class="mt-6 grid grid-cols-2 md:grid-cols-3 gap-3"
         >
           <div
-            class="rounded-xl bg-gray-50 p-3"
+            class="rounded-xl bg-[var(--color-gray-100)] p-3"
           >
-            <p class="text-[10px] text-gray-400">
+            <p class="text-[10px] text-[var(--color-gray-400)]">
               ظرفیت پایه
             </p>
 
@@ -817,9 +969,9 @@
           </div>
 
           <div
-            class="rounded-xl bg-gray-50 p-3"
+            class="rounded-xl bg-[var(--color-gray-100)] p-3"
           >
-            <p class="text-[10px] text-gray-400">
+            <p class="text-[10px] text-[var(--color-gray-400)]">
               حداکثر ظرفیت
             </p>
 
@@ -830,9 +982,9 @@
           </div>
 
           <div
-            class="rounded-xl bg-gray-50 p-3"
+            class="rounded-xl bg-[var(--color-gray-100)] p-3"
           >
-            <p class="text-[10px] text-gray-400">
+            <p class="text-[10px] text-[var(--color-gray-400)]">
               نمای اتاق
             </p>
 
@@ -840,11 +992,45 @@
               {{selectedRoom.roomView||'-'}}
             </p>
           </div>
+<!-- صبحانه -->
+<div
+ v-if="
+  selectedRoom.breakfastIncluded!==undefined &&
+  selectedRoom.breakfastIncluded!==null
+ "
+ class="rounded-xl bg-[var(--color-gray-100)] p-3"
+>
+ <p class="text-[10px] text-[var(--color-gray-400)]">
+  نوع اقامت
+ </p>
 
+ <p
+  class="mt-1 flex items-center gap-2 text-[12px] font-bold"
+  :class="
+   selectedRoom.breakfastIncluded
+    ?'text-[var(--color-gray-600)]'
+    :'text-[var(--color-gray-600)]'
+  "
+ >
+  <i
+   :class="
+    selectedRoom.breakfastIncluded
+     ?'bi bi-cup-hot-fill'
+     :'bi bi-cup-hot'
+   "
+  ></i>
+
+  {{
+   selectedRoom.breakfastIncluded
+    ?'اقامت + صبحانه'
+    :'اقامت بدون صبحانه'
+  }}
+ </p>
+</div>
           <div
-            class="rounded-xl bg-gray-50 p-3"
+            class="rounded-xl bg-[var(--color-gray-100)] p-3"
           >
-            <p class="text-[10px] text-gray-400">
+            <p class="text-[10px] text-[var(--color-gray-400)]">
               تخت دو نفره
             </p>
 
@@ -854,9 +1040,9 @@
           </div>
 
           <div
-            class="rounded-xl bg-gray-50 p-3"
+            class="rounded-xl bg-[var(--color-gray-100)] p-3"
           >
-            <p class="text-[10px] text-gray-400">
+            <p class="text-[10px] text-[var(--color-gray-400)]">
               تخت یک نفره
             </p>
 
@@ -866,9 +1052,9 @@
           </div>
 
           <div
-            class="rounded-xl bg-gray-50 p-3"
+            class="rounded-xl bg-[var(--color-gray-100)] p-3"
           >
-            <p class="text-[10px] text-gray-400">
+            <p class="text-[10px] text-[var(--color-gray-400)]">
               کاناپه
             </p>
 
@@ -879,9 +1065,9 @@
 
           <div
             v-if="Number(selectedRoom.extraBed||0)>0"
-            class="rounded-xl bg-gray-50 p-3"
+            class="rounded-xl bg-[var(--color-gray-100)] p-3"
           >
-            <p class="text-[10px] text-gray-400">
+            <p class="text-[10px] text-[var(--color-gray-400)]">
               تخت اضافه
             </p>
 
@@ -892,9 +1078,9 @@
 
           <div
             v-if="selectedRoom.extraBedService"
-            class="rounded-xl bg-gray-50 p-3"
+            class="rounded-xl bg-[var(--color-gray-100)] p-3"
           >
-            <p class="text-[10px] text-gray-400">
+            <p class="text-[10px] text-[var(--color-gray-400)]">
               نوع تخت اضافه
             </p>
 
@@ -905,9 +1091,9 @@
 
           <div
             v-if="Number(selectedRoom.noBed||0)>0"
-            class="rounded-xl bg-gray-50 p-3"
+            class="rounded-xl bg-[var(--color-gray-100)] p-3"
           >
-            <p class="text-[10px] text-gray-400">
+            <p class="text-[10px] text-[var(--color-gray-400)]">
               بدون تخت
             </p>
 
@@ -919,9 +1105,9 @@
 
           <div
             v-if="selectedRoom.doubleBedType"
-            class="rounded-xl bg-gray-50 p-3"
+            class="rounded-xl bg-[var(--color-gray-100)] p-3"
           >
-            <p class="text-[10px] text-gray-400">
+            <p class="text-[10px] text-[var(--color-gray-400)]">
               نوع تخت دبل
             </p>
 
@@ -938,7 +1124,7 @@
             selectedRoom.extraBedFrom||
             selectedRoom.extraBedTo
           "
-          class="mt-5 rounded-2xl border border-gray-100 p-4"
+          class="mt-5 rounded-2xl border border-[var(--color-gray-100)] p-4"
         >
           <h4
             class="text-[13px] font-black"
@@ -947,7 +1133,7 @@
           </h4>
 
           <p
-            class="mt-3 text-[11px] leading-6 text-gray-500"
+            class="mt-3 text-[11px] leading-6 text-[var(--color-gray-500)]"
           >
             تخت اضافه برای سن
             {{selectedRoom.extraBedFrom||'-'}}
@@ -971,7 +1157,7 @@
             selectedRoom.noBedFrom||
             selectedRoom.noBedTo
           "
-          class="mt-4 rounded-2xl border border-gray-100 p-4"
+          class="mt-4 rounded-2xl border border-[var(--color-gray-100)] p-4"
         >
           <h4
             class="text-[13px] font-black"
@@ -980,7 +1166,7 @@
           </h4>
 
           <p
-            class="mt-3 text-[11px] leading-6 text-gray-500"
+            class="mt-3 text-[11px] leading-6 text-[var(--color-gray-500)]"
           >
             اقامت بدون تخت برای سن
             {{selectedRoom.noBedFrom||'-'}}
@@ -1001,7 +1187,7 @@
         <!-- توضیحات -->
         <div
           v-if="selectedRoom.description"
-          class="mt-4 rounded-2xl border border-gray-100 p-4"
+          class="mt-4 rounded-2xl border border-[var(--color-gray-100)] p-4"
         >
           <h4
             class="text-[13px] font-black"
@@ -1010,7 +1196,7 @@
           </h4>
 
           <p
-            class="mt-3 text-[11px] leading-7 text-gray-500"
+            class="mt-3 text-[11px] leading-7 text-[var(--color-gray-500)]"
           >
             {{selectedRoom.description}}
           </p>
@@ -1044,7 +1230,9 @@ import{
  watch,
  nextTick
 }from'vue'
-
+import{
+ searchAllHotelProviders
+}from'~/services/searchHotels'
 import{
  useRoute,
  useRouter
@@ -1052,6 +1240,7 @@ import{
 import moment from 'moment-jalaali'
 import{useFlightStore}from'~/stores/flights'
 import { useHotelStore } from '~/stores/hotels'
+import FilterHotel from '~/components/FilterHotel.vue'
 const hotelStore = useHotelStore()
 const route=useRoute()
 const router=useRouter()
@@ -1070,6 +1259,75 @@ const showSelectedRoomSection=
   selectedRoomsForView.value.length>0
  )
 const currentStep = computed(()=>flightStore.currentStep)
+
+const hotelSortOptions=[
+ 'پیشنهادی',
+ 'ارزان‌ترین',
+ 'گران‌ترین',
+ 'ظرفیت کمتر',
+ 'ظرفیت بیشتر'
+]
+
+const enabledHotelSortOptions=[
+ 'ارزان‌ترین',
+ 'گران‌ترین'
+]
+
+const activeHotelSort=ref('ارزان‌ترین')
+const isHotelFilterModalOpen=ref(false)
+const isHotelSortDropdownOpen=ref(false)
+
+const activeHotelFilters=ref({
+ priceRange:null,
+ capacities:[],
+ roomViews:[],
+ withBreakfast:true,
+ withoutBreakfast:true,
+ availableOnly:false,
+ extraBedOnly:false
+})
+
+function isHotelSortEnabled(option){
+ return enabledHotelSortOptions.includes(option)
+}
+
+function selectHotelSort(option){
+
+ if(!isHotelSortEnabled(option))
+  return
+
+ activeHotelSort.value=option
+ isHotelSortDropdownOpen.value=false
+
+}
+
+function getHotelRoomFilterPrice(room){
+ return Number(
+  room?.calculatedPrice||
+  room?.priceFrom||
+  0
+ )
+}
+
+function isHotelRoomAvailable(room){
+
+ const availableCount=
+  Number(
+   room?.availableCount??
+   room?.loadNo??
+   0
+  )
+
+ return(
+  room?.disabled!==true&&
+  room?.forShow!==true&&
+  room?.displayOnly!==true&&
+  availableCount>0&&
+  getHotelRoomFilterPrice(room)>0
+ )
+
+}
+
 const BASE_URL='https://api.ahuan.ir/api'
 const HOTEL_IMAGE_BASE='https://panel.ahuan.ir/uploads'
 const passengerFormRef=ref(null)
@@ -1622,20 +1880,17 @@ async function continueHotelBooking(){
   continueShoppingLoading.value=true
 
 
-  const passengerValid =
-    passengerFormRef.value?.validateAll()
+const passengerValid =
+  await passengerFormRef.value?.validateAll()
 
+if(passengerValid !== true)
+  return
 
-  if(!passengerValid)
-    return
+const contactValid =
+  await contactFormRef.value?.validateAll()
 
-
-  const contactValid =
-    contactFormRef.value?.validateAll()
-
-
-  if(!contactValid)
-    return
+if(contactValid !== true)
+  return
 
 
 
@@ -3073,52 +3328,99 @@ hotelStore.clearRooms()
 
 hotelStore.addRoom({
 
- // خود اطلاعات کامل اتاق
  ...room,
 
  key:
-  `${room.id||room.roomId}-${Date.now()}`,
+  `${room.id}-${Date.now()}`,
+
+ provider:
+  room.provider,
+
+ providerRoomId:
+  String(
+   room.providerRoomId||
+   room.roomId||
+   ''
+  ),
 
  roomId:
-  room.id||room.roomId,
+  Number(
+   room.providerRoomId||
+   room.roomId||
+   0
+  ),
 
  roomName:
-  room.type||room.name||'اتاق',
+  room.roomName||
+  room.roomType||
+  room.type||
+  room.name||
+  'اتاق',
 
  count,
 
  unitPrice:
-  Number(room.calculatedPrice||0),
+  Number(
+   room.priceFrom||
+   room.calculatedPrice||
+   0
+  ),
 
  basePrice:
-  Number(data?.basePrice||0),
+  Number(
+   data?.basePrice||
+   0
+  ),
 
  extraBedCount:
-  Number(data?.extraBedCount||0),
+  Number(
+   data?.extraBedCount||
+   0
+  ),
 
  extraBedService:
-  data?.extraBedService||'',
+  data?.extraBedService||
+  '',
 
  extraBedUnitPrice:
-  Number(data?.extraBedUnitPrice||0),
+  Number(
+   data?.extraBedUnitPrice||
+   0
+  ),
 
  extraBedPrice:
-  Number(data?.extraBedPrice||0),
+  Number(
+   data?.extraBedPrice||
+   0
+  ),
 
  noBedCount:
-  Number(data?.noBedCount||0),
+  Number(
+   data?.noBedCount||
+   0
+  ),
 
  noBedService:
-  data?.noBedService||'',
+  data?.noBedService||
+  '',
 
  noBedUnitPrice:
-  Number(data?.noBedUnitPrice||0),
+  Number(
+   data?.noBedUnitPrice||
+   0
+  ),
 
  noBedPrice:
-  Number(data?.noBedPrice||0),
+  Number(
+   data?.noBedPrice||
+   0
+  ),
 
  price:
-  Number(data?.finalPrice||0)
+  Number(
+   data?.finalPrice||
+   0
+  )
 
 })
 
@@ -3707,13 +4009,14 @@ function mergeHotelRooms({
 
 async function loadHotelAvailability(){
 
- if(!hotelId.value){
+ if(
+  !hotelId.value
+ ){
 
   errorMessage.value=
    'شناسه هتل معتبر نیست.'
 
   return
-
  }
 
 
@@ -3726,11 +4029,9 @@ async function loadHotelAvailability(){
 
   hotelRooms.value=[]
 
-  roomsFallbackMode.value=false
+  hotelStore.setSearchRooms([])
 
   roomsError.value=''
-
-  roomsLoading.value=false
 
   return
 
@@ -3745,236 +4046,76 @@ async function loadHotelAvailability(){
 
  roomsError.value=''
 
- hotelRooms.value=[]
-
- roomsFallbackMode.value=false
-
 
  try{
 
-  // =========================
-  // هر دو درخواست همزمان
-  // =========================
+  const rooms=
+   await searchAllHotelProviders({
 
-  const[
-   availabilityResult,
-   roomsResult
-  ]=
-   await Promise.allSettled([
+    hotelId:
+     hotelId.value,
 
-    $fetch(
-     `${BASE_URL}/Hotel/hotel-availability`,
-     {
-      params:{
-       HotelId:
-        hotelId.value,
+    checkIn:
+     checkIn.value,
 
-       CheckIn:
-        checkIn.value,
+    checkOut:
+     checkOut.value
 
-       CheckOut:
-        checkOut.value
-      }
-     }
-    ),
-
-    $fetch(
-     `${BASE_URL}/Hotel/rooms/${hotelId.value}`
-    )
-
-   ])
-
-
-  // =========================
-  // Availability Response
-  // =========================
-
-  const availabilityResponse=
-   availabilityResult.status==='fulfilled'
-    ?availabilityResult.value
-    :null
-
-
-  // =========================
-  // Rooms Response
-  // =========================
-
-  const roomsResponse=
-   roomsResult.status==='fulfilled'
-    ?roomsResult.value
-    :null
-
-
-  // =========================
-  // خطاهای جداگانه
-  // =========================
-
-  if(
-   availabilityResult.status==='rejected'
-  ){
-
-   console.error(
-    'Hotel Availability Error:',
-    availabilityResult.reason
-   )
-
-  }
-
-
-  if(
-   roomsResult.status==='rejected'
-  ){
-
-   console.error(
-    'Hotel Rooms Error:',
-    roomsResult.reason
-   )
-
-  }
-
-
-  // =========================
-  // اطلاعات هتل
-  // =========================
-
-  hotelAvailability.value=
-   availabilityResponse||null
-
-
-  if(availabilityResponse){
-
-   hotel.value=
-    availabilityResponse
-
-  }
-
-
-  // =========================
-  // Rooms داخل Availability
-  // =========================
-
-  const availabilityRooms=
-   Array.isArray(
-    availabilityResponse?.hotelRooms
-   )
-    ?availabilityResponse.hotelRooms
-    :[]
-
-
-  // =========================
-  // همه Rooms
-  // =========================
-
-  const allRooms=
-   normalizeRoomApiResponse(
-    roomsResponse
-   )
-
-
-  // =========================
-  // Merge
-  // =========================
-
-  const mergedRooms=
-   mergeHotelRooms({
-    availabilityRooms,
-    allRooms
    })
 
 
   hotelRooms.value=
-   mergedRooms
+   rooms
 
 
   /*
-   * دیگر fallback mode نداریم.
-   * چون هر Room خودش مشخص می‌کند:
-   *
-   * forShow:false => Availability
-   * forShow:true  => Rooms Only
+   * فعلاً Hotel اصلی آهوان را
+   * از meta اولین اتاق می‌گیریم.
    */
-  roomsFallbackMode.value=false
+
+  const ahuanRoom=
+   rooms.find(
+    room=>
+     room.provider===
+     'AHUAN'
+   )
 
 
-  console.log(
-   'Hotel Availability:',
-   availabilityResponse
-  )
+  const providerHotel=
+   ahuanRoom
+    ?.meta
+    ?.hotel
 
 
-  console.log(
-   'Availability Rooms:',
-   availabilityRooms.map(room=>({
-    id:getRoomId(room),
-    name:room?.name,
-    type:room?.type
-   }))
-  )
+  if(providerHotel){
 
+   hotelAvailability.value=
+    providerHotel
 
-  console.log(
-   'All Hotel Rooms:',
-   allRooms.map(room=>({
-    id:getRoomId(room),
-    name:room?.name,
-    type:room?.type
-   }))
-  )
-
-
-  console.log(
-   'Merged Hotel Rooms:',
-   mergedRooms.map(room=>({
-
-    id:
-     getRoomId(room),
-
-    name:
-     room?.name,
-
-    type:
-     room?.type,
-
-    source:
-     room?.source,
-
-    forShow:
-     room?.forShow,
-
-    displayOnly:
-     room?.displayOnly
-
-   }))
-  )
-
-
-  // =========================
-  // هیچ داده‌ای نداریم
-  // =========================
-
-  if(!mergedRooms.length){
-
-   roomsError.value=
-    'اتاقی برای این هتل یافت نشد.'
+   hotel.value=
+    providerHotel
 
   }
-  else{
 
-   roomsError.value=''
 
-  }
+  console.log(
+   'NORMALIZED HOTEL ROOMS:',
+   rooms
+  )
 
  }
  catch(error){
 
   console.error(
-   'Hotel rooms loading error:',
+   'Hotel Search Error:',
    error
   )
 
-  hotelAvailability.value=null
 
   hotelRooms.value=[]
+
+  hotelStore.setSearchRooms([])
+
 
   roomsError.value=
    'دریافت اطلاعات اتاق‌ها با خطا مواجه شد.'
@@ -4247,83 +4388,170 @@ function getRoomTotalPrice(room){
  return roomPrice
 
 }
+const roomsWithPrice=
+ computed(
+  ()=>
+   hotelStore.searchRooms
+ )
 
-const roomsWithPrice=computed(()=>{
+const filteredSortedRooms=computed(()=>{
 
- return hotelRooms.value.map(room=>{
+ const filters=
+  activeHotelFilters.value||{}
 
-  // =========================
-  // اتاقی که فقط از Rooms آمده
-  // =========================
+ const selectedCapacities=
+  Array.isArray(filters.capacities)
+   ?filters.capacities.map(Number)
+   :[]
 
-  if(
-   room?.forShow===true||
-   room?.displayOnly===true
-  ){
+ const selectedViews=
+  Array.isArray(filters.roomViews)
+   ?filters.roomViews.map(
+    item=>String(item).trim()
+   )
+   :[]
 
-   return{
+ const priceRange=
+  Array.isArray(filters.priceRange)&&
+  filters.priceRange.length===2
+   ?filters.priceRange.map(Number)
+   :null
 
-    ...room,
+ const withBreakfast=
+  filters.withBreakfast!==false
 
-    forShow:true,
+ const withoutBreakfast=
+  filters.withoutBreakfast!==false
 
-    displayOnly:true,
+ const filtered=
+  roomsWithPrice.value.filter(room=>{
 
-    calculatedPrice:0,
+   const price=
+    getHotelRoomFilterPrice(room)
 
-    availableCount:0,
+   if(
+    priceRange&&
+    Number.isFinite(priceRange[0])&&
+    Number.isFinite(priceRange[1])
+   ){
 
-    nightCount:
-     Math.max(
-      0,
-      calculateNights()
-     )
+    if(price<=0)
+     return false
+
+    if(
+     price<priceRange[0]||
+     price>priceRange[1]
+    ){
+     return false
+    }
 
    }
 
-  }
-
-
-  // =========================
-  // اتاق Availability
-  // =========================
-
-  const details=
-   getRoomPriceDetails(room)
-
-
-  const price=
-   getRoomTotalPrice(room)
-
-
-  const availableCount=
-   getRoomAvailableCount(room)
-
-
-  return{
-
-   ...room,
-
-   forShow:false,
-
-   displayOnly:false,
-
-   calculatedPrice:
-    price,
-
-   availableCount,
-
-   nightCount:
-    Math.max(
-     0,
-     calculateNights()
+   if(
+    selectedCapacities.length&&
+    !selectedCapacities.includes(
+     Number(room?.capacity||0)
     )
+   ){
+    return false
+   }
 
-  }
+   const roomView=
+    String(room?.roomView||'').trim()
 
- })
+   if(
+    selectedViews.length&&
+    !selectedViews.includes(roomView)
+   ){
+    return false
+   }
+
+   const hasBreakfast=
+    room?.breakfastIncluded!==false
+
+   if(
+    hasBreakfast&&
+    !withBreakfast
+   ){
+    return false
+   }
+
+   if(
+    !hasBreakfast&&
+    !withoutBreakfast
+   ){
+    return false
+   }
+
+   if(
+    filters.availableOnly===true&&
+    !isHotelRoomAvailable(room)
+   ){
+    return false
+   }
+
+   if(
+    filters.extraBedOnly===true&&
+    Number(room?.extraBed||0)<=0
+   ){
+    return false
+   }
+
+   return true
+  })
+
+ const list=[...filtered]
+
+ switch(activeHotelSort.value){
+
+  case'ارزان‌ترین':
+   list.sort((a,b)=>{
+    const aPrice=getHotelRoomFilterPrice(a)
+    const bPrice=getHotelRoomFilterPrice(b)
+
+    if(aPrice<=0&&bPrice<=0)return 0
+    if(aPrice<=0)return 1
+    if(bPrice<=0)return-1
+
+    return aPrice-bPrice
+   })
+   break
+
+  case'گران‌ترین':
+   list.sort((a,b)=>{
+    const aPrice=getHotelRoomFilterPrice(a)
+    const bPrice=getHotelRoomFilterPrice(b)
+
+    if(aPrice<=0&&bPrice<=0)return 0
+    if(aPrice<=0)return 1
+    if(bPrice<=0)return-1
+
+    return bPrice-aPrice
+   })
+   break
+
+  case'ظرفیت کمتر':
+   list.sort(
+    (a,b)=>
+     Number(a?.capacity||0)-
+     Number(b?.capacity||0)
+   )
+   break
+
+  case'ظرفیت بیشتر':
+   list.sort(
+    (a,b)=>
+     Number(b?.capacity||0)-
+     Number(a?.capacity||0)
+   )
+   break
+ }
+
+ return list
 
 })
+
+
 
 function getRoomNightCount(room){
   return getRoomPriceDetails(room)

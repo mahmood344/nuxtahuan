@@ -1,6 +1,11 @@
 <template>
   <section class="rounded-3xl border border-gray-100 bg-white p-4 shadow-sm" dir="rtl">
     <div v-if="mode === 'passengers'">
+      <div class="mb-5">
+ <h2 class="text-[16px] font-black text-gray-900">
+  {{passengerSectionTitle}}
+ </h2>
+</div>
       <!-- Desktop -->
       <div class="hidden overflow-x-auto lg:block">
         <table class="w-full border-separate border-spacing-y-2">
@@ -194,22 +199,27 @@
     </div>
 
     <div v-else-if="mode === 'contact'">
+       <div class="mb-5">
+  <h2 class="text-[16px] font-black text-gray-900">
+   اطلاعات تماس
+  </h2>
+ </div>
       <!-- Desktop -->
       <div class="hidden overflow-x-auto lg:block">
         <table class="w-full border-separate border-spacing-y-2">
           <thead>
             <tr class="text-right text-sm text-gray-500">
-              <th class="px-3 py-2 text-center">شماره موبایل</th>
+              <th class="px-3 py-2 text-start">شماره موبایل</th>
               <th class="px-3 py-2 text-center">ایمیل</th>
-              <th class="px-3 py-2 text-center">عملیات</th>
+              <th class="px-3 py-2 text-end">عملیات</th>
             </tr>
           </thead>
 
           <tbody>
             <tr class="bg-gray-50 text-sm text-gray-800">
-              <td class="rounded-r-2xl px-3 py-3 text-center" dir="ltr">{{ contact.phone || '-' }}</td>
+              <td class="rounded-r-2xl px-3 py-3 text-end" dir="ltr">{{ contact.phone || '-' }}</td>
               <td class="px-3 py-3 text-center" dir="ltr">{{ contact.email || '-' }}</td>
-              <td class="rounded-l-2xl px-3 py-3 text-center">
+              <td class="rounded-l-2xl px-3 py-3 text-end">
                 <button
                   type="button"
                   class="rounded-xl bg-primary px-3 py-2 text-xs font-bold text-white"
@@ -648,6 +658,7 @@
 <script setup>
 import { computed, reactive, ref } from 'vue'
 import {useFlightStore} from '~/stores/flights'
+import { useRoute } from '#app'
 
 const flightStore=
   useFlightStore()
@@ -656,7 +667,19 @@ const countryOptions=
   computed(
     ()=>flightStore.countries
   )
+const route=
+ useRoute()
 
+const isHotelBooking=
+ computed(()=>
+  route.path.startsWith('/hotels')
+ )
+ const passengerSectionTitle=
+ computed(()=>
+  isHotelBooking.value
+   ?'مشخصات رزرو کننده'
+   :'مشخصات مسافران'
+ )
 const countriesLoading=
   computed(
     ()=>flightStore.countriesLoading

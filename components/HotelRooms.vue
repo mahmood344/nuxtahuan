@@ -5,7 +5,7 @@
   :class="
     selectedView
       ? 'bg-transparent p-0'
-      : 'bg-[#f7f8fd] px-5 py-7 md:px-8 md:py-10'
+      : 'bg-[var(--color-gray-100)] px-5 py-7 md:px-8 md:py-10'
   "
   dir="rtl"
 >
@@ -17,7 +17,7 @@
   <div v-if="selectedView">
 
     <h2
-      class="mb-5 text-[18px] font-black text-gray-900"
+      class="mb-5 text-[18px] font-black text-[var(--color-gray-800)]"
     >
       اتاق انتخاب شده
     </h2>
@@ -30,13 +30,13 @@
     <div>
 
       <h2
-        class="text-[18px] font-black text-gray-900"
+        class="text-[18px] font-black text-[var(--color-gray-800)]"
       >
         اتاق‌های هتل {{hotel.name}}
       </h2>
 
       <p
-        class="mt-2 text-[11px] text-gray-400"
+        class="mt-2 text-[11px] text-[var(--color-gray-400)]"
       >
         اطلاعات اتاق‌های این مجموعه
       </p>
@@ -45,7 +45,7 @@
 
 
     <h3
-      class="mt-8 mb-5 text-[17px] font-black text-gray-900"
+      class="mt-8 mb-5 text-[17px] font-black text-[var(--color-gray-800)]"
     >
       اتاق‌ها
     </h3>
@@ -53,27 +53,36 @@
   </template>
 
   <!-- Loading -->
-  <div
-    v-if="roomsLoading"
-    class="min-h-[180px] rounded-2xl bg-white flex items-center justify-center"
-  >
-    <div class="text-center">
+  <template v-if="roomsLoading">
+    <transition name="fade" appear>
       <div
-        class="mx-auto w-8 h-8 rounded-full border-4 border-gray-200 border-t-[var(--color-primary)] animate-spin"
-      ></div>
+        class="fixed inset-0 z-[999] flex items-center justify-center bg-slate-900/10 backdrop-blur-[3px] transition-all duration-300"
+      >
+        <div
+          class="bg-white/95 p-8 rounded-3xl shadow-2xl border border-[var(--color-gray-100)] flex flex-col items-center text-center max-w-sm mx-4"
+        >
+          <div
+            class="animate-spin rounded-full h-14 w-14 border-4 border-[var(--color-primary-light)] bg-[var(--color-primary)] mb-4"
+          ></div>
 
-      <p class="mt-3 text-[12px] text-gray-400">
-        در حال دریافت اتاق‌ها...
-      </p>
-    </div>
-  </div>
+          <h4 class="font-bold text-[var(--color-gray-800)] text-base">
+            در حال دریافت اتاق‌ها...
+          </h4>
+
+          <p class="text-xs text-[var(--color-gray-500)] mt-2 leading-relaxed">
+            اطلاعات و قیمت اتاق‌ها در حال بارگذاری است.
+          </p>
+        </div>
+      </div>
+    </transition>
+  </template>
 
   <!-- Error -->
   <div
     v-else-if="roomsError"
     class="min-h-[160px] rounded-2xl bg-white flex items-center justify-center"
   >
-    <p class="text-[12px] text-red-500">
+    <p class="text-[12px] text-[var(--color-red-500)]">
       {{roomsError}}
     </p>
   </div>
@@ -83,9 +92,9 @@
     v-else-if="!hotelRooms.length"
     class="min-h-[180px] rounded-2xl bg-white flex flex-col items-center justify-center"
   >
-    <i class="bi bi-door-closed text-[30px] text-gray-300"></i>
+    <i class="bi bi-door-closed text-[30px] text-[var(--color-gray-300)]"></i>
 
-    <p class="mt-3 text-[13px] font-bold text-gray-600">
+    <p class="mt-3 text-[13px] font-bold text-[var(--color-gray-600)]">
       اتاقی پیدا نشد
     </p>
   </div>
@@ -99,18 +108,18 @@
   <article
     v-for="room in hotelRooms"
     :key="room.id"
-    class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
+    class="overflow-hidden rounded-2xl border border-[var(--color-gray-200)] bg-white shadow-sm"
   >
     <!-- بخش بالای کارت -->
     <div class="p-5 md:p-6">
       <div
-        class="flex flex-col md:flex-row md:items-start md:justify-between gap-5"
+        class="relative flex flex-col md:flex-row md:items-start md:justify-between gap-5"
       >
         <!-- اطلاعات -->
         <div class="flex-1">
 
           <h4
-            class="text-[15px] font-black text-gray-900"
+            class="text-[15px] font-black text-[var(--color-gray-800)]"
           >
             {{room.type||room.name||'اتاق'}}
           </h4>
@@ -118,103 +127,108 @@
           <div
             class="mt-3 flex flex-wrap items-center gap-2"
           >
-            <span
+            <UiBaseLabel
               v-if="room.capacity"
-              class="rounded bg-[#f1f2f7] px-2 py-1 text-[10px]"
-            >
-              <i class="bi bi-person-fill ml-1"></i>
-              {{room.capacity}} نفر
-            </span>
+              :text="`${room.capacity} نفر`"
+              color="var(--color-primary)"
+              icon='<i class="bi bi-person-fill"></i>'
+            style="zoom:0.78"
+            />
 
+            <UiBaseLabel
+              v-if="hasRoomCapacity(room) && Number(room.extraBed||0)>0"
+              :text="`${room.extraBed} تخت اضافه`"
+              color="var(--color-primary)"
+              icon='<i class="bi bi-plus-circle"></i>'
+            style="zoom:0.78"
+            />
+
+            <UiBaseLabel
+              v-if="hasRoomCapacity(room) && Number(room.noBed||0)>0"
+              :text="`${room.noBed} نفر بدون تخت`"
+              color="var(--color-secondary)"
+              icon='<i class="bi bi-person"></i>'
+            style="zoom:0.78"
+            />
+
+            <UiBaseLabel
+              :text="room.breakfastIncluded === false ? 'بدون صبحانه' : 'اقامت + صبحانه'"
+              color="var(--color-primary-dark)"
+              icon='<i class="bi bi-cup-hot"></i>'
+            style="zoom:0.78"
+            />
+
+            <UiBaseLabel
+              v-if="room.doubleBedCount"
+              :text="`${room.doubleBedCount} تخت دبل`"
+              color="var(--color-gray-600)"
+              icon='<i class="bi bi-bed"></i>'
+            style="zoom:0.78"
+            />
+
+            <UiBaseLabel
+              v-if="room.singleBedCount"
+              :text="`${room.singleBedCount} تخت سینگل`"
+              color="var(--color-gray-600)"
+              icon='<i class="bi bi-bed"></i>'
+            style="zoom:0.78"
+            />
+
+            <UiBaseLabel
+              v-if="hasRoomCapacity(room) && Number(room.sofaBedCount||0)>0"
+              :text="`${room.sofaBedCount} کاناپه تختخواب‌شو`"
+              color="var(--color-gray-600)"
+              icon='<i class="bi bi-house-door"></i>'
+            style="zoom:0.78"
+            />
+          </div>
+
+          <div
+            v-if="room.name || room.roomView"
+            class="mt-3 flex flex-wrap items-center gap-2"
+          >
             <span
               v-if="room.name"
-              class="rounded bg-[#f1f2f7] px-2 py-1 text-[10px]"
+              class="rounded bg-[var(--color-gray-100)] px-2 py-1 text-[10px] text-[var(--color-gray-700)]"
             >
               {{room.name}}
             </span>
 
             <span
               v-if="room.roomView"
-              class="rounded bg-[#f1f2f7] px-2 py-1 text-[10px]"
+              class="rounded bg-[var(--color-gray-100)] px-2 py-1 text-[10px] text-[var(--color-gray-700)]"
             >
               نمای {{room.roomView}}
             </span>
-
-           <span
- v-if="
-  hasRoomCapacity(room) &&
-  Number(room.extraBed||0)>0
- "
- class="rounded bg-[#f1f2f7] px-2 py-1 text-[10px]"
->
- {{room.extraBed}} تخت اضافه
-</span>
-
-            <span
- v-if="
-  hasRoomCapacity(room) &&
-  Number(room.noBed||0)>0
- "
- class="rounded bg-[#f1f2f7] px-2 py-1 text-[10px]"
->
- {{room.noBed}} نفر بدون تخت
-</span>
-<span
- class="rounded bg-[#f1f2f7] px-2 py-1 text-[10px]"
->
- <i class="bi bi-cup-hot ml-1"></i>
- اقامت + صبحانه
-</span>
-          </div>
-
-          <div
-            class="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] text-gray-500"
-          >
-            <span v-if="room.doubleBedCount">
-              <i class="bi bi-bed ml-1"></i>
-              {{room.doubleBedCount}} تخت دبل
-            </span>
-
-            <span v-if="room.singleBedCount">
-              {{room.singleBedCount}} تخت سینگل
-            </span>
-
-           <span
- v-if="
-  hasRoomCapacity(room) &&
-  Number(room.sofaBedCount||0)>0
- "
->
- {{room.sofaBedCount}}
- کاناپه تختخواب‌شو
-</span>
-
           </div>
 
           <p
             v-if="room.description"
-            class="mt-4 text-[11px] leading-6 text-gray-500"
+            class="mt-4 text-[11px] leading-6 text-[var(--color-gray-500)]"
           >
             {{room.description}}
           </p>
         </div>
 
         <!-- جزئیات -->
-        <button
-          type="button"
-          class="shrink-0 text-[11px] font-medium text-[#5865ff]"
+        <UiBaseButton
+          label="جزئیات اتاق و قوانین"
+          variant="soft"
+          color="primary"
+          icon='<i class="bi bi-chevron-left"></i>'
+          class="absolute left-0 top-0 shrink-0 !bg-transparent !border-0 !shadow-none !rounded-none !px-0 !py-0 text-[11px] font-medium md:static"
           @click="openRoomModal(room)"
-        >
-          جزئیات اتاق و قوانین
-          <i class="bi bi-chevron-left mr-1"></i>
-        </button>
+        />
       </div>
 
 
       <!-- اسلایدر عکس -->
       <div
-        v-if="room.hotelRoomImages?.length"
-        class="relative mt-5 h-[220px] overflow-hidden rounded-2xl bg-gray-100"
+ v-if="
+  !selectedView &&
+  room.hotelRoomImages?.length
+ "
+        class="relative mt-5 h-[220px] overflow-hidden rounded-2xl bg-[var(--color-gray-100)]"
       >
         <img
           :src="
@@ -269,66 +283,245 @@
 <!-- حالت اتاق انتخاب‌شده -->
 <!-- ========================= -->
 
+<!-- ========================= -->
+<!-- خلاصه اتاق انتخاب شده -->
+<!-- ========================= -->
+
 <div
  v-if="selectedView"
- class="border-t border-gray-200 px-5 py-5 md:px-6"
+ class="border-t border-[var(--color-gray-100)] bg-gradient-to-b from-white to-[var(--color-gray-100)] px-5 py-5 md:px-6"
 >
 
+ <!-- اطلاعات اصلی -->
  <div
-  class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
+  class="grid grid-cols-2 gap-3 md:grid-cols-4"
  >
 
-  <!-- انتخاب‌های کاربر -->
-  <div class="flex flex-wrap gap-2">
+  <!-- تعداد اتاق -->
+  <div
+   class="rounded-2xl border border-[var(--color-gray-100)] bg-white p-4"
+  >
+   <div
+    class="mb-2 flex items-center gap-2 text-[var(--color-gray-400)]"
+   >
+    <i class="bi bi-door-open text-[15px]"></i>
 
-   <span
-    class="rounded-lg bg-gray-100 px-3 py-2 text-[11px] font-bold text-gray-600"
+    <span class="text-[10px]">
+     تعداد اتاق
+    </span>
+   </div>
+
+   <p
+    class="text-[13px] font-black text-[var(--color-gray-800)]"
    >
     {{Number(room.count||1)}}
     اتاق
-   </span>
+   </p>
+  </div>
 
 
-   <span
-    v-if="Number(room.extraBedCount||0)>0"
-    class="rounded-lg bg-gray-100 px-3 py-2 text-[11px] font-bold text-gray-600"
+  <!-- تعداد شب -->
+  <div
+   class="rounded-2xl border border-[var(--color-gray-100)] bg-white p-4"
+  >
+   <div
+    class="mb-2 flex items-center gap-2 text-[var(--color-gray-400)]"
    >
-    {{room.extraBedCount}}
-    تخت اضافه
-   </span>
+    <i class="bi bi-moon-stars text-[15px]"></i>
 
+    <span class="text-[10px]">
+     مدت اقامت
+    </span>
+   </div>
 
-   <span
-    v-if="Number(room.noBedCount||0)>0"
-    class="rounded-lg bg-gray-100 px-3 py-2 text-[11px] font-bold text-gray-600"
+   <p
+    class="text-[13px] font-black text-[var(--color-gray-800)]"
    >
-    {{room.noBedCount}}
-    بدون تخت
-   </span>
+    {{getRoomNightCount(room)}}
+    شب
+   </p>
+  </div>
+
+
+  <!-- ظرفیت -->
+  <div
+   class="rounded-2xl border border-[var(--color-gray-100)] bg-white p-4"
+  >
+   <div
+    class="mb-2 flex items-center gap-2 text-[var(--color-gray-400)]"
+   >
+    <i class="bi bi-people text-[15px]"></i>
+
+    <span class="text-[10px]">
+     ظرفیت اتاق
+    </span>
+   </div>
+
+   <UiBaseLabel
+    :text="`${Number(room.capacity||0)} نفر`"
+    color="var(--color-primary)"
+    icon='<i class="bi bi-people"></i>'
+   style="zoom:0.78"
+   />
+  </div>
+
+
+  <!-- نوع اقامت -->
+  <div
+   class="rounded-2xl border border-[var(--color-gray-100)] bg-white p-4"
+  >
+   <div
+    class="mb-2 flex items-center gap-2 text-[var(--color-gray-400)]"
+   >
+    <i class="bi bi-cup-hot text-[15px]"></i>
+
+    <span class="text-[10px]">
+     نوع اقامت
+    </span>
+   </div>
+
+   <UiBaseLabel
+    :text="room.breakfastIncluded === false ? 'بدون صبحانه' : 'با صبحانه'"
+    color="var(--color-primary-dark)"
+    icon='<i class="bi bi-cup-hot"></i>'
+   style="zoom:0.78"
+   />
+  </div>
+
+ </div>
+
+
+ <!-- سرویس‌های اضافه -->
+ <div
+  v-if="
+   Number(room.extraBedCount||0)>0 ||
+   Number(room.noBedCount||0)>0
+  "
+  class="mt-4 flex flex-wrap gap-2"
+ >
+
+  <UiBaseLabel
+   v-if="Number(room.extraBedCount||0)>0"
+   :text="`${room.extraBedCount} تخت اضافه`"
+   color="var(--color-primary)"
+   icon='<i class="bi bi-plus-circle"></i>'
+  style="zoom:0.78"
+  />
+
+
+  <UiBaseLabel
+   v-if="Number(room.noBedCount||0)>0"
+   :text="`${room.noBedCount} نفر بدون تخت`"
+   color="var(--color-secondary)"
+   icon='<i class="bi bi-person"></i>'
+  style="zoom:0.78"
+  />
+
+ </div>
+
+
+ <!-- تاریخ اقامت -->
+ <div
+  v-if="checkIn&&checkOut"
+  class="mt-4 flex flex-col gap-3 rounded-2xl border border-[var(--color-gray-100)] bg-white p-4 sm:flex-row sm:items-center sm:justify-between"
+ >
+
+  <div class="flex items-center gap-3">
+
+   <div
+    class="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-gray-100)] text-[var(--color-gray-500)]"
+   >
+    <i class="bi bi-calendar-check"></i>
+   </div>
+
+   <div>
+
+    <p class="text-[10px] text-[var(--color-gray-400)]">
+     تاریخ ورود
+    </p>
+
+    <p
+     class="mt-1 text-[12px] font-bold text-[var(--color-gray-700)]"
+     dir="ltr"
+    >
+     {{checkIn}}
+    </p>
+
+   </div>
 
   </div>
 
 
-  <!-- قیمت نهایی -->
   <div
-   class="flex items-end gap-1"
+   class="hidden h-px flex-1 bg-[var(--color-gray-100)] sm:block"
+  ></div>
+
+
+  <div class="flex items-center gap-3">
+
+   <div
+    class="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-gray-100)] text-[var(--color-gray-500)]"
+   >
+    <i class="bi bi-calendar-x"></i>
+   </div>
+
+   <div>
+
+    <p class="text-[10px] text-[var(--color-gray-400)]">
+     تاریخ خروج
+    </p>
+
+    <p
+     class="mt-1 text-[12px] font-bold text-[var(--color-gray-700)]"
+     dir="ltr"
+    >
+     {{checkOut}}
+    </p>
+
+   </div>
+
+  </div>
+
+ </div>
+
+
+ <!-- مبلغ نهایی -->
+ <div
+  class="mt-4 flex flex-col items-center gap-4 rounded-2xl bg-[var(--color-primary-light)] p-4 text-center sm:flex-row sm:items-center sm:justify-between sm:text-right"
+ >
+
+  <div>
+
+   <p
+    class="text-[11px] font-bold text-[var(--color-gray-500)]"
+   >
+    مبلغ نهایی اقامت
+   </p>
+
+   <p class="mt-1 text-[10px] text-[var(--color-gray-400)]">
+    برای
+    {{Number(room.count||1)}}
+    اتاق و
+    {{Number(room.nightCount||0)}}
+    شب
+   </p>
+
+  </div>
+
+
+  <div
+   class="flex items-end justify-center gap-1 sm:justify-start"
    dir="rtl"
   >
- <p
-     class="text-[10px] text-gray-400"
-    >
-     قیمت نهایی برای
-     {{room.nightCount}}
-     شب
-    </p>
+
    <span
-    class="text-[18px] font-black text-gray-900"
+    class="text-[22px] font-black text-[var(--color-primary-dark)]"
    >
     {{formatPrice(room.price)}}
    </span>
 
    <span
-    class="pb-[2px] text-[10px] text-gray-500"
+    class="pb-1 text-[10px] font-bold text-[var(--color-gray-500)]"
    >
     ریال
    </span>
@@ -340,7 +533,7 @@
 </div>
 <div
 v-else
- class="border-t border-gray-200 px-5 py-5 md:px-6"
+ class="border-t border-[var(--color-gray-200)] px-5 py-5 md:px-6"
 >
  <div
   class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between"
@@ -361,13 +554,13 @@ v-else
     <div class="min-w-[140px]">
 
      <span
-      class="text-[11px] font-bold text-gray-700"
+      class="text-[11px] font-bold text-[var(--color-gray-700)]"
      >
       تعداد اتاق
      </span>
 
      <p
-      class="mt-1 text-[10px] text-gray-400"
+      class="mt-1 text-[10px] text-[var(--color-gray-400)]"
      >
       موجودی:
       {{getRoomAvailableCount(room)}}
@@ -377,21 +570,16 @@ v-else
     </div>
 
 
-    <button
-     type="button"
-     class="flex h-9 w-9 items-center justify-center rounded-lg border text-[22px]"
-     :class="
-      getSelectedRoomCount(room)>=getRoomAvailableCount(room)
-       ?'cursor-not-allowed border-gray-300 text-gray-300'
-       :'border-[#5865ff] text-[#5865ff]'
-     "
+        <UiBaseButton
+     label="+"
+     variant="outline"
+     color="primary"
+     class="!h-9 !w-9 !min-w-0 !rounded-lg !p-0 text-[22px]"
      :disabled="
       getSelectedRoomCount(room)>=getRoomAvailableCount(room)
      "
      @click="increaseRoom(room)"
-    >
-     +
-    </button>
+    />
 
 
     <span
@@ -401,21 +589,16 @@ v-else
     </span>
 
 
-    <button
-     type="button"
-     class="flex h-9 w-9 items-center justify-center rounded-lg border text-[20px]"
-     :class="
-      getSelectedRoomCount(room)<=1
-       ?'cursor-not-allowed border-gray-300 text-gray-300'
-       :'border-gray-400 text-gray-500'
-     "
+        <UiBaseButton
+     label="−"
+     variant="outline"
+     color="primary"
+     class="!h-9 !w-9 !min-w-0 !rounded-lg !p-0 text-[20px]"
      :disabled="
       getSelectedRoomCount(room)<=1
      "
      @click="decreaseRoom(room)"
-    >
-     −
-    </button>
+    />
 
    </div>
 
@@ -448,14 +631,14 @@ v-else
      <div class="min-w-[140px]">
 
       <span
-       class="text-[11px] font-bold text-gray-700"
+       class="text-[11px] font-bold text-[var(--color-gray-700)]"
       >
        {{room.extraBedService || 'تخت اضافه'}}
       </span>
 
       <p
        v-if="getExtraBedTotalPrice(room)>0"
-       class="mt-1 text-[10px] text-gray-400"
+       class="mt-1 text-[10px] text-[var(--color-gray-400)]"
       >
        {{formatPrice(getExtraBedTotalPrice(room))}}
        ریال
@@ -464,21 +647,16 @@ v-else
      </div>
 
 
-     <button
-      type="button"
-      class="flex h-9 w-9 items-center justify-center rounded-lg border text-[22px]"
-      :class="
-       getSelectedExtraBedCount(room)>=getExtraBedLimit(room)
-        ?'cursor-not-allowed border-gray-300 text-gray-300'
-        :'border-[#5865ff] text-[#5865ff]'
-      "
+          <UiBaseButton
+      label="+"
+      variant="outline"
+      color="primary"
+      class="!h-9 !w-9 !min-w-0 !rounded-lg !p-0 text-[22px]"
       :disabled="
        getSelectedExtraBedCount(room)>=getExtraBedLimit(room)
       "
       @click="increaseExtraBed(room)"
-     >
-      +
-     </button>
+     />
 
 
      <span
@@ -488,21 +666,16 @@ v-else
      </span>
 
 
-     <button
-      type="button"
-      class="flex h-9 w-9 items-center justify-center rounded-lg border text-[20px]"
-      :class="
-       getSelectedExtraBedCount(room)<=0
-        ?'cursor-not-allowed border-gray-300 text-gray-300'
-        :'border-gray-400 text-gray-500'
-      "
+          <UiBaseButton
+      label="−"
+      variant="outline"
+      color="primary"
+      class="!h-9 !w-9 !min-w-0 !rounded-lg !p-0 text-[20px]"
       :disabled="
        getSelectedExtraBedCount(room)<=0
       "
       @click="decreaseExtraBed(room)"
-     >
-      −
-     </button>
+     />
 
     </div>
 
@@ -520,14 +693,14 @@ v-else
      <div class="min-w-[140px]">
 
       <span
-       class="text-[11px] font-bold text-gray-700"
+       class="text-[11px] font-bold text-[var(--color-gray-700)]"
       >
        {{room.noBedService || 'بدون تخت'}}
       </span>
 
       <p
        v-if="getNoBedTotalPrice(room)>0"
-       class="mt-1 text-[10px] text-gray-400"
+       class="mt-1 text-[10px] text-[var(--color-gray-400)]"
       >
        {{formatPrice(getNoBedTotalPrice(room))}}
        ریال
@@ -536,21 +709,16 @@ v-else
      </div>
 
 
-     <button
-      type="button"
-      class="flex h-9 w-9 items-center justify-center rounded-lg border text-[22px]"
-      :class="
-       getSelectedNoBedCount(room)>=getNoBedLimit(room)
-        ?'cursor-not-allowed border-gray-300 text-gray-300'
-        :'border-[#5865ff] text-[#5865ff]'
-      "
+          <UiBaseButton
+      label="+"
+      variant="outline"
+      color="primary"
+      class="!h-9 !w-9 !min-w-0 !rounded-lg !p-0 text-[22px]"
       :disabled="
        getSelectedNoBedCount(room)>=getNoBedLimit(room)
       "
       @click="increaseNoBed(room)"
-     >
-      +
-     </button>
+     />
 
 
      <span
@@ -560,21 +728,16 @@ v-else
      </span>
 
 
-     <button
-      type="button"
-      class="flex h-9 w-9 items-center justify-center rounded-lg border text-[20px]"
-      :class="
-       getSelectedNoBedCount(room)<=0
-        ?'cursor-not-allowed border-gray-300 text-gray-300'
-        :'border-gray-400 text-gray-500'
-      "
+          <UiBaseButton
+      label="−"
+      variant="outline"
+      color="primary"
+      class="!h-9 !w-9 !min-w-0 !rounded-lg !p-0 text-[20px]"
       :disabled="
        getSelectedNoBedCount(room)<=0
       "
       @click="decreaseNoBed(room)"
-     >
-      −
-     </button>
+     />
 
     </div>
 
@@ -588,93 +751,77 @@ v-else
   <!-- ========================= -->
 
   <div
-   class="flex flex-wrap items-center justify-end gap-4"
+   class="flex min-w-[210px] flex-col items-stretch gap-3"
   >
 
-   <!-- قیمت -->
+   <!-- قیمت نهایی؛ همیشه بالای دکمه رزرو -->
    <div
     v-if="
      Number(room.calculatedPrice||0)>0 &&
      getRoomAvailableCount(room)>0
     "
-    class="text-left"
+    class="text-right"
     dir="rtl"
    >
 
     <p
-     class="text-[10px] text-gray-400"
+     class="text-[11px] font-bold text-[var(--color-gray-700)]"
     >
      قیمت نهایی برای
-     {{room.nightCount}}
+     {{getRoomNightCount(room)}}
      شب
     </p>
 
-
     <div
-     class="mt-1 flex items-end gap-1"
+     class="mt-1 flex items-end justify-center gap-1"
     >
-
      <span
-      class="text-[18px] font-black text-gray-900"
+      class="text-[19px] font-black text-[var(--color-primary-dark)]"
      >
       {{formatPrice(getRoomFinalPrice(room))}}
      </span>
 
      <span
-      class="pb-[2px] text-[10px] text-gray-500"
+      class="pb-[2px] text-[10px] text-[var(--color-gray-600)]"
      >
       ریال
      </span>
-
     </div>
-
    </div>
-
 
    <!-- قیمت موجود نیست -->
    <div
-    v-if="
+    v-else-if="
      getRoomAvailableCount(room)>0 &&
      Number(room.calculatedPrice||0)<=0
     "
-    class="text-[11px] font-bold text-gray-400"
+    class="rounded-xl bg-[var(--color-gray-100)] px-4 py-3 text-center text-[11px] font-bold text-[var(--color-gray-500)]"
    >
     قیمت موجود نیست
    </div>
 
-
    <!-- واچر -->
-   <span
-    v-if="
-     room.onRequest &&
-     getRoomAvailableCount(room)>0
-    "
-    class="text-[11px] font-bold text-orange-500"
-   >
-    واچر بعد از تایید هتل ارسال میشود
-   </span>
-
+   <UiBaseLabel
+    v-if="room.onRequest && getRoomAvailableCount(room)>0"
+    text="واچر بعد از تایید هتل ارسال می‌شود"
+    color="var(--color-red-500)"
+    icon='<i class="bi bi-info-circle"></i>'
+   style="zoom:0.78"
+   />
 
    <!-- رزرو -->
-   <button
-    type="button"
-    class="rounded-lg px-5 py-3 text-[11px] font-bold text-white"
-    :class="
-     getRoomAvailableCount(room)>0
-      ?'bg-red-500'
-      :'bg-gray-400 cursor-not-allowed'
-    "
-    :disabled="
-     getRoomAvailableCount(room)===0
-    "
-    @click="reserveRoom(room)"
-   >
-    {{
+   <UiBaseButton
+    :label="
      getRoomAvailableCount(room)>0
       ?'رزرو اتاق'
       :'تکمیل ظرفیت'
-    }}
-   </button>
+    "
+    variant="filled"
+    color="primary"
+    class="w-full !rounded-3xl !px-6 h-12 text-sm font-bold"
+    :disabled="getRoomAvailableCount(room)===0"
+    @click="reserveRoom(room)"
+   />
 
   </div>
 
