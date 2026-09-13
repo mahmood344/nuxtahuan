@@ -551,8 +551,8 @@ export async function searchNiraFlightForAirline(
         method:'GET',
         params:{
           AirLine:airlineCode,
-          OfficeUser:creds.username,
-          OfficePass:creds.password,
+          // OfficeUser:creds.username,
+          // OfficePass:creds.password,
           cbSource:String(
             params.from||''
           ).toUpperCase(),
