@@ -1843,7 +1843,8 @@ childNoBedNo:
 
   // تعداد نفر پایه
   adultNo:
-   Number(room.count||1),
+  Number(room.capacity || 0) *
+  Number(room.count || 1),
 
 
   infantNo:
@@ -1856,9 +1857,9 @@ childNoBedNo:
   description:[
    `${room.count} اتاق`,
 
-   Number(room.extraBedCount||0)>0
-    ?`${room.extraBedCount} تخت اضافه`
-    :'',
+  Number(room.extraBedCount||0)>0
+ ?`${room.extraBedCount} ${room.extraBedService || 'تخت اضافه'}`
+ :'',
 
    Number(room.noBedCount||0)>0
     ?`${room.noBedCount} بدون تخت`
@@ -1875,90 +1876,124 @@ childNoBedNo:
 }
 async function continueHotelBooking(){
 
- try{
+  if(continueShoppingLoading.value)
+    return
 
+  /*
+   * اول فرم‌ها Validate شوند
+   */
+  const passengerValid =
+    await passengerFormRef.value?.validateAll?.() ?? false
+
+  const contactValid =
+    await contactFormRef.value?.validateAll?.() ?? false
+
+  if(
+    !passengerValid ||
+    !contactValid
+  ){
+    return
+  }
+
+  /*
+   * اگر کاربر Login نیست
+   * Modal ورود باز شود.
+   *
+   * بعد از Login موفق همین عملیات
+   * دوباره اجرا می‌شود.
+   */
+  if(!flightStore.isLoggedIn){
+
+    flightStore.openModal()
+
+    flightStore.pendingAction =
+      ()=>continueHotelBooking()
+
+    return
+  }
+
+  /*
+   * فقط بعد از Login
+   * فرآیند Contract شروع شود.
+   */
   continueShoppingLoading.value=true
 
+  try{
 
-const passengerValid =
-  await passengerFormRef.value?.validateAll()
+    const passengerData =
+      passengerFormRef.value?.getData?.() ?? []
 
-if(passengerValid !== true)
-  return
+    const contactData =
+      contactFormRef.value?.getData?.() ?? {}
 
-const contactValid =
-  await contactFormRef.value?.validateAll()
+    if(!passengerData.length)
+      return
 
-if(contactValid !== true)
-  return
+    bookingData.value.passengers =
+      passengerData
 
-
-
-  const passengerData =
-    passengerFormRef.value.getData()
-
-
-
-  const contactData =
-    contactFormRef.value.getData()
-
-bookingData.value.passengers = passengerData
-
-bookingData.value.contact = contactData
-await hotelStore.refreshSelectedRoomsPricing()
-  const payload =
-    buildHotelContractPayload(
-      passengerData,
+    bookingData.value.contact =
       contactData
+
+    await hotelStore
+      .refreshSelectedRoomsPricing()
+
+    const payload =
+      buildHotelContractPayload(
+        passengerData,
+        contactData
+      )
+
+    console.log(
+      'HOTEL CONTRACT PAYLOAD',
+      payload
     )
 
+    const response =
+      await addHotelContract(
+        payload
+      )
 
+    currentContractData.value = {
+      addPayload:payload,
+      addResponse:response
+    }
 
-  console.log('HOTEL CONTRACT PAYLOAD',payload)
+    bookingData.value.contract =
+      response
 
+    console.log(
+      'HOTEL BOOKING DATA',
+      bookingData.value
+    )
 
+    /*
+     * فقط کاربر Login شده
+     * اجازه ورود به تایید و پرداخت دارد
+     */
+    flightStore.setCurrentStep(2)
 
- const response=
- await addHotelContract(payload)
+    await nextTick()
 
-currentContractData.value={
- addPayload:payload,
- addResponse:response
-}
+    window.scrollTo({
+      top:0,
+      behavior:'smooth'
+    })
 
-bookingData.value.contract=response
+  }
+  catch(error){
 
-console.log(
- 'HOTEL BOOKING DATA',
- bookingData.value
-)
+    console.error(
+      'Hotel Contract Error',
+      error
+    )
 
-flightStore.setCurrentStep(2)
+  }
+  finally{
 
-await nextTick()
+    continueShoppingLoading.value=false
 
-window.scrollTo({
- top:0,
- behavior:'smooth'
-})
-
-
-
- }
- catch(error){
-
-  console.error(
-    'Hotel Contract Error',
-    error
-  )
-
- }
- finally{
-
-  continueShoppingLoading.value=false
-
- }
-
+  }
 }
 async function updateHotelContract(payload){
 
@@ -2200,9 +2235,8 @@ function buildHotelUpdateContractPayload({
 
      // تعداد پایه
      adultNo:
-      Number(
-       room.count||1
-      ),
+  Number(room.capacity || 0) *
+  Number(room.count || 1),
 
      infantNo:
       0,
