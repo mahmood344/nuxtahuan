@@ -84,49 +84,23 @@
 
             </div>
 
-            <button
+           <button
+  v-if="isHotelBooking"
+  type="button"
+  class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-700 px-6 py-3 font-semibold text-white transition hover:bg-blue-800"
+  @click="downloadHotelVoucherPdf"
+>
+  دانلود PDF واچر
+</button>
 
-             v-if="tickets.length || isHotelBooking"
-
-              type="button"
-
-              class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-700 px-6 py-3 font-semibold text-white transition hover:bg-blue-800"
-
-              @click="printTickets"
-
-            >
-
-              <svg
-
-                xmlns="http://www.w3.org/2000/svg"
-
-                fill="none"
-
-                viewBox="0 0 24 24"
-
-                stroke-width="2"
-
-                stroke="currentColor"
-
-                class="h-5 w-5"
-
-              >
-
-                <path
-
-                  stroke-linecap="round"
-
-                  stroke-linejoin="round"
-
-                  d="M6.72 13.829a3 3 0 00-2.68 3.306l.266 2.4A2.25 2.25 0 006.542 21h10.916a2.25 2.25 0 002.236-1.465l.266-2.4a3 3 0 00-2.68-3.306M6.75 7.5V3.75A.75.75 0 017.5 3h9a.75.75 0 01.75.75V7.5M6.75 16.5h10.5M6 7.5h12a3 3 0 013 3v3.75a.75.75 0 01-.75.75H18v-1.5H6V15H3.75a.75.75 0 01-.75-.75V10.5a3 3 0 013-3z"
-
-                />
-
-              </svg>
-
-              چاپ یا ذخیره PDF
-
-            </button>
+<button
+  v-else-if="tickets.length"
+  type="button"
+  class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-700 px-6 py-3 font-semibold text-white transition hover:bg-blue-800"
+  @click="downloadFlightTicketsPdf"
+>
+  دانلود PDF بلیت
+</button>
 
           </div>
 
@@ -246,13 +220,10 @@
 <script setup lang="ts">
 
 import {
-
   computed,
-
+  nextTick,
   onMounted,
-
   ref
-
 } from 'vue'
 
 import { useRoute } from '#app'
@@ -4317,7 +4288,128 @@ const fetchFlightPrintableTickets=async(
   }
 
 }
+const downloadHotelVoucherPdf = async () => {
 
+  if(
+    typeof window === 'undefined'
+  ){
+    return
+  }
+
+  const element =
+    document.querySelector(
+      '#ticket-print-area .hotel-voucher'
+    ) as HTMLElement | null
+
+  if(!element){
+
+    toast.error(
+      'واچر هتل برای دانلود پیدا نشد.'
+    )
+
+    return
+  }
+
+  try{
+
+    const [
+      { default:html2canvas },
+      { jsPDF }
+    ] =
+      await Promise.all([
+        import('html2canvas'),
+        import('jspdf')
+      ])
+
+    /*
+     * فعال شدن استایل مخصوص PDF
+     */
+    element.classList.add(
+      'pdf-exporting'
+    )
+
+    await nextTick()
+
+    const canvas =
+      await html2canvas(
+        element,
+        {
+          scale:2,
+          useCORS:true,
+          backgroundColor:'#ffffff',
+          logging:false
+        }
+      )
+
+    const pdf =
+      new jsPDF({
+        orientation:'portrait',
+        unit:'mm',
+        format:'a4',
+        compress:true
+      })
+
+    const pageWidth =
+      pdf.internal.pageSize
+        .getWidth()
+
+    const pageHeight =
+      pdf.internal.pageSize
+        .getHeight()
+
+    const imageData =
+      canvas.toDataURL(
+        'image/jpeg',
+        0.95
+      )
+
+    pdf.addImage(
+      imageData,
+      'JPEG',
+      0,
+      0,
+      pageWidth,
+      pageHeight,
+      undefined,
+      'FAST'
+    )
+
+    const contractId =
+      Number(
+        contractData.value?.id ||
+        0
+      )
+
+    pdf.save(
+      `hotel-voucher-${
+        contractId ||
+        'ahuan'
+      }.pdf`
+    )
+
+  }
+  catch(error:any){
+
+    console.error(
+      'Hotel voucher PDF error:',
+      error
+    )
+
+    toast.error(
+      'دانلود PDF واچر با خطا مواجه شد.'
+    )
+
+  }
+  finally{
+
+    /*
+     * برگشت Preview به حالت عادی
+     */
+    element.classList.remove(
+      'pdf-exporting'
+    )
+  }
+}
 const processContractTickets=async(
 
   contract:any
@@ -4514,302 +4606,602 @@ const partoSessionCookie=
 
   )
 
-const printTicketsInternal = async () => {
+// const printTicketsInternal = async () => {
 
-  if (typeof window === 'undefined') return
+//   if (typeof window === 'undefined') return
 
-  const printArea =
+//   const printArea =
 
-    document.getElementById('ticket-print-area')
+//     document.getElementById('ticket-print-area')
 
-  if (!printArea) {
+//   if (!printArea) {
 
-    throw new Error('بخش بلیت برای چاپ پیدا نشد.')
+//     throw new Error('بخش بلیت برای چاپ پیدا نشد.')
 
-  }
+//   }
 
-  const iframe =
+//   const iframe =
 
-    document.createElement('iframe')
+//     document.createElement('iframe')
 
-  iframe.style.position = 'fixed'
+//   iframe.style.position = 'fixed'
 
-  iframe.style.width = '0'
+//   iframe.style.width = '0'
 
-  iframe.style.height = '0'
+//   iframe.style.height = '0'
 
-  iframe.style.border = '0'
+//   iframe.style.border = '0'
 
-  iframe.style.right = '0'
+//   iframe.style.right = '0'
 
-  iframe.style.bottom = '0'
+//   iframe.style.bottom = '0'
 
-  document.body.appendChild(iframe)
+//   document.body.appendChild(iframe)
 
-  const iframeDocument =
+//   const iframeDocument =
 
-    iframe.contentDocument ||
+//     iframe.contentDocument ||
 
-    iframe.contentWindow?.document
+//     iframe.contentWindow?.document
 
-  if (!iframeDocument) {
+//   if (!iframeDocument) {
 
-    iframe.remove()
+//     iframe.remove()
 
-    throw new Error('امکان ساخت صفحه چاپ وجود ندارد.')
+//     throw new Error('امکان ساخت صفحه چاپ وجود ندارد.')
 
-  }
+//   }
 
-  const styles = Array.from(
+//   const styles = Array.from(
 
-    document.querySelectorAll(
+//     document.querySelectorAll(
 
-      'style,link[rel="stylesheet"]'
+//       'style,link[rel="stylesheet"]'
 
-    )
+//     )
 
-  )
+//   )
 
-    .map((element) =>
+//     .map((element) =>
 
-      element.outerHTML
+//       element.outerHTML
 
-    )
+//     )
 
-    .join('\n')
+//     .join('\n')
 
-  iframeDocument.open()
+//   iframeDocument.open()
 
-  iframeDocument.write(`
+//   iframeDocument.write(`
 
-    <!DOCTYPE html>
+//     <!DOCTYPE html>
 
-    <html lang="fa" dir="rtl">
+//     <html lang="fa" dir="rtl">
 
-      <head>
+//       <head>
 
-        <meta charset="UTF-8" />
+//         <meta charset="UTF-8" />
 
-        ${styles}
+//         ${styles}
 
-        <style>
+//         <style>
 
-          @page {
+//           @page {
 
-            size: A4 landscape;
+//             size: A4 landscape;
 
-            margin: 7mm;
+//             margin: 7mm;
 
-          }
+//           }
 
-          html,
+//           html,
 
-          body {
+//           body {
 
-            margin: 0 !important;
+//             margin: 0 !important;
 
-            padding: 0 !important;
+//             padding: 0 !important;
 
-            background: #fff !important;
+//             background: #fff !important;
 
-          }
+//           }
 
-          body {
+//           body {
 
-            width: 100%;
+//             width: 100%;
 
-          }
+//           }
 
-          *,
+//           *,
 
-          *::before,
+//           *::before,
 
-          *::after {
+//           *::after {
 
-            box-sizing: border-box !important;
+//             box-sizing: border-box !important;
 
-            -webkit-print-color-adjust: exact !important;
+//             -webkit-print-color-adjust: exact !important;
 
-            print-color-adjust: exact !important;
+//             print-color-adjust: exact !important;
 
-          }
+//           }
 
-          .ticket-list {
+//           .ticket-list {
 
-            display: block !important;
+//             display: block !important;
 
-            width: 100% !important;
+//             width: 100% !important;
 
-            margin: 0 !important;
+//             margin: 0 !important;
 
-            padding: 0 !important;
+//             padding: 0 !important;
 
-          }
+//           }
 
-          .ticket-sheet {
+//           .ticket-sheet {
 
-            display: block !important;
+//             display: block !important;
 
-            width: 100% !important;
+//             width: 100% !important;
 
-            height: 190mm !important;
+//             height: 190mm !important;
 
-            margin: 0 !important;
+//             margin: 0 !important;
 
-            padding: 0 !important;
+//             padding: 0 !important;
 
-            overflow: hidden !important;
+//             overflow: hidden !important;
 
-            break-inside: avoid !important;
+//             break-inside: avoid !important;
 
-            page-break-inside: avoid !important;
+//             page-break-inside: avoid !important;
 
-            break-after: page !important;
+//             break-after: page !important;
 
-            page-break-after: always !important;
+//             page-break-after: always !important;
 
-          }
+//           }
 
-          .ticket-sheet:last-child {
+//           .ticket-sheet:last-child {
 
-            break-after: auto !important;
+//             break-after: auto !important;
 
-            page-break-after: auto !important;
+//             page-break-after: auto !important;
 
-          }
+//           }
 
-          .ticket-page {
+//           .ticket-page {
 
-            width: 100% !important;
+//             width: 100% !important;
 
-            margin: 0 !important;
+//             margin: 0 !important;
 
-            min-height: 0 !important;
+//             min-height: 0 !important;
 
-            border-radius: 0 !important;
+//             border-radius: 0 !important;
 
-            box-shadow: none !important;
+//             box-shadow: none !important;
 
-            transform: scale(.82);
+//             transform: scale(.82);
 
-            transform-origin: top center;
+//             transform-origin: top center;
 
-          }
+//           }
 
-        </style>
+//         </style>
 
-      </head>
+//       </head>
 
-      <body>
+//       <body>
 
-        ${printArea.innerHTML}
+//         ${printArea.innerHTML}
 
-      </body>
+//       </body>
 
-    </html>
+//     </html>
 
-  `)
+//   `)
 
-  iframeDocument.close()
+//   iframeDocument.close()
 
-  const printWindow =
+//   const printWindow =
 
-    iframe.contentWindow
+//     iframe.contentWindow
 
-  if (!printWindow) {
+//   if (!printWindow) {
 
-    iframe.remove()
+//     iframe.remove()
 
-    throw new Error('پنجره چاپ در دسترس نیست.')
+//     throw new Error('پنجره چاپ در دسترس نیست.')
 
-  }
+//   }
 
-  const images =
+//   const images =
 
-    Array.from(
+//     Array.from(
 
-      iframeDocument.images
+//       iframeDocument.images
 
-    )
+//     )
 
-  await Promise.all(
+//   await Promise.all(
 
-    images.map(
+//     images.map(
 
-      (image) =>
+//       (image) =>
 
-        new Promise<void>(
+//         new Promise<void>(
 
-          (resolve) => {
+//           (resolve) => {
 
-            if (image.complete) {
+//             if (image.complete) {
 
-              resolve()
+//               resolve()
 
-              return
+//               return
 
+//             }
+
+//             image.onload = () =>
+
+//               resolve()
+
+//             image.onerror = () =>
+
+//               resolve()
+
+//           }
+
+//         )
+
+//     )
+
+//   )
+
+//   printWindow.focus()
+
+//   printWindow.print()
+
+//   setTimeout(() => {
+
+//     iframe.remove()
+
+//   }, 1000)
+
+// }
+
+// const printTickets=async()=>{
+
+//   try{
+
+//     await printTicketsInternal()
+
+//   }catch(error:any){
+
+//     console.error(
+
+//       'Print ticket error:',
+
+//       error
+
+//     )
+
+//     toast.error(
+
+//       error?.data?.message||
+
+//       error?.data?.title||
+
+//       error?.message||
+
+//       'چاپ بلیت با خطا مواجه شد.'
+
+//     )
+
+//   }
+
+// }
+const downloadFlightTicketsPdf =
+  async () => {
+
+    if(
+      typeof window === 'undefined'
+    ){
+      return
+    }
+
+
+    const printArea =
+      document.getElementById(
+        'ticket-print-area'
+      )
+
+
+    if(!printArea){
+
+      toast.error(
+        'بخش بلیت پیدا نشد.'
+      )
+
+      return
+    }
+
+
+    const ticketSheets =
+      Array.from(
+        printArea.querySelectorAll(
+          '.ticket-sheet'
+        )
+      ) as HTMLElement[]
+
+
+    if(
+      !ticketSheets.length
+    ){
+
+      toast.error(
+        'بلیت برای دانلود پیدا نشد.'
+      )
+
+      return
+    }
+
+
+    try{
+
+      const [
+        { default:html2canvas },
+        { jsPDF }
+      ] =
+        await Promise.all([
+          import('html2canvas'),
+          import('jspdf')
+        ])
+
+
+      /*
+       * فعال شدن استایل مخصوص PDF پرواز
+       */
+      printArea.classList.add(
+        'flight-pdf-exporting'
+      )
+
+
+      await nextTick()
+
+
+      /*
+       * در صورت وجود Web Font
+       */
+      if(
+        document.fonts?.ready
+      ){
+        await document.fonts.ready
+      }
+
+
+      /*
+       * بلیت پرواز Landscape است.
+       */
+      const pdf =
+        new jsPDF({
+          orientation:'landscape',
+          unit:'mm',
+          format:'a4',
+          compress:true
+        })
+
+
+      const pageWidth =
+        pdf.internal.pageSize
+          .getWidth()
+
+
+      const pageHeight =
+        pdf.internal.pageSize
+          .getHeight()
+
+
+      /*
+       * فاصله اطراف بلیت در PDF
+       */
+      const margin =
+        4
+
+
+      const availableWidth =
+        pageWidth -
+        margin * 2
+
+
+      const availableHeight =
+        pageHeight -
+        margin * 2
+
+
+      for(
+        let index = 0;
+        index < ticketSheets.length;
+        index++
+      ){
+
+        const ticketSheet =
+          ticketSheets[index]
+
+
+        await nextTick()
+
+
+        /*
+         * هر ticket-sheet جداگانه
+         * تبدیل به Canvas می‌شود.
+         */
+        const canvas =
+          await html2canvas(
+            ticketSheet,
+            {
+              scale:2,
+
+              useCORS:true,
+
+              backgroundColor:
+                '#ffffff',
+
+              logging:false,
+
+              /*
+               * حتی اگر کاربر موبایل باشد،
+               * PDF با Layout دسکتاپ ساخته شود.
+               */
+              windowWidth:1440,
+
+              windowHeight:1000,
+
+              onclone:(
+                clonedDocument:Document
+              )=>{
+
+                const clonedPrintArea =
+                  clonedDocument
+                    .getElementById(
+                      'ticket-print-area'
+                    )
+
+                clonedPrintArea
+                  ?.classList
+                  .add(
+                    'flight-pdf-exporting'
+                  )
+              }
             }
+          )
 
-            image.onload = () =>
 
-              resolve()
+        /*
+         * بلیت دوم به بعد:
+         * صفحه جدید
+         */
+        if(index > 0){
 
-            image.onerror = () =>
+          pdf.addPage(
+            'a4',
+            'landscape'
+          )
+        }
 
-              resolve()
 
-          }
+        const imageRatio =
+          canvas.width /
+          canvas.height
 
+
+        let imageWidth =
+          availableWidth
+
+
+        let imageHeight =
+          imageWidth /
+          imageRatio
+
+
+        /*
+         * اگر ارتفاع بلیت بیشتر از
+         * ارتفاع قابل استفاده A4 بود،
+         * کل بلیت متناسب کوچک شود.
+         */
+        if(
+          imageHeight >
+          availableHeight
+        ){
+
+          imageHeight =
+            availableHeight
+
+          imageWidth =
+            imageHeight *
+            imageRatio
+        }
+
+
+        /*
+         * وسط‌چین افقی
+         */
+        const x =
+          (
+            pageWidth -
+            imageWidth
+          ) / 2
+
+
+        /*
+         * وسط‌چین عمودی
+         */
+        const y =
+          (
+            pageHeight -
+            imageHeight
+          ) / 2
+
+
+        const imageData =
+          canvas.toDataURL(
+            'image/jpeg',
+            0.95
+          )
+
+
+        pdf.addImage(
+          imageData,
+          'JPEG',
+          x,
+          y,
+          imageWidth,
+          imageHeight,
+          undefined,
+          'FAST'
+        )
+      }
+
+
+      const contractId =
+        Number(
+          contractData.value?.id ||
+          0
         )
 
-    )
 
-  )
+      pdf.save(
+        `flight-tickets-${
+          contractId ||
+          'ahuan'
+        }.pdf`
+      )
 
-  printWindow.focus()
+    }
+    catch(error:any){
 
-  printWindow.print()
+      console.error(
+        'Flight tickets PDF error:',
+        error
+      )
 
-  setTimeout(() => {
 
-    iframe.remove()
+      toast.error(
+        error?.message ||
+        'دانلود PDF بلیت با خطا مواجه شد.'
+      )
 
-  }, 1000)
+    }
+    finally{
 
-}
-
-const printTickets=async()=>{
-
-  try{
-
-    await printTicketsInternal()
-
-  }catch(error:any){
-
-    console.error(
-
-      'Print ticket error:',
-
-      error
-
-    )
-
-    toast.error(
-
-      error?.data?.message||
-
-      error?.data?.title||
-
-      error?.message||
-
-      'چاپ بلیت با خطا مواجه شد.'
-
-    )
-
+      /*
+       * Preview دوباره به حالت عادی برگردد.
+       */
+      printArea.classList.remove(
+        'flight-pdf-exporting'
+      )
+    }
   }
-
-}
-
 const initializePage = async () => {
 
   loading.value = true
@@ -4900,5 +5292,498 @@ onMounted(() => {
 
 
 }
+/* ================================= */
+/* Flight PDF Export */
+/* ================================= */
 
+.flight-pdf-exporting
+.ticket-sheet{
+  margin:0 !important;
+  padding:0 !important;
+
+  overflow:visible !important;
+
+  break-after:auto !important;
+  page-break-after:auto !important;
+}
+
+
+.flight-pdf-exporting
+.ticket-page{
+  margin:0 !important;
+
+  transform:none !important;
+
+  box-shadow:none !important;
+}
+
+
+/* ================================= */
+/* Tailwind Blue */
+/* ================================= */
+
+.flight-pdf-exporting
+.bg-blue-900{
+  background-color:#1c398e !important;
+}
+
+.flight-pdf-exporting
+.bg-blue-50{
+  background-color:#eff6ff !important;
+}
+
+
+.flight-pdf-exporting
+.text-blue-950{
+  color:#162456 !important;
+}
+
+.flight-pdf-exporting
+.text-blue-900{
+  color:#1c398e !important;
+}
+
+.flight-pdf-exporting
+.text-blue-200{
+  color:#bedbff !important;
+}
+
+.flight-pdf-exporting
+.text-blue-100{
+  color:#dbeafe !important;
+}
+
+
+.flight-pdf-exporting
+[class~="text-blue-950/70"]{
+  color:rgba(
+    22,
+    36,
+    86,
+    .7
+  ) !important;
+}
+
+
+.flight-pdf-exporting
+.border-blue-900{
+  border-color:#1c398e !important;
+}
+
+.flight-pdf-exporting
+.border-blue-300{
+  border-color:#8ec5ff !important;
+}
+
+.flight-pdf-exporting
+.border-blue-100{
+  border-color:#dbeafe !important;
+}
+
+
+/* ================================= */
+/* Slate */
+/* ================================= */
+
+.flight-pdf-exporting
+.bg-slate-50{
+  background-color:#f8fafc !important;
+}
+
+
+.flight-pdf-exporting
+.text-slate-900{
+  color:#0f172b !important;
+}
+
+.flight-pdf-exporting
+.text-slate-700{
+  color:#314158 !important;
+}
+
+.flight-pdf-exporting
+.text-slate-600{
+  color:#45556c !important;
+}
+
+.flight-pdf-exporting
+.text-slate-500{
+  color:#62748e !important;
+}
+
+
+.flight-pdf-exporting
+.border-slate-100{
+  border-color:#f1f5f9 !important;
+}
+
+
+/* ================================= */
+/* Emerald / Status */
+/* ================================= */
+
+.flight-pdf-exporting
+.bg-emerald-100{
+  background-color:#d0fae5 !important;
+}
+
+.flight-pdf-exporting
+.text-emerald-700{
+  color:#007a55 !important;
+}
+
+
+/* ================================= */
+/* Amber / Baggage */
+/* ================================= */
+
+.flight-pdf-exporting
+.bg-amber-50{
+  background-color:#fffbeb !important;
+}
+
+.flight-pdf-exporting
+.text-amber-800{
+  color:#973c00 !important;
+}
+
+.flight-pdf-exporting
+.border-amber-200{
+  border-color:#fee685 !important;
+}
+
+
+/* ================================= */
+/* White */
+/* ================================= */
+
+.flight-pdf-exporting
+.bg-white{
+  background-color:#ffffff !important;
+}
+
+.flight-pdf-exporting
+.text-white{
+  color:#ffffff !important;
+}
+
+
+/* ================================= */
+/* Passenger */
+/* رنگ اصلی خودت */
+/* ================================= */
+
+.flight-pdf-exporting
+[class~="bg-[#d5af81]"]{
+  background-color:#d5af81 !important;
+}
+
+
+/* ================================= */
+/* Cancel stamp */
+/* ================================= */
+
+.flight-pdf-exporting
+.cancel-stamp{
+  color:#dc2626 !important;
+  border-color:#dc2626 !important;
+}
+
+
+/* ================================= */
+/* Ticket Sheet */
+/* ================================= */
+
+.flight-pdf-exporting
+.ticket-sheet{
+
+  position:
+    relative !important;
+
+  width:
+    1120px !important;
+
+  max-width:
+    none !important;
+
+  margin:
+    0 !important;
+
+  padding:
+    0 !important;
+
+  background:
+    #ffffff !important;
+
+  overflow:
+    visible !important;
+
+  break-after:
+    auto !important;
+
+  page-break-after:
+    auto !important;
+}
+
+
+/* ================================= */
+/* Ticket Page */
+/* ================================= */
+
+.flight-pdf-exporting
+.ticket-page{
+
+  width:
+    1120px !important;
+
+  max-width:
+    none !important;
+
+  margin:
+    0 !important;
+
+  transform:
+    none !important;
+
+  background:
+    #ffffff !important;
+
+  border-color:
+    #1e3a8a !important;
+
+  box-shadow:
+    none !important;
+}
+
+
+/* ================================= */
+/* Header */
+/* ================================= */
+
+.flight-pdf-exporting
+.ticket-header{
+
+  background:
+    #1e3a8a !important;
+
+  color:
+    #ffffff !important;
+}
+
+
+.flight-pdf-exporting
+.ticket-header *{
+
+  color:
+    #ffffff !important;
+}
+
+
+/* ================================= */
+/* Company */
+/* ================================= */
+
+.flight-pdf-exporting
+.ticket-company{
+
+  background:
+    #ffffff !important;
+
+  color:
+    #1e3a8a !important;
+}
+
+
+.flight-pdf-exporting
+.ticket-company *{
+
+  color:
+    #1e3a8a !important;
+}
+
+
+/* ================================= */
+/* Status */
+/* ================================= */
+
+.flight-pdf-exporting
+.ticket-status{
+
+  background:
+    #d1fae5 !important;
+
+  color:
+    #047857 !important;
+
+  border-color:
+    #a7f3d0 !important;
+}
+
+
+.flight-pdf-exporting
+.ticket-status *{
+
+  color:
+    #047857 !important;
+}
+
+
+/* ================================= */
+/* Flight Info Box */
+/* ================================= */
+
+.flight-pdf-exporting
+.ticket-info-box{
+
+  background:
+    #f8fafc !important;
+
+  color:
+    #0f172a !important;
+}
+
+
+/* ================================= */
+/* Warning */
+/* ================================= */
+
+.flight-pdf-exporting
+.ticket-warning{
+
+  background:
+    #fffbeb !important;
+
+  color:
+    #92400e !important;
+
+  border-color:
+    #fde68a !important;
+}
+
+
+.flight-pdf-exporting
+.ticket-warning *{
+
+  color:
+    #92400e !important;
+}
+
+
+/* ================================= */
+/* Passenger */
+/* ================================= */
+
+.flight-pdf-exporting
+.ticket-passenger{
+
+  background:
+    #d5af81 !important;
+
+  color:
+    #172554 !important;
+}
+
+
+.flight-pdf-exporting
+.ticket-passenger *{
+
+  color:
+    #172554 !important;
+}
+
+
+/* ================================= */
+/* Price Boxes */
+/* ================================= */
+
+.flight-pdf-exporting
+.ticket-price-box{
+
+  background:
+    #f8fafc !important;
+
+  color:
+    #0f172a !important;
+}
+
+
+.flight-pdf-exporting
+.ticket-price-box *{
+
+  color:
+    #0f172a !important;
+}
+
+
+/* ================================= */
+/* Total */
+/* ================================= */
+
+.flight-pdf-exporting
+.ticket-total{
+
+  background:
+    #1e3a8a !important;
+
+  color:
+    #ffffff !important;
+}
+
+
+.flight-pdf-exporting
+.ticket-total *{
+
+  color:
+    #ffffff !important;
+}
+
+
+/* ================================= */
+/* Headings */
+/* ================================= */
+
+.flight-pdf-exporting
+.ticket-page h2,
+.flight-pdf-exporting
+.ticket-page h3{
+
+  color:
+    #1e3a8a !important;
+}
+
+
+.flight-pdf-exporting
+.ticket-header h2,
+.flight-pdf-exporting
+.ticket-header h3{
+
+  color:
+    #ffffff !important;
+}
+
+
+.flight-pdf-exporting
+.ticket-passenger h3{
+
+  color:
+    #172554 !important;
+}
+
+
+/* ================================= */
+/* Cancel Stamp */
+/* ================================= */
+
+.flight-pdf-exporting
+.cancel-stamp{
+
+  color:
+    #dc2626 !important;
+
+  border-color:
+    #dc2626 !important;
+
+  background:
+    transparent !important;
+}
 </style>

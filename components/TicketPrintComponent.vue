@@ -57,7 +57,7 @@
         </div>
 
         <div
-          class="rounded-2xl bg-white px-4 py-3 text-center text-blue-900"
+         class="ticket-company rounded-2xl bg-white px-4 py-3 text-center text-blue-900"
         >
           <p class="text-xs">
             شرکت خدمات مسافرتی
