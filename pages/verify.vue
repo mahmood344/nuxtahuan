@@ -3105,59 +3105,77 @@ const markHotelIncomplete=async(
  return save
 }
 
-const bookHotelRoom=async(
- contract:any
-)=>{
-   console.log(
-  'BOOK HOTEL CONTRACT:',
-  contract
- )
-
- console.log(
-  'BOOK HOTEL ROUTES:',
-  contract?.contractRoutes
- )
- try{
-  const routes=
-   Array.isArray(contract?.contractRoutes)
-    ?contract.contractRoutes
-    :[]
-
-  for(const routeItem of routes){
-   await $fetch(
-    'https://api.ahuan.ir/api/Hotel/room/book',
-    {
-     method:'PUT',
-     body:{
-      roomId:routeItem.roomId,
-      checkIn:new Date(
-       routeItem.checkIn
-      ).toISOString(),
-      checkOut:new Date(
-       routeItem.checkOut
-      ).toISOString(),
-      amount:
-       Number(routeItem.price||0)||
-       Number(contract?.totalPrice||0)
-     }
-    }
-   )
-  }
+const bookHotelRoom = async (
+  contract: any,
+  session: PaymentSession
+) => {
+  console.log(
+    'BOOK HOTEL CONTRACT:',
+    contract
+  )
 
   console.log(
-   'Hotel room booked successfully'
+    'BOOK HOTEL SESSION:',
+    session?.hotel
   )
- }catch(error){
-  /*
-   * عمداً throw نمی‌کنیم.
-   * نتیجه این API روی موفقیت نهایی قرارداد
-   * تأثیر ندارد.
-   */
-  console.error(
-   'Hotel booking failed:',
-   error
-  )
- }
+
+  try {
+    const routes =
+      Array.isArray(contract?.contractRoutes)
+        ? contract.contractRoutes
+        : []
+
+    const selectedRooms =
+      Array.isArray(session?.hotel?.rooms)
+        ? session.hotel.rooms
+        : []
+
+    for (const routeItem of routes) {
+
+      const selectedRoom =
+        selectedRooms.find(
+          item =>
+            Number(item?.roomId) ===
+            Number(routeItem?.roomId)
+        )
+
+      const count = Math.max(
+        1,
+        Number(selectedRoom?.count || 1)
+      )
+
+      await $fetch(
+        'https://api.ahuan.ir/api/Hotel/room/book',
+        {
+          method: 'PUT',
+
+          body: {
+            roomId: routeItem.roomId,
+
+            checkIn: new Date(
+              routeItem.checkIn
+            ).toISOString(),
+
+            checkOut: new Date(
+              routeItem.checkOut
+            ).toISOString(),
+
+            amount: count
+          }
+        }
+      )
+    }
+
+    console.log(
+      'Hotel room booked successfully'
+    )
+  }
+  catch (error) {
+    console.error(
+      'Hotel booking failed:',
+      error
+    )
+  }
 }
 
 const refundHotelBankPayment=async(
@@ -3386,7 +3404,8 @@ const processHotelVerify=async(
    * روی SUCCESS تأثیر ندارد.
    */
   await bookHotelRoom(
-   contractData.value
+    contractData.value,
+  session
   )
 await sendHotelSms(
  contractData.value,

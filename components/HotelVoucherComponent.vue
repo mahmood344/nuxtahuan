@@ -103,7 +103,7 @@
             </td>
 
             <td>
-              {{ contract?.passengersNo ?? passengers.length }}
+              {{ roomTotalGuestCount }}
               نفر
             </td>
           </tr>
@@ -157,47 +157,67 @@
  </tr>
 </tbody>
       </table>
-
+<p
+  v-if="roomRoute?.description?.trim()"
+  class="voucher-note"
+>
+  {{ roomRoute.description }}
+</p>
       <p class="voucher-note font-bold">
         ساعت تحویل اتاق ۱۴:۰۰ بعدازظهر و ساعت تخلیه اتاق ۱۲:۰۰ ظهر است.
       </p>
     </VoucherSection>
 
     <!-- Room supervisors -->
-    <VoucherSection title="مشخصات سرپرست اتاق">
-      <table class="voucher-table">
-        <thead>
-          <tr>
-            <th>نام</th>
-            <th>نام خانوادگی</th>
-            <th>رده سنی</th>
-            <th>نوع اتاق</th>
-          </tr>
-        </thead>
+    <!-- Room supervisor -->
+<VoucherSection title="مشخصات سرپرست اتاق">
+  <table class="voucher-table">
+    <thead>
+      <tr>
+        <th>نام</th>
+        <th>نام خانوادگی</th>
+        <th>رده سنی</th>
+        <th>تعداد میهمانان</th>
+      </tr>
+    </thead>
 
-        <tbody>
- <tr>
-  <td>
-   {{ leadPassenger?.fName||'-' }}
-  </td>
+    <tbody>
+      <tr>
+        <td>
+          {{ leadPassenger?.fName || '-' }}
+        </td>
 
-  <td>
-   {{ leadPassenger?.lName||'-' }}
-  </td>
+        <td>
+          {{ leadPassenger?.lName || '-' }}
+        </td>
 
-  <td>
-   {{ passengerTypeTitle(leadPassenger?.age) }}
-  </td>
+        <td>
+          {{ passengerTypeTitle(leadPassenger?.age) }}
+        </td>
 
-  <td>
-   {{ roomRoute?.roomName||'-' }}
-  </td>
- </tr>
-</tbody>
-      </table>
-
-    
-    </VoucherSection>
+        <td>
+  {{ roomCompanionCount }}
+  نفر
+</td>
+      </tr>
+    </tbody>
+  </table>
+<p
+  v-if="leadPassenger?.description?.trim()"
+  class="voucher-note"
+>
+  {{ leadPassenger.description }}
+</p>
+  <p
+  v-if="
+    contract?.printContractDesc === true &&
+    contract?.contractDesc?.trim()
+  "
+  class="voucher-note contract-description"
+>
+  {{ contract.contractDesc }}
+</p>
+</VoucherSection>
 
     <!-- Cancellation -->
     <!-- Cancellation -->
@@ -301,7 +321,32 @@ const props=defineProps<{
  route:any
  roomIndex:number
 }>()
+const roomGuestCount=computed(()=>{
 
+  const route=roomRoute.value
+
+  if(!route)
+    return 0
+
+  const adultNo=
+    Number(route?.adultNo||0)
+
+  const extraBedNo=
+    Number(route?.extBedNo||0)
+
+  const noBedNo=
+    Number(route?.noBedNo||0)
+
+  const infantNo=
+    Number(route?.infantNo||0)
+
+  return(
+    adultNo+
+    extraBedNo+
+    noBedNo+
+    infantNo
+  )
+})
 const contract=computed(
  ()=>props.contract||{}
 )
@@ -309,7 +354,34 @@ const contract=computed(
 const roomRoute=computed(
  ()=>props.route||null
 )
+const roomTotalGuestCount=computed(()=>{
 
+  const route=roomRoute.value
+
+  if(!route)
+    return 0
+
+  return(
+    Number(route?.adultNo||0)+
+    Number(route?.extBedNo||0)+
+    Number(route?.noBedNo||0)+
+    Number(route?.infantNo||0)
+  )
+})
+
+const roomCompanionCount=computed(()=>{
+
+  const total=
+    roomTotalGuestCount.value
+
+  const mainGuestCount=
+    Number(roomRoute.value?.adultNo||0)
+
+  return Math.max(
+    total-mainGuestCount,
+    0
+  )
+})
 const passengers=computed(
  ()=>Array.isArray(contract.value?.contractPassengers)
   ?contract.value.contractPassengers
@@ -560,5 +632,8 @@ const formatDate=(
     print-color-adjust:exact;
     -webkit-print-color-adjust:exact;
   }
+}
+.contract-description {
+  white-space: pre-line;
 }
 </style>

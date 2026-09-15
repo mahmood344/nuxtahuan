@@ -137,8 +137,7 @@
 
             <UiBaseLabel
               v-if="hasRoomCapacity(room) && Number(room.extraBed||0)>0"
-              :text="`${room.extraBed} تخت اضافه`"
-              color="var(--color-primary)"
+              :text="`${room.extraBed} ${room.extraBedService || 'تخت اضافه'}`"              color="var(--color-primary)"
               icon='<i class="bi bi-plus-circle"></i>'
             style="zoom:0.78"
             />
@@ -400,13 +399,13 @@
   class="mt-4 flex flex-wrap gap-2"
  >
 
-  <UiBaseLabel
-   v-if="Number(room.extraBedCount||0)>0"
-   :text="`${room.extraBedCount} تخت اضافه`"
-   color="var(--color-primary)"
-   icon='<i class="bi bi-plus-circle"></i>'
-  style="zoom:0.78"
-  />
+ <UiBaseLabel
+ v-if="Number(room.extraBedCount||0)>0"
+ :text="`${room.extraBedCount} ${room.extraBedService || 'تخت اضافه'}`"
+ color="var(--color-primary)"
+ icon='<i class="bi bi-plus-circle"></i>'
+ style="zoom:0.78"
+/>
 
 
   <UiBaseLabel
@@ -444,7 +443,7 @@
      class="mt-1 text-[12px] font-bold text-[var(--color-gray-700)]"
      dir="ltr"
     >
-     {{checkIn}}
+     {{formatJalaliDate(checkIn)}}
     </p>
 
    </div>
@@ -475,7 +474,7 @@
      class="mt-1 text-[12px] font-bold text-[var(--color-gray-700)]"
      dir="ltr"
     >
-     {{checkOut}}
+     {{formatJalaliDate(checkOut)}}
     </p>
 
    </div>
@@ -838,6 +837,7 @@ v-else
 
 import {ref,computed} from 'vue'
 import { useHotelStore } from '~/stores/hotels'
+import moment from 'moment-jalaali'
 const hotelStore = useHotelStore()
 
 const props=defineProps({
@@ -932,7 +932,45 @@ function getNoBedLimit(room){
 
 }
 
+function formatJalaliDate(value){
 
+  if(!value)
+    return '-'
+
+  const raw=
+    String(value)
+      .trim()
+      .split('T')[0]
+      .replaceAll('/','-')
+
+  const parts=
+    raw.split('-')
+
+  if(parts.length!==3)
+    return raw
+
+  const year=
+    Number(parts[0])
+
+  // اگر تاریخ از قبل شمسی بود
+  if(year<1700){
+    return raw.replaceAll('-','/')
+  }
+
+  const date=
+    moment(
+      raw,
+      'YYYY-MM-DD',
+      true
+    )
+
+  if(!date.isValid())
+    return raw
+
+  return date.format(
+    'jYYYY/jMM/jDD'
+  )
+}
 function getNoBedTotalPrice(room){
 
  const details=

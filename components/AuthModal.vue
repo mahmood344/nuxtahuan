@@ -75,12 +75,12 @@
             placeholder="نام خانوادگی"
           />
 
-          <UiBaseInput
+          <!-- <UiBaseInput
             v-model="regData.nationalCode"
             label="کد ملی"
             placeholder="کد ملی ۱۰ رقمی"
             inputClass="text-center ltr font-bold tracking-wider"
-          />
+          /> -->
 
           <UiBaseInput
             v-model="mobile"
