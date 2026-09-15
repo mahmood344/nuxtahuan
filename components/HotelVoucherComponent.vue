@@ -1,639 +1,1461 @@
 <template>
   <div
-    class="hotel-voucher mx-auto w-full max-w-[1120px] bg-[#f7f1e7] text-[#1f2937]"
-    dir="rtl"
+    ref="voucherWrapper"
+    class="voucher-responsive-shell"
   >
-    <!-- Header -->
-    <div class="voucher-header">
-      <div class="header-illustration">
-        <div class="illustration-placeholder">
-          <span>AHUAN</span>
+    <div
+      class="voucher-scale-layer"
+      :style="voucherScaleStyle"
+    >
+      <div
+        class="hotel-voucher"
+        dir="rtl"
+      >
+        <div class="voucher-content">
+
+          <!-- ================================= -->
+          <!-- Contract Meta -->
+          <!-- ================================= -->
+          <div class="meta-row">
+
+            <div>
+              شماره قرارداد:
+              <strong>
+                {{ contract?.id || '-' }}
+              </strong>
+            </div>
+
+            <div>
+              ساعت رزرو:
+              <strong>
+                {{ contract?.issueTime || '-' }}
+              </strong>
+            </div>
+
+            <div>
+              تاریخ رزرو:
+              <strong>
+                {{ formatDate(contract?.issueDate) }}
+              </strong>
+            </div>
+
+          </div>
+
+
+          <!-- ================================= -->
+          <!-- Buyer -->
+          <!-- ================================= -->
+          <VoucherSection
+            title="مشخصات درخواست‌دهنده (خریدار)"
+          >
+            <table class="voucher-table">
+              <thead>
+                <tr>
+                  <th>
+                    نام و نام خانوادگی
+                  </th>
+
+                  <th>
+                    کد ملی
+                  </th>
+
+                  <th>
+                    نوع مهمان
+                  </th>
+
+                  <th>
+                    موبایل
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                <tr>
+                  <td>
+                    {{ leadPassengerFullName }}
+                  </td>
+
+                  <td dir="ltr">
+                    {{
+                      leadPassenger?.codeMelli ||
+                      '-'
+                    }}
+                  </td>
+
+                  <td>
+                    {{
+                      passengerTypeTitle(
+                        leadPassenger?.age
+                      )
+                    }}
+                  </td>
+
+                  <td dir="ltr">
+                    {{
+                      contract?.userName ||
+                      '-'
+                    }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+
+            <!-- تاریخ اقامت -->
+            <table
+              class="
+                voucher-table
+                voucher-table-secondary
+              "
+            >
+              <thead>
+                <tr>
+                  <th>
+                    تاریخ ورود
+                  </th>
+
+                  <th>
+                    تاریخ خروج
+                  </th>
+
+                  <th>
+                    تعداد شب
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                <tr>
+                  <td>
+                    {{
+                      formatDate(
+                        roomRoute?.checkIn
+                      )
+                    }}
+                  </td>
+
+                  <td>
+                    {{
+                      formatDate(
+                        roomRoute?.checkOut
+                      )
+                    }}
+                  </td>
+
+                  <td>
+                    {{
+                      roomRoute?.stayNights ??
+                      roomRoute?.nights ??
+                      '-'
+                    }}
+                    شب
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+
+            <p class="voucher-note">
+              در صورت تمایل به هرگونه تغییر یا کنسلی،
+              حتماً با پشتیبانی هماهنگ شود.
+            </p>
+
+          </VoucherSection>
+
+
+          <!-- ================================= -->
+          <!-- Rooms -->
+          <!-- ================================= -->
+          <VoucherSection
+            title="مشخصات اتاق(ها)"
+          >
+            <table class="voucher-table">
+              <thead>
+                <tr>
+
+                  <th class="row-number">
+                    ردیف
+                  </th>
+
+                  <th>
+                    نام اتاق
+                  </th>
+
+                  <th>
+                    نوع اتاق
+                  </th>
+
+                  <th>
+                    هتل
+                  </th>
+
+                  <th>
+                    شهر
+                  </th>
+
+                  <th>
+                    مبلغ (ریال)
+                  </th>
+
+                </tr>
+              </thead>
+
+              <tbody>
+                <tr>
+
+                  <td>
+                    {{ roomIndex + 1 }}
+                  </td>
+
+                  <td>
+                    {{
+                      roomRoute?.roomName ||
+                      '-'
+                    }}
+                  </td>
+
+                  <td>
+                    {{
+                      roomRoute?.roomType ||
+                      '-'
+                    }}
+                  </td>
+
+                  <td>
+                    {{
+                      roomRoute?.hotelName ||
+                      '-'
+                    }}
+                  </td>
+
+                  <td>
+                    {{
+                      roomRoute?.cityNameFarsi ||
+                      roomRoute?.cityName ||
+                      '-'
+                    }}
+                  </td>
+
+                  <td dir="ltr">
+                    {{
+                      formatPrice(
+                        roomPrice
+                      )
+                    }}
+                  </td>
+
+                </tr>
+              </tbody>
+            </table>
+
+
+            <p
+              v-if="
+                roomRoute
+                  ?.description
+                  ?.trim()
+              "
+              class="voucher-note"
+            >
+              {{ roomRoute.description }}
+            </p>
+
+
+            <p
+              class="
+                voucher-note
+                font-bold
+              "
+            >
+              ساعت تحویل اتاق ۱۴:۰۰ بعدازظهر
+              و ساعت تخلیه اتاق ۱۲:۰۰ ظهر است.
+            </p>
+
+          </VoucherSection>
+
+
+          <!-- ================================= -->
+          <!-- Room Supervisor -->
+          <!-- ================================= -->
+          <VoucherSection
+            title="مشخصات سرپرست اتاق"
+          >
+            <table class="voucher-table">
+              <thead>
+                <tr>
+
+                  <th>
+                    نام
+                  </th>
+
+                  <th>
+                    نام خانوادگی
+                  </th>
+
+                  <th>
+                    رده سنی
+                  </th>
+
+                </tr>
+              </thead>
+
+              <tbody>
+                <tr>
+
+                  <td>
+                    {{
+                      leadPassenger?.fName ||
+                      '-'
+                    }}
+                  </td>
+
+                  <td>
+                    {{
+                      leadPassenger?.lName ||
+                      '-'
+                    }}
+                  </td>
+
+                  <td>
+                    {{
+                      passengerTypeTitle(
+                        leadPassenger?.age
+                      )
+                    }}
+                  </td>
+
+                </tr>
+              </tbody>
+            </table>
+
+
+            <p
+              v-if="
+                leadPassenger
+                  ?.description
+                  ?.trim()
+              "
+              class="voucher-note"
+            >
+              {{
+                leadPassenger.description
+              }}
+            </p>
+
+
+            <p
+              v-if="
+                contract?.printContractDesc === true &&
+                contract?.contractDesc?.trim()
+              "
+              class="
+                voucher-note
+                contract-description
+              "
+            >
+              {{
+                contract.contractDesc
+              }}
+            </p>
+
+          </VoucherSection>
+
+
+          <!-- ================================= -->
+          <!-- Cancellation -->
+          <!-- ================================= -->
+          <VoucherSection
+            v-if="
+              Number(
+                roomRoute?.hotelId
+              ) === 3
+            "
+            title="شرایط انصراف و هزینه ابطال"
+          >
+            <table
+              class="
+                voucher-table
+                cancellation-table
+              "
+            >
+              <thead>
+                <tr>
+
+                  <th class="row-number">
+                    ردیف
+                  </th>
+
+                  <th>
+                    (بدون احتساب روزهای تعطیل)
+                    زمان اعلام تغییرات
+                  </th>
+
+                  <th>
+                    میزان هزینه ابطال
+                  </th>
+
+                </tr>
+              </thead>
+
+              <tbody>
+
+                <tr>
+                  <td>
+                    1
+                  </td>
+
+                  <td>
+                    تا ساعت 10 صبح (7) روز قبل
+                    از تاریخ عزیمت
+                  </td>
+
+                  <td>
+                    10 درصد هزینه یک شب
+                  </td>
+                </tr>
+
+
+                <tr>
+                  <td>
+                    2
+                  </td>
+
+                  <td>
+                    از ساعت 10 صبح (7) روز قبل،
+                    تا ساعت 10 صبح (2) روز قبل
+                    از تاریخ عزیمت
+                  </td>
+
+                  <td>
+                    50 درصد هزینه یک شب
+                  </td>
+                </tr>
+
+
+                <tr>
+                  <td>
+                    3
+                  </td>
+
+                  <td>
+                    تا ساعت 10 صبح (2) روز قبل
+                    از تاریخ عزیمت تا روز ورود
+                    یا پس از آن
+                  </td>
+
+                  <td>
+                    100 درصد هزینه یک شب
+                  </td>
+                </tr>
+
+
+                <tr>
+                  <td>
+                    4
+                  </td>
+
+                  <td colspan="2">
+                    میهمانانی که در هتل اقامت داشته
+                    و به دلایلی اقامت خود را کاهش دهند،
+                    مشمول یک شب جریمه خواهند بود.
+                  </td>
+                </tr>
+
+
+                <tr>
+                  <td>
+                    5
+                  </td>
+
+                  <td colspan="2">
+                    در صورت انصراف اتاق رزرو شده برای
+                    ایام ویژه تعطیلات نوروزی
+                    (از 27 اسفند لغایت 15 فروردین)
+                    تا دو هفته قبل از تاریخ استفاده
+                    از هتل شامل هزینه یک شب از تعداد
+                    اتاق‌های رزرو شده کسر می‌گردد و
+                    کمتر از دو هفته قبل از تاریخ
+                    استفاده از هتل شامل صد درصد هزینه
+                    کل اتاق‌های رزرو شده بوده و
+                    هیچگونه وجهی به مهمان محترم
+                    مسترد نمی‌گردد.
+                  </td>
+                </tr>
+
+              </tbody>
+            </table>
+
+          </VoucherSection>
+
         </div>
       </div>
-
-      <div class="header-brand">
-        <div class="brand-small">
-          هتل بزرگ
-        </div>
-
-        <div class="brand-title">
-          آهوان
-        </div>
-
-        <div class="brand-company">
-          شرکت خدمات مسافرتی، گردشگری و زیارتی آهوان
-        </div>
-      </div>
-    </div>
-
-    <!-- Contract Meta -->
-    <div class="meta-row">
-      <div>
-        شماره قرارداد:
-        <strong>{{ contract?.id || '-' }}</strong>
-      </div>
-
-      <div>
-        ساعت رزرو:
-        <strong>{{ contract?.issueTime || '-' }}</strong>
-      </div>
-
-      <div>
-        تاریخ رزرو:
-        <strong>{{ formatDate(contract?.issueDate) }}</strong>
-      </div>
-    </div>
-
-    <!-- Buyer -->
-    <VoucherSection title="مشخصات درخواست‌دهنده (خریدار)">
-      <table class="voucher-table">
-        <thead>
-          <tr>
-            <th>نام و نام خانوادگی</th>
-            <th>کد ملی</th>
-            <th>نوع مهمان</th>
-            <th>موبایل</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          <tr>
-            <td>
-              {{ leadPassengerFullName }}
-            </td>
-
-            <td dir="ltr">
-              {{ leadPassenger?.codeMelli || '-' }}
-            </td>
-
-            <td>
-              {{ passengerTypeTitle(leadPassenger?.age) }}
-            </td>
-
-            <td dir="ltr">
-              {{ contract?.userName || '-' }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
-
-      <table class="voucher-table mt-2">
-        <thead>
-          <tr>
-            <th>تاریخ ورود</th>
-            <th>تاریخ خروج</th>
-            <th>تعداد شب</th>
-            <th>تعداد کل نفرات</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          <tr>
-            <td>
-              {{ formatDate(roomRoute?.checkIn) }}
-            </td>
-
-            <td>
-              {{ formatDate(roomRoute?.checkOut) }}
-            </td>
-
-            <td>
-              {{ roomRoute?.stayNights ?? '-' }}
-              شب
-            </td>
-
-            <td>
-              {{ roomTotalGuestCount }}
-              نفر
-            </td>
-          </tr>
-        </tbody>
-      </table>
-
-      <p class="voucher-note">
-        در صورت تمایل به هرگونه تغییر یا کنسلی، حتماً با پشتیبانی هماهنگ شود.
-      </p>
-    </VoucherSection>
-
-    <!-- Rooms -->
-    <VoucherSection title="مشخصات اتاق(ها)">
-      <table class="voucher-table">
-        <thead>
-          <tr>
-            <th class="w-14">ردیف</th>
-            <th>نام اتاق</th>
-            <th>نوع اتاق</th>
-            <th>هتل</th>
-            <th>شهر</th>
-            <th>مبلغ (ریال)</th>
-          </tr>
-        </thead>
-
-       <tbody>
- <tr>
-  <td>
-   {{ roomIndex+1 }}
-  </td>
-
-  <td>
-   {{ roomRoute?.roomName||'-' }}
-  </td>
-
-  <td>
-   {{ roomRoute?.roomType||'-' }}
-  </td>
-
-  <td>
-   {{ roomRoute?.hotelName||'-' }}
-  </td>
-
-  <td>
-   {{ roomRoute?.cityNameFarsi||roomRoute?.cityName||'-' }}
-  </td>
-
-  <td dir="ltr">
-   {{ formatPrice(roomPrice) }}
-  </td>
- </tr>
-</tbody>
-      </table>
-<p
-  v-if="roomRoute?.description?.trim()"
-  class="voucher-note"
->
-  {{ roomRoute.description }}
-</p>
-      <p class="voucher-note font-bold">
-        ساعت تحویل اتاق ۱۴:۰۰ بعدازظهر و ساعت تخلیه اتاق ۱۲:۰۰ ظهر است.
-      </p>
-    </VoucherSection>
-
-    <!-- Room supervisors -->
-    <!-- Room supervisor -->
-<VoucherSection title="مشخصات سرپرست اتاق">
-  <table class="voucher-table">
-    <thead>
-      <tr>
-        <th>نام</th>
-        <th>نام خانوادگی</th>
-        <th>رده سنی</th>
-        <th>تعداد میهمانان</th>
-      </tr>
-    </thead>
-
-    <tbody>
-      <tr>
-        <td>
-          {{ leadPassenger?.fName || '-' }}
-        </td>
-
-        <td>
-          {{ leadPassenger?.lName || '-' }}
-        </td>
-
-        <td>
-          {{ passengerTypeTitle(leadPassenger?.age) }}
-        </td>
-
-        <td>
-  {{ roomCompanionCount }}
-  نفر
-</td>
-      </tr>
-    </tbody>
-  </table>
-<p
-  v-if="leadPassenger?.description?.trim()"
-  class="voucher-note"
->
-  {{ leadPassenger.description }}
-</p>
-  <p
-  v-if="
-    contract?.printContractDesc === true &&
-    contract?.contractDesc?.trim()
-  "
-  class="voucher-note contract-description"
->
-  {{ contract.contractDesc }}
-</p>
-</VoucherSection>
-
-    <!-- Cancellation -->
-    <!-- Cancellation -->
-<VoucherSection
- v-if="Number(roomRoute?.hotelId)===3"
- title="شرایط انصراف و هزینه ابطال"
->
- <table class="voucher-table cancellation-table">
-  <thead>
-   <tr>
-    <th class="w-14">
-     ردیف
-    </th>
-
-    <th>
-     (بدون احتساب روزهای تعطیل)زمان اعلام تغییرات
-    </th>
-
-    <th>
-     میزان هزینه ابطال
-    </th>
-   </tr>
-  </thead>
-
-  <tbody>
-   <tr>
-    <td>1</td>
-
-    <td>
-     تا ساعت 10 صبح (7) روز قبل از تاریخ عزیمت
-    </td>
-
-    <td>
-     10 درصد هزینه یک شب
-    </td>
-   </tr>
-
-   <tr>
-    <td>2</td>
-
-    <td>
-     از ساعت 10 صبح (7) روز قبل، تا ساعت 10 صبح (2) روز قبل از تاریخ عزیمت
-    </td>
-
-    <td>
-     50 درصد هزینه یک شب
-    </td>
-   </tr>
-
-   <tr>
-    <td>3</td>
-
-    <td>
-     تا ساعت 10 صبح (2) روز قبل از تاریخ عزیمت تا روز ورود یا پس از آن
-    </td>
-
-    <td>
-     100 درصد هزینه یک شب
-    </td>
-   </tr>
-
-   <tr>
-    <td>4</td>
-
-    <td colspan="2">
-     میهمانانی که در هتل اقامت داشته و به دلایلی اقامت خود را کاهش دهند،مشمول یک شب جریمه خواهند بود.
-    </td>
-   </tr>
-
-   <tr>
-    <td>5</td>
-
-    <td colspan="2">
-     در صورت انصراف اتاق رزرو شده برای ایام ویژه تعطیلات نوروزی (از 27 اسفند لغایت 15 فروردین) تا دو هفته قبل از تاریخ استفاده از هتل شامل هزینه یک شب از تعداد اتاق‌های رزرو شده کسر میگردد و کمتر از دو هفته قبل از تاریخ استفاده از هتل شامل صد درصد هزینه کل اتاق‌های رزرو شده بوده و هیچگونه وجهی به مهمان محترم مسترد نمی گردد.
-    </td>
-   </tr>
-  </tbody>
- </table>
-</VoucherSection>
-
-    <!-- Footer -->
-    <div class="voucher-footer">
-      <div>
-        آدرس دفتر مرکزی شرکت آهوان تهران، ضلع شمالغربی میدان آرژانتین طبقه همکف ساختمان بانک تجارت
-      </div>
-    <div>تلفن: ۰۲۱۴۱۸۸۹ | داخلی ۱۳۱و ۱۳۲
-</div>
-      <div>
-        آدرس هتل آهوان چابکسر گیلان رودسر - کلاچای کیلومتر ۷ جاده ی کلاچای به چابکسر هتل بزرگ آهوان
-      </div>
-      <div>تلفن : ۰۱۳۴۲۰۵</div>
     </div>
   </div>
 </template>
 
+
 <script setup lang="ts">
-import {computed} from'vue'
 
-const props=defineProps<{
- contract:any
- route:any
- roomIndex:number
-}>()
-const roomGuestCount=computed(()=>{
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref
+} from 'vue'
 
-  const route=roomRoute.value
 
-  if(!route)
-    return 0
+/* ================================= */
+/* Props */
+/* ================================= */
 
-  const adultNo=
-    Number(route?.adultNo||0)
+const props =
+  defineProps<{
+    contract:any
+    route:any
+    roomIndex:number
+  }>()
 
-  const extraBedNo=
-    Number(route?.extBedNo||0)
 
-  const noBedNo=
-    Number(route?.noBedNo||0)
+/* ================================= */
+/* Responsive Preview */
+/* ================================= */
 
-  const infantNo=
-    Number(route?.infantNo||0)
-
-  return(
-    adultNo+
-    extraBedNo+
-    noBedNo+
-    infantNo
+const voucherWrapper =
+  ref<HTMLElement | null>(
+    null
   )
-})
-const contract=computed(
- ()=>props.contract||{}
-)
 
-const roomRoute=computed(
- ()=>props.route||null
-)
-const roomTotalGuestCount=computed(()=>{
 
-  const route=roomRoute.value
+const voucherScale =
+  ref(1)
 
-  if(!route)
-    return 0
 
-  return(
-    Number(route?.adultNo||0)+
-    Number(route?.extBedNo||0)+
-    Number(route?.noBedNo||0)+
-    Number(route?.infantNo||0)
-  )
-})
+const voucherOriginalWidth =
+  ref(794)
 
-const roomCompanionCount=computed(()=>{
 
-  const total=
-    roomTotalGuestCount.value
+const voucherOriginalHeight =
+  ref(1123)
 
-  const mainGuestCount=
-    Number(roomRoute.value?.adultNo||0)
 
-  return Math.max(
-    total-mainGuestCount,
-    0
-  )
-})
-const passengers=computed(
- ()=>Array.isArray(contract.value?.contractPassengers)
-  ?contract.value.contractPassengers
-  :[]
-)
+let resizeObserver:
+  ResizeObserver | null =
+  null
 
-const roomPrice=computed(()=>{
- const price=Number(
-  roomRoute.value?.price||
-  roomRoute.value?.totalPrice||
-  0
- )
 
- if(price>0){
-  return price
- }
+const voucherScaleStyle =
+  computed(() => ({
+    transform:
+      `scale(${voucherScale.value})`
+  }))
 
- const roomCount=
-  Array.isArray(contract.value?.contractRoutes)
-   ?contract.value.contractRoutes.length
-   :1
 
- if(roomCount===1){
-  return Number(
-   contract.value?.totalPrice||0
-  )
- }
+const updateVoucherScale =
+  async () => {
 
- return 0
-})
+    await nextTick()
 
-const leadPassenger=computed(
- ()=>passengers.value[0]||null
-)
+    const wrapper =
+      voucherWrapper.value
 
-const leadPassengerFullName=computed(()=>{
- const passenger=leadPassenger.value
+    if(!wrapper){
+      return
+    }
 
- if(!passenger){
-  return'-'
- }
+    const voucher =
+      wrapper.querySelector(
+        '.hotel-voucher'
+      ) as HTMLElement | null
 
- return[
-  passenger?.fName,
-  passenger?.lName
- ]
-  .filter(Boolean)
-  .join(' ')
-  .trim()||'-'
-})
+    if(!voucher){
+      return
+    }
 
-const passengerTypeTitle=(
- value:unknown
-):string=>{
- const type=String(value||'')
-  .trim()
-  .toUpperCase()
+    /*
+     * offsetWidth/Height اندازه واقعی
+     * A4 قبل از scale است.
+     */
+    const originalWidth =
+      voucher.offsetWidth
 
- if(type==='CHD'){
-  return'کودک'
- }
+    const originalHeight =
+      voucher.offsetHeight
 
- if(type==='INF'){
-  return'نوزاد'
- }
+    if(
+      !originalWidth ||
+      !originalHeight
+    ){
+      return
+    }
 
- return'مسافر عادی'
-}
+    voucherOriginalWidth.value =
+      originalWidth
 
-const formatPrice=(
- value:unknown
-):string=>{
- const price=Number(value||0)
+    voucherOriginalHeight.value =
+      originalHeight
 
- if(!Number.isFinite(price)){
-  return'0'
- }
+    const availableWidth =
+      wrapper.clientWidth
 
- return new Intl.NumberFormat(
-  'fa-IR'
- ).format(price)
-}
+    const scale =
+      Math.min(
+        1,
+        availableWidth /
+        originalWidth
+      )
 
-const formatDate=(
- value:unknown
-):string=>{
- const raw=String(value||'').trim()
+    voucherScale.value =
+      scale
 
- if(!raw){
-  return'-'
- }
-
- const normalized=
-  raw.includes('T')
-   ?raw
-   :`${raw}T00:00:00`
-
- const date=new Date(normalized)
-
- if(Number.isNaN(date.getTime())){
-  return raw
- }
-
- return date.toLocaleDateString(
-  'fa-IR',
-  {
-   year:'numeric',
-   month:'2-digit',
-   day:'2-digit'
+    /*
+     * چون transform روی flow تاثیر ندارد،
+     * ارتفاع wrapper را دستی اصلاح می‌کنیم.
+     */
+    wrapper.style.height =
+      `${
+        originalHeight *
+        scale
+      }px`
   }
- )
-}
 
+
+onMounted(
+  async () => {
+
+    await updateVoucherScale()
+
+    if(
+      typeof ResizeObserver !==
+      'undefined'
+    ){
+      resizeObserver =
+        new ResizeObserver(
+          () => {
+            updateVoucherScale()
+          }
+        )
+
+      if(
+        voucherWrapper.value
+      ){
+        resizeObserver.observe(
+          voucherWrapper.value
+        )
+      }
+    }
+
+    window.addEventListener(
+      'resize',
+      updateVoucherScale
+    )
+  }
+)
+
+
+onBeforeUnmount(
+  () => {
+
+    resizeObserver
+      ?.disconnect()
+
+    window.removeEventListener(
+      'resize',
+      updateVoucherScale
+    )
+  }
+)
+
+
+/* ================================= */
+/* Contract */
+/* ================================= */
+
+const contract =
+  computed(
+    () =>
+      props.contract ||
+      {}
+  )
+
+
+const roomRoute =
+  computed(
+    () =>
+      props.route ||
+      null
+  )
+
+
+/* ================================= */
+/* Passengers */
+/* ================================= */
+
+const passengers =
+  computed(
+    () =>
+      Array.isArray(
+        contract.value
+          ?.contractPassengers
+      )
+        ? contract.value
+            .contractPassengers
+        : []
+  )
+
+
+const leadPassenger =
+  computed(
+    () =>
+      passengers.value[0] ||
+      null
+  )
+
+
+const leadPassengerFullName =
+  computed(
+    () => {
+
+      const passenger =
+        leadPassenger.value
+
+      if(!passenger){
+        return '-'
+      }
+
+      return [
+        passenger?.fName,
+        passenger?.lName
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .trim() ||
+        '-'
+    }
+  )
+
+
+/* ================================= */
+/* Price */
+/* ================================= */
+
+const roomPrice =
+  computed(
+    () => {
+
+      const price =
+        Number(
+          roomRoute.value
+            ?.price ||
+          roomRoute.value
+            ?.totalPrice ||
+          0
+        )
+
+      if(price > 0){
+        return price
+      }
+
+      const roomCount =
+        Array.isArray(
+          contract.value
+            ?.contractRoutes
+        )
+          ? contract.value
+              .contractRoutes
+              .length
+          : 1
+
+      if(roomCount === 1){
+        return Number(
+          contract.value
+            ?.totalPrice ||
+          0
+        )
+      }
+
+      return 0
+    }
+  )
+
+
+/* ================================= */
+/* Helpers */
+/* ================================= */
+
+const passengerTypeTitle =
+  (
+    value:unknown
+  ):string => {
+
+    const type =
+      String(
+        value || ''
+      )
+        .trim()
+        .toUpperCase()
+
+    if(
+      type === 'CHD'
+    ){
+      return 'کودک'
+    }
+
+    if(
+      type === 'INF'
+    ){
+      return 'نوزاد'
+    }
+
+    return 'مسافر عادی'
+  }
+
+
+const formatPrice =
+  (
+    value:unknown
+  ):string => {
+
+    const price =
+      Number(
+        value || 0
+      )
+
+    if(
+      !Number.isFinite(
+        price
+      )
+    ){
+      return '0'
+    }
+
+    return new Intl.NumberFormat(
+      'fa-IR'
+    ).format(
+      price
+    )
+  }
+
+
+const formatDate =
+  (
+    value:unknown
+  ):string => {
+
+    const raw =
+      String(
+        value || ''
+      ).trim()
+
+    if(!raw){
+      return '-'
+    }
+
+    const normalized =
+      raw.includes('T')
+        ? raw
+        : `${raw}T00:00:00`
+
+    const date =
+      new Date(
+        normalized
+      )
+
+    if(
+      Number.isNaN(
+        date.getTime()
+      )
+    ){
+      return raw
+    }
+
+    return date.toLocaleDateString(
+      'fa-IR',
+      {
+        year:'numeric',
+        month:'2-digit',
+        day:'2-digit'
+      }
+    )
+  }
 
 </script>
 
+
 <style scoped>
-.hotel-voucher{
-  font-family:Tahoma,Arial,sans-serif;
-  min-height:720px;
-  border:1px solid #9ca3af;
+
+/* ================================= */
+/* Responsive Wrapper */
+/* ================================= */
+
+.voucher-responsive-shell{
+  position:relative;
+
+  width:100%;
+  max-width:210mm;
+
+  margin:
+    0 auto;
+
   overflow:hidden;
 }
 
-.voucher-header{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  min-height:160px;
-  background:#f0e5d5;
-  border-bottom:6px solid #163f8c;
+
+.voucher-scale-layer{
+  position:absolute;
+
+  top:0;
+  left:50%;
+
+  width:210mm;
+  height:297mm;
+
+  transform-origin:
+    top center;
+
+  /*
+   * left 50% + translate باعث
+   * وسط‌چین شدن در موبایل می‌شود
+   */
+  margin-left:
+    -105mm;
 }
 
-.header-illustration{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:20px;
+
+/* ================================= */
+/* A4 Voucher */
+/* ================================= */
+
+.hotel-voucher{
+  position:relative;
+
+  width:210mm;
+  height:297mm;
+
+  box-sizing:
+    border-box;
+
+  overflow:
+    hidden;
+
+  font-family:
+    Tahoma,
+    Arial,
+    sans-serif;
+
+  color:
+    #1f2937;
+
+  background-image:
+    url('/imgs/hotel/Voucher.jpg');
+
+  background-repeat:
+    no-repeat;
+
+  background-position:
+    top center;
+
+  background-size:
+    100% 100%;
+
+  background-color:
+    #f7f1e7;
+
+  print-color-adjust:
+    exact;
+
+  -webkit-print-color-adjust:
+    exact;
 }
 
-.illustration-placeholder{
-  width:85%;
-  height:110px;
-  border:2px dashed #bbb;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  color:#163f8c;
-  font-size:28px;
-  font-weight:900;
-}
 
-.header-brand{
-  background:#173f8c;
-  color:#fff;
+/* ================================= */
+/* Content Area */
+/* ================================= */
+
+.voucher-content{
+  position:absolute;
+
+  /*
+   * پایین هدر سربرگ
+   */
+  top:58mm;
+
+  /*
+   * بالای Footer سربرگ
+   */
+  bottom:40mm;
+
+  left:8mm;
+  right:8mm;
+
+  overflow:hidden;
+
   display:flex;
   flex-direction:column;
-  justify-content:center;
-  align-items:center;
-  padding:16px;
+
+  gap:4px;
 }
 
-.brand-small{
-  font-size:28px;
-}
 
-.brand-title{
-  margin-top:-4px;
-  font-size:58px;
-  font-weight:900;
-  color:#f3c18d;
-  line-height:1;
-}
-
-.brand-company{
-  margin-top:10px;
-  font-size:12px;
-  text-align:center;
-}
+/* ================================= */
+/* Meta */
+/* ================================= */
 
 .meta-row{
   display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:10px;
-  padding:14px 16px;
-  border-bottom:1px solid #9ca3af;
-  font-size:15px;
+
+  grid-template-columns:
+    repeat(
+      3,
+      minmax(0,1fr)
+    );
+
+  gap:4px;
+
+  padding:
+    5px 8px;
+
+  border:
+    1px solid
+    rgba(
+      23,
+      63,
+      140,
+      .7
+    );
+
+  border-radius:
+    5px;
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      .72
+    );
+
+  font-size:
+    14px;
+
+  text-align:
+    center;
 }
+
+
+/* ================================= */
+/* Tables */
+/* ================================= */
 
 .voucher-table{
   width:100%;
-  border-collapse:collapse;
-  table-layout:fixed;
+
+  border-collapse:
+    collapse;
+
+  table-layout:
+    fixed;
+
+  background:
+    transparent;
 }
+
+
+.voucher-table-secondary{
+  margin-top:
+    6px;
+}
+
 
 .voucher-table th,
 .voucher-table td{
-  border:1px solid #9ca3af;
-  padding:8px 6px;
-  text-align:center;
-  vertical-align:middle;
-  font-size:13px;
+  border:
+    1px solid
+    rgba(
+      23,
+      63,
+      140,
+      .65
+    );
+
+  padding:
+    5px 4px;
+
+  text-align:
+    center;
+
+  vertical-align:
+    middle;
+
+  font-size:
+    14px;
+
+  font-weight:
+    bold;
+
+  line-height:
+    0.9;
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      .68
+    );
+
+  overflow-wrap:
+    anywhere;
 }
+
 
 .voucher-table th{
-  background:rgba(255,255,255,.2);
-  font-weight:800;
+  color:
+    #173f8c;
+
+  font-weight:
+    800;
+
+  background:
+    rgba(
+      240,
+      229,
+      213,
+      .86
+    );
 }
+
+
+.row-number{
+  width:
+    40px;
+}
+
+
+/* ================================= */
+/* Notes */
+/* ================================= */
 
 .voucher-note{
-  margin-top:7px;
-  text-align:center;
-  font-size:11px;
-  line-height:1.9;
+  font-weight:
+    bold;
+
+  margin-top:
+    6px;
+
+  margin-bottom:
+    5px;
+
+  text-align:
+    center;
+
+  font-size:
+    12px;
+
+  line-height:
+    1.5;
+
+  color:
+    #374151;
 }
 
-.important-note{
-  margin-top:6px;
-  background:#13a8a7;
-  padding:5px 10px;
-  text-align:center;
-  font-size:11px;
-  font-weight:800;
+
+.contract-description{
+  white-space:
+    pre-line;
 }
 
-.voucher-footer{
-  background:#173f8c;
-  color:#fff;
-  text-align:center;
-  font-size:11px;
-  line-height:1.9;
-  padding:9px 15px;
+
+/* ================================= */
+/* Cancellation */
+/* ================================= */
+
+.cancellation-table th,
+.cancellation-table td{
+  padding:
+    4px;
+
+  font-size:
+    12px;
+
+  line-height:
+    1.3;
 }
+
+
+/* ================================= */
+/* PDF Export */
+/* ================================= */
+
+/*
+ * این کلاس فقط هنگام html2canvas
+ * فعال می‌شود.
+ */
+
+.hotel-voucher.pdf-exporting
+.meta-row{
+  font-size:
+    11px !important;
+
+  padding-top:
+    7px !important;
+
+  padding-bottom:
+    7px !important;
+}
+
+
+.hotel-voucher.pdf-exporting
+.voucher-table th,
+.hotel-voucher.pdf-exporting
+.voucher-table td{
+  font-size:
+    11px !important;
+
+  line-height:
+    1.4 !important;
+
+  /*
+   * جدول در PDF بلندتر و بازتر
+   */
+  padding-top:
+    9px !important;
+
+  padding-bottom:
+    9px !important;
+
+  padding-left:
+    4px !important;
+
+  padding-right:
+    4px !important;
+}
+
+
+.hotel-voucher.pdf-exporting
+.voucher-note{
+  font-size:
+    9.5px !important;
+
+  line-height:
+    1.5 !important;
+
+  margin-top:
+    5px !important;
+
+  margin-bottom:
+    8px !important;
+}
+
+
+.hotel-voucher.pdf-exporting
+.cancellation-table th,
+.hotel-voucher.pdf-exporting
+.cancellation-table td{
+  font-size:
+    9px !important;
+
+  line-height:
+    1.3 !important;
+
+  padding:
+    6px 4px !important;
+}
+
+
+.hotel-voucher.pdf-exporting
+.voucher-content{
+  top:
+    50mm !important;
+
+  /*
+   * فضای بیشتر برای Footer
+   */
+  bottom:
+    48mm !important;
+}
+
+
+/* ================================= */
+/* Mobile */
+/* ================================= */
+
+@media (max-width:768px){
+
+  .voucher-responsive-shell{
+    width:100%;
+  }
+
+  /*
+   * فقط Preview موبایل
+   * روی PDF اعمال نمی‌شود
+   */
+  .hotel-voucher:not(.pdf-exporting)
+  .voucher-content{
+    left:6mm;
+    right:6mm;
+
+    gap:2px;
+  }
+
+  .hotel-voucher:not(.pdf-exporting)
+  .meta-row{
+    gap:2px;
+
+    padding:
+      4px 3px;
+
+    font-size:
+      10px;
+
+    line-height:
+      1.25;
+  }
+
+  .hotel-voucher:not(.pdf-exporting)
+  .voucher-table th,
+  .hotel-voucher:not(.pdf-exporting)
+  .voucher-table td{
+    padding:
+      5px 3px;
+
+    font-size:
+      11px;
+
+    line-height:
+      2.9;
+
+    white-space:
+      normal;
+
+    word-break:
+      break-word;
+
+    overflow-wrap:
+      anywhere;
+  }
+
+  .hotel-voucher:not(.pdf-exporting)
+  .voucher-table th{
+    font-size:
+      10px;
+  }
+
+  .hotel-voucher:not(.pdf-exporting)
+  .voucher-table-secondary{
+    margin-top:
+      3px;
+  }
+
+  .hotel-voucher:not(.pdf-exporting)
+  .voucher-note{
+    margin-top:
+      3px;
+
+    margin-bottom:
+      3px;
+
+    font-size:
+      9px;
+
+    line-height:
+      1.3;
+  }
+
+  .hotel-voucher:not(.pdf-exporting)
+  .cancellation-table th,
+  .hotel-voucher:not(.pdf-exporting)
+  .cancellation-table td{
+    padding:
+      2px;
+
+    font-size:
+      8.5px;
+
+    line-height:
+      1.25;
+  }
+
+  .hotel-voucher:not(.pdf-exporting)
+  .row-number{
+    width:
+      28px;
+  }
+}
+
+
+/* ================================= */
+/* Print */
+/* ================================= */
 
 @media print{
-  .hotel-voucher{
-    width:100%;
-    max-width:none;
-    border:0;
-    min-height:auto;
-    print-color-adjust:exact;
-    -webkit-print-color-adjust:exact;
+
+  .voucher-responsive-shell{
+    width:
+      210mm !important;
+
+    height:
+      297mm !important;
+
+    max-width:
+      none !important;
+
+    overflow:
+      visible !important;
   }
 
-  .voucher-header,
-  .header-brand,
-  .important-note,
-  .voucher-footer{
-    print-color-adjust:exact;
-    -webkit-print-color-adjust:exact;
+
+  .voucher-scale-layer{
+    position:
+      static !important;
+
+    width:
+      210mm !important;
+
+    height:
+      297mm !important;
+
+    margin:
+      0 !important;
+
+    transform:
+      none !important;
   }
+
+
+  .hotel-voucher{
+    width:
+      210mm !important;
+
+    height:
+      297mm !important;
+
+    margin:
+      0 !important;
+
+    border:
+      0 !important;
+
+    overflow:
+      hidden !important;
+
+    print-color-adjust:
+      exact;
+
+    -webkit-print-color-adjust:
+      exact;
+  }
+
+
+  .voucher-content{
+    top:
+      58mm;
+
+    bottom:
+      48mm;
+  }
+
 }
-.contract-description {
-  white-space: pre-line;
-}
+
 </style>
