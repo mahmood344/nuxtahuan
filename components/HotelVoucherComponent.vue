@@ -83,7 +83,7 @@
             <th>تاریخ ورود</th>
             <th>تاریخ خروج</th>
             <th>تعداد شب</th>
-            <th>تعداد کل نفرات</th>
+            <!-- <th>تعداد کل نفرات</th> -->
           </tr>
         </thead>
 
@@ -102,10 +102,10 @@
               شب
             </td>
 
-            <td>
+            <!-- <td>
               {{ roomTotalGuestCount }}
               نفر
-            </td>
+            </td> -->
           </tr>
         </tbody>
       </table>
@@ -177,7 +177,7 @@
         <th>نام</th>
         <th>نام خانوادگی</th>
         <th>رده سنی</th>
-        <th>تعداد میهمانان</th>
+        <!-- <th>تعداد میهمانان</th> -->
       </tr>
     </thead>
 
@@ -195,10 +195,10 @@
           {{ passengerTypeTitle(leadPassenger?.age) }}
         </td>
 
-        <td>
+        <!-- <td>
   {{ roomCompanionCount }}
   نفر
-</td>
+</td> -->
       </tr>
     </tbody>
   </table>

@@ -2794,8 +2794,8 @@
             disabled:cursor-not-allowed
             disabled:opacity-40
            "
-           :disabled="!passenger?.goTicketUrl"
-           @click="downloadHotelVoucher(passenger)"
+           :disabled="!selectedContract?.id"
+@click="downloadHotelVoucher"
           >
            دانلود واچر هتل
           </button>
@@ -2990,8 +2990,8 @@
               hover:bg-blue-50
               disabled:opacity-50
              "
-             :disabled="!passenger?.goTicketUrl"
-             @click="downloadHotelVoucher(passenger)"
+            :disabled="!selectedContract?.id"
+@click="downloadHotelVoucher"
             >
              دانلود واچر هتل
             </button>
@@ -4692,19 +4692,30 @@ function canDownloadHotelVoucher(passenger){
     selectedContract.value?.voucherUrl
   )
 }
+function downloadHotelVoucher(){
 
-function downloadHotelVoucher(passenger){
-  const url=passenger?.goTicketUrl
+  const contractId=
+    Number(
+      selectedContract.value?.id||0
+    )
 
-  if(!url){
+  if(!contractId){
+    toast.error(
+      'شناسه قرارداد یافت نشد.'
+    )
     return
   }
 
-  window.open(
-    url,
-    '_blank'
+  const encodedContractId=
+    window.btoa(
+      String(contractId)
+    )
+
+  navigateTo(
+    `/downloadticket/${encodedContractId}`
   )
 }
+
 function extractTicketEntries(value){
   const text=String(value||'')
     .replace(/\r?\n/g,' ')
@@ -7174,17 +7185,7 @@ const filteredContractOrders = computed(() => {
     )
   }
 
-  list.sort((a,b) => {
-    const firstTime =
-      getContractTimestamp(a.contract)
 
-    const secondTime =
-      getContractTimestamp(b.contract)
-
-    return contractSort.value === 'newest'
-      ? secondTime - firstTime
-      : firstTime - secondTime
-  })
 
   return list
 })
@@ -7368,11 +7369,7 @@ async function fetchUserContracts() {
     contracts.value =
       unwrapContractsResponse(response)
         .filter(Boolean)
-        .sort(
-          (a,b) =>
-            getContractTimestamp(b) -
-            getContractTimestamp(a)
-        )
+      
   } catch (error) {
     console.error(
       'Fetch user contracts error:',

@@ -1827,6 +1827,12 @@ childNoBedNo:
   roomId:
    Number(room.roomId),
 
+roomServiceId:
+ Number(
+  room?.hotelRoomPrices?.[0]
+   ?.roomServiceId || 0
+ ),
+
   nights:
    calculateNights(),
 
@@ -2208,7 +2214,11 @@ function buildHotelUpdateContractPayload({
       Number(
        room.roomId
       ),
-
+roomServiceId:
+ Number(
+  room?.hotelRoomPrices?.[0]
+   ?.roomServiceId || 0
+ ),
      nights:
       calculateNights(),
 
