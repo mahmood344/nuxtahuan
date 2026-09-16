@@ -57,7 +57,11 @@
 />
 
  <FilterHotel
-  v-if="currentStep===0"
+   v-if="
+    currentStep===0 &&
+    checkIn &&
+    checkOut
+  "
   v-model:filters="activeHotelFilters"
   :all-rooms-data="roomsWithPrice"
 />
