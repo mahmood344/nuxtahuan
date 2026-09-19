@@ -3936,33 +3936,33 @@ async function reserveFlightByProvider(
     }
   }
 
-  if(supplier==='MAHAN'){
-    const result=
-      await reserveMahanFlight(
-        flight,
-        passengers,
-        contactInfo
-      )
+  // if(supplier==='MAHAN'){
+  //   const result=
+  //     await reserveMahanFlight(
+  //       flight,
+  //       passengers,
+  //       contactInfo
+  //     )
 
-    return{
-      flightId:
-        flight?.id||null,
+  //   return{
+  //     flightId:
+  //       flight?.id||null,
 
-      supplier:'MAHAN',
+  //     supplier:'MAHAN',
 
-      airline:
-        flight?.airline||
-        'W5',
+  //     airline:
+  //       flight?.airline||
+  //       'W5',
 
-      pnr:
-        result?.pnr||'',
+  //     pnr:
+  //       result?.pnr||'',
 
-      reserveResponse:
-        result?.reserveResponse||
-        result?.raw||
-        result
-    }
-  }
+  //     reserveResponse:
+  //       result?.reserveResponse||
+  //       result?.raw||
+  //       result
+  //   }
+  // }
 
   if(supplier==='PARTO'){
     return await reservePartoFlight(

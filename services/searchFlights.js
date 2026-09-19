@@ -2,11 +2,11 @@ import { useFlightStore } from '../stores/flights.js'
 import { searchNiraFlightForAirline } from './providers/nira.js'
 import { searchParoFlights } from './providers/paro.js'
 
-import {
-  buildMahanAvailabilityPayload,
-  searchMahanAvailability,
-  mapMahanOfferToFlight
-} from './providers/mahan.js'
+// import {
+//   buildMahanAvailabilityPayload,
+//   searchMahanAvailability,
+//   mapMahanOfferToFlight
+// } from './providers/mahan.js'
 
 /*
 |--------------------------------------------------------------------------
@@ -396,80 +396,80 @@ export async function searchAllProviders(searchParams){
   | MAHAN
   |--------------------------------------------------------------------------
   */
-  const mahanTask=(async()=>{
-    try{
-      console.log(
-        `ارسال درخواست ماهان برای تاریخ ${date}`
-      )
+  // const mahanTask=(async()=>{
+  //   try{
+  //     console.log(
+  //       `ارسال درخواست ماهان برای تاریخ ${date}`
+  //     )
 
-      const mahanCred={
-        userName:'APIAHOVAN',
-        password:'AHVN@3298',
+  //     const mahanCred={
+  //       userName:'APIAHOVAN',
+  //       password:'AHVN@3298',
 
-        baseUrl:
-          'https://reservations.mahanair.co.ir/webservices/services/AAResWebServices',
+  //       baseUrl:
+  //         'https://reservations.mahanair.co.ir/webservices/services/AAResWebServices',
 
-        agancyName:'Ahuan'
-      }
+  //       agancyName:'Ahuan'
+  //     }
 
-      const payload=
-        buildMahanAvailabilityPayload({
-          searchParams:
-            currentSearchParams,
+  //     const payload=
+  //       buildMahanAvailabilityPayload({
+  //         searchParams:
+  //           currentSearchParams,
 
-          credentials:
-            mahanCred
-        })
+  //         credentials:
+  //           mahanCred
+  //       })
 
-      const res=
-        await withTimeout(
-          searchMahanAvailability(
-            payload
-          ),
-          1500000
-        )
+  //     const res=
+  //       await withTimeout(
+  //         searchMahanAvailability(
+  //           payload
+  //         ),
+  //         1500000
+  //       )
 
-      if(!isCurrentSearch()){
-        console.log(
-          `پاسخ ماهان تاریخ ${date} قدیمی است و نادیده گرفته شد`
-        )
+  //     if(!isCurrentSearch()){
+  //       console.log(
+  //         `پاسخ ماهان تاریخ ${date} قدیمی است و نادیده گرفته شد`
+  //       )
 
-        return
-      }
+  //       return
+  //     }
 
-      const offers=
-        Array.isArray(
-          res?.flightOffers
-        )
-          ?res.flightOffers
-          :[]
+  //     const offers=
+  //       Array.isArray(
+  //         res?.flightOffers
+  //       )
+  //         ?res.flightOffers
+  //         :[]
 
-      const mappedFlights=
-        offers
-          .map(
-            mapMahanOfferToFlight
-          )
-          .filter(Boolean)
+  //     const mappedFlights=
+  //       offers
+  //         .map(
+  //           mapMahanOfferToFlight
+  //         )
+  //         .filter(Boolean)
 
-      appendFlights(
-        mappedFlights,
-        'MAHAN'
-      )
-    }catch(error){
-      if(!isCurrentSearch()){
-        return
-      }
+  //     appendFlights(
+  //       mappedFlights,
+  //       'MAHAN'
+  //     )
+  //   }catch(error){
+  //     if(!isCurrentSearch()){
+  //       return
+  //     }
 
-      console.error(
-        `خطای ماهان برای تاریخ ${date}:`,
-        error
-      )
-    }
-  })()
+  //     console.error(
+  //       `خطای ماهان برای تاریخ ${date}:`,
+  //       error
+  //     )
+  //   }
+  // })()
 
-  providerTasks.push(
-    mahanTask
-  )
+  // providerTasks.push(
+  //   mahanTask
+  // )
 
   /*
   |--------------------------------------------------------------------------
