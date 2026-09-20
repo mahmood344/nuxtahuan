@@ -222,7 +222,8 @@ const toast=useToast()
 const emit = defineEmits([
   'update:mabda',
   'update:maghsad',
-]);
+  'destination-selected'
+])
 
 const flightStore = useFlightStore()
 
@@ -592,17 +593,33 @@ const swapFields = () => {
 /* -----------------------
 select city
 ----------------------- */
-const selectMabda = (city) => {
+const selectMabda = async (city) => {
+
   isSelecting.value = true
 
   mabda.value = city
-  searchMabda.value = city.cityNicName
 
-  // ارسال کد مناسب به والد
-  emit('update:mabda', getCodeForEmit(city))
+  searchMabda.value =
+    city.cityNicName
 
+  emit(
+    'update:mabda',
+    getCodeForEmit(city)
+  )
+
+  // مبدا بسته شود
   isMabdaOpen.value = false
-  dropdownCities.value = []
+
+  // داده‌های مقصد آماده شود
+  searchMaghsad.value = ""
+
+  dropdownCities.value =
+    popularCities.value
+
+  await nextTick()
+
+  // مقصد خودکار باز شود
+  isMaghsadOpen.value = true
 
   setTimeout(() => {
     isSelecting.value = false
@@ -610,16 +627,31 @@ const selectMabda = (city) => {
 }
 
 const selectMaghsad = (city) => {
+
   isSelecting.value = true
 
   maghsad.value = city
-  searchMaghsad.value = city.cityNicName
 
-  // ارسال کد مناسب به والد
-  emit('update:maghsad', getCodeForEmit(city))
+  searchMaghsad.value =
+    city.cityNicName
+
+  const code =
+    getCodeForEmit(city)
+
+  emit(
+    'update:maghsad',
+    code
+  )
 
   isMaghsadOpen.value = false
+
   dropdownCities.value = []
+
+  // به والد می‌گوییم مقصد انتخاب شد
+  emit(
+    'destination-selected',
+    code
+  )
 
   setTimeout(() => {
     isSelecting.value = false

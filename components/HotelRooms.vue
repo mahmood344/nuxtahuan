@@ -917,19 +917,21 @@ function getSelectedNoBedCount(room){
 }
 
 
-function getNoBedLimit(room){
+function getNoBedLimit(room) {
+  const extraBedCount =
+    getSelectedExtraBedCount(room)
 
- const perRoom=
-  Math.max(
-   0,
-   Number(room?.noBed||0)
+  const remainingCapacity =
+    Math.max(
+      0,
+      getAdditionalCapacityLimit(room) -
+      extraBedCount
+    )
+
+  return Math.min(
+    getNoBedAbsoluteLimit(room),
+    remainingCapacity
   )
-
- return (
-  perRoom*
-  getSelectedRoomCount(room)
- )
-
 }
 
 function formatJalaliDate(value){
@@ -1121,65 +1123,150 @@ function increaseRoom(room){
 
 
 
-function decreaseRoom(room){
+function decreaseRoom(room) {
 
- const current=
-  getSelectedRoomCount(room)
+  const current =
+    getSelectedRoomCount(room)
 
- if(current<=1)
-  return
+  if (current <= 1)
+    return
 
+  const newCount =
+    current - 1
 
- const newCount=
-  current-1
+  // =====================
+  // تعداد جدید اتاق
+  // =====================
 
-
- selectedRoomCounts.value={
-  ...selectedRoomCounts.value,
-  [room.id]:newCount
- }
-
-
- // =====================
- // کنترل تخت اضافه
- // =====================
-
- const maxExtraBed=
-  Number(room?.extraBed||0)*
-  newCount
-
- const currentExtraBed=
-  getSelectedExtraBedCount(room)
-
- if(currentExtraBed>maxExtraBed){
-
-  selectedExtraBedCounts.value={
-   ...selectedExtraBedCounts.value,
-   [room.id]:maxExtraBed
+  selectedRoomCounts.value = {
+    ...selectedRoomCounts.value,
+    [room.id]: newCount
   }
 
- }
+
+  // =====================
+  // ظرفیت اضافه مجاز جدید
+  // =====================
+
+  const capacity =
+    Math.max(
+      0,
+      Number(room?.capacity || 0)
+    )
+
+  const maxCapacity =
+    Math.max(
+      capacity,
+      Number(
+        room?.maxCapacity ||
+        capacity
+      )
+    )
+
+  const additionalPerRoom =
+    Math.max(
+      0,
+      maxCapacity - capacity
+    )
+
+  const totalAdditionalLimit =
+    additionalPerRoom * newCount
 
 
- // =====================
- // کنترل بدون تخت
- // =====================
+  // =====================
+  // مقادیر فعلی
+  // =====================
 
- const maxNoBed=
-  Number(room?.noBed||0)*
-  newCount
+  let extraBedCount =
+    getSelectedExtraBedCount(room)
 
- const currentNoBed=
-  getSelectedNoBedCount(room)
+  let noBedCount =
+    getSelectedNoBedCount(room)
 
- if(currentNoBed>maxNoBed){
 
-  selectedNoBedCounts.value={
-   ...selectedNoBedCounts.value,
-   [room.id]:maxNoBed
+  // =====================
+  // سقف خود سرویس‌ها
+  // =====================
+
+  const maxExtraBed =
+    Math.max(
+      0,
+      Number(room?.extraBed || 0)
+    ) * newCount
+
+  const maxNoBed =
+    Math.max(
+      0,
+      Number(room?.noBed || 0)
+    ) * newCount
+
+
+  extraBedCount =
+    Math.min(
+      extraBedCount,
+      maxExtraBed
+    )
+
+  noBedCount =
+    Math.min(
+      noBedCount,
+      maxNoBed
+    )
+
+
+  // =====================
+  // کنترل مجموع ظرفیت
+  // =====================
+
+  const totalSelected =
+    extraBedCount +
+    noBedCount
+
+  if (
+    totalSelected >
+    totalAdditionalLimit
+  ) {
+
+    if (totalSelected > 0) {
+
+      const extraRatio =
+        extraBedCount /
+        totalSelected
+
+      extraBedCount =
+        Math.min(
+          extraBedCount,
+          Math.floor(
+            totalAdditionalLimit *
+            extraRatio
+          )
+        )
+
+      noBedCount =
+        Math.min(
+          noBedCount,
+          totalAdditionalLimit -
+          extraBedCount
+        )
+
+    }
+
   }
 
- }
+
+  // =====================
+  // ذخیره تعداد جدید
+  // =====================
+
+  selectedExtraBedCounts.value = {
+    ...selectedExtraBedCounts.value,
+    [room.id]: extraBedCount
+  }
+
+  selectedNoBedCounts.value = {
+    ...selectedNoBedCounts.value,
+    [room.id]: noBedCount
+  }
 
 }
 
@@ -1192,19 +1279,21 @@ function getSelectedExtraBedCount(room){
 }
 
 
-function getExtraBedLimit(room){
+function getExtraBedLimit(room) {
+  const noBedCount =
+    getSelectedNoBedCount(room)
 
- const perRoom=
-  Math.max(
-   0,
-   Number(room?.extraBed||0)
+  const remainingCapacity =
+    Math.max(
+      0,
+      getAdditionalCapacityLimit(room) -
+      noBedCount
+    )
+
+  return Math.min(
+    getExtraBedAbsoluteLimit(room),
+    remainingCapacity
   )
-
- return (
-  perRoom *
-  getSelectedRoomCount(room)
- )
-
 }
 
 
@@ -1679,6 +1768,61 @@ function openRoomModal(room){
 
 }
 
+function getAdditionalCapacityLimit(room) {
+  const roomCount =
+    getSelectedRoomCount(room)
 
+  const capacity =
+    Math.max(
+      0,
+      Number(room?.capacity || 0)
+    )
+
+  const maxCapacity =
+    Math.max(
+      capacity,
+      Number(room?.maxCapacity || capacity)
+    )
+
+  return (
+    Math.max(
+      0,
+      maxCapacity - capacity
+    ) *
+    roomCount
+  )
+}
+
+function getExtraBedAbsoluteLimit(room) {
+  const roomCount =
+    getSelectedRoomCount(room)
+
+  const extraBed =
+    Math.max(
+      0,
+      Number(room?.extraBed || 0)
+    )
+
+  return Math.min(
+    extraBed * roomCount,
+    getAdditionalCapacityLimit(room)
+  )
+}
+
+function getNoBedAbsoluteLimit(room) {
+  const roomCount =
+    getSelectedRoomCount(room)
+
+  const noBed =
+    Math.max(
+      0,
+      Number(room?.noBed || 0)
+    )
+
+  return Math.min(
+    noBed * roomCount,
+    getAdditionalCapacityLimit(room)
+  )
+}
 </script>
 

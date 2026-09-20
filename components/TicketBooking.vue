@@ -69,16 +69,22 @@
   <!-- در حالت lg، w-1/4 باعث می‌شود هر کدام 25% عرض را بگیرند -->
   <div class="order-4 xl:order-1 w-full xl:w-1/2 xl:basis-auto">
   <UiOriginDestinationSelector
+  ref="originDestinationRef"
+  @destination-selected="
+    openDatePicker
+  "
   :sendFlightType="flightType"
   v-model:mabda="origin"
   v-model:maghsad="destination"
 ></UiOriginDestinationSelector></div>
   <div class="order-3 xl:order-2 w-full xl:w-1/3 xl:basis-auto">
-  <UiBaseDatePicker :sendTravelType="travelType"
+  <UiBaseDatePicker @date-complete="
+    openPassengerSelector
+  " ref="datePickerRef" :sendTravelType="travelType"
   v-model:departDate="departDate"
   v-model:returnDate="returnDate"></UiBaseDatePicker></div>
   <div class="order-2 xl:order-3 w-full xl:w-1/3 xl:basis-auto">
-  <UiPassengerSelector v-model:adl="adl"
+  <UiPassengerSelector ref="passengerRef" v-model:adl="adl"
   v-model:chd="chd"
   v-model:inf="inf"></UiPassengerSelector></div>
   <div class="order-1 xl:order-4 flex justify-center items-center w-full xl:w-1/6 xl:basis-auto">
@@ -144,10 +150,20 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import {
+  ref,
+  computed,
+  watch,
+  nextTick,
+  onMounted,
+  onUnmounted
+} from 'vue'
 import { useRouter } from 'vue-router'
 import { useFlightStore } from '~/stores/flights'
 import { useHotelStore } from '~/stores/hotels'
+const originDestinationRef = ref(null)
+const datePickerRef = ref(null)
+const passengerRef = ref(null)
 const hotelStore = useHotelStore()
 const router = useRouter()
 const origin = ref(null)
@@ -187,7 +203,23 @@ const hotelCities=computed(()=>{
   }))
 
 })
+const openDatePicker = async () => {
 
+  await nextTick()
+
+  datePickerRef.value
+    ?.openDepartPicker?.()
+}
+
+
+const openPassengerSelector =
+  async () => {
+
+    await nextTick()
+
+    passengerRef.value
+      ?.openSelector?.()
+  }
 const hotelDateLabel = computed(()=>{
 
   if(!hotelDate.value)
@@ -342,6 +374,55 @@ function searchFlights() {
   })
 
 }
+watch(origin, async (newValue, oldValue) => {
+  if (!newValue || newValue === oldValue)
+    return
+
+  await nextTick()
+
+  originDestinationRef.value
+    ?.openDestination?.()
+})
+
+
+watch(destination, async (newValue, oldValue) => {
+  if (!newValue || newValue === oldValue)
+    return
+
+  await nextTick()
+
+  datePickerRef.value
+    ?.openPicker?.()
+})
+
+
+watch(departDate, async (newValue, oldValue) => {
+  if (!newValue || newValue === oldValue)
+    return
+
+  if (travelType.value === 'round-trip')
+    return
+
+  await nextTick()
+
+  passengerRef.value
+    ?.openSelector?.()
+})
+
+
+watch(returnDate, async (newValue, oldValue) => {
+  if (!newValue || newValue === oldValue)
+    return
+
+  if (travelType.value !== 'round-trip')
+    return
+
+  await nextTick()
+
+  passengerRef.value
+    ?.openSelector?.()
+})
+
 </script>
 
 <style scoped>

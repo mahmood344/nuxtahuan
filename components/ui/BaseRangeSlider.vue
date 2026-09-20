@@ -1,5 +1,8 @@
 <template>
-  <div class="relative w-full px-4" ref="sliderContainer">
+  <div
+  class="relative isolate z-0 w-full px-4"
+  ref="sliderContainer"
+>
     <!-- نمایشگر مقادیر فعلی -->
     <div class="flex justify-between text-sm text-gray-500 mb-3 px-1">
      
