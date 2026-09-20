@@ -1,6 +1,9 @@
 <script setup>
-import { ref, watch } from "vue";
-
+import {
+  ref,
+  watch,
+  computed
+} from "vue";
 const props = defineProps({
   sendTravelType: {
     type: String,
@@ -29,7 +32,8 @@ const disablePastDates = (date) => {
 }
 const emit = defineEmits([
   "update:departDate",
-  "update:returnDate"
+  "update:returnDate",
+  "date-complete"
 ])
 
 const departDate = ref("");
@@ -37,7 +41,11 @@ const returnDate = ref("");
 
 const showdepartDate = ref(false);
 const showreturnDate = ref(false);
+const syncingDepart =
+  ref(false)
 
+const syncingReturn =
+  ref(false)
 // رنگ‌ها از theme
 const styles = {
   "primary-color": "var(--color-primary)",
@@ -63,23 +71,129 @@ const clearReturnDate = () => {
   returnDate.value = "";
   emit("update:returnDate", null)
 };
+const toPersianDigits = value =>
+  String(value || "").replace(
+    /\d/g,
+    digit => "۰۱۲۳۴۵۶۷۸۹"[Number(digit)]
+  )
 
+const toJalaliDate = value => {
+  const raw = String(value || "").trim()
+
+  if (!raw)
+    return ""
+
+  const normalized =
+    raw.replace(/-/g, "/")
+
+  const parts =
+    normalized.split("/")
+
+  if (parts.length !== 3)
+    return toPersianDigits(raw)
+
+  const year = Number(parts[0])
+  const month = Number(parts[1])
+  const day = Number(parts[2])
+
+  // اگر به هر دلیل از قبل شمسی بود
+  if (year < 1700) {
+    return toPersianDigits(
+      `${String(year).padStart(4, "0")}/${String(month).padStart(2, "0")}/${String(day).padStart(2, "0")}`
+    )
+  }
+
+  const dateValue = new Date(
+    year,
+    month - 1,
+    day,
+    12,
+    0,
+    0
+  )
+
+  if (Number.isNaN(dateValue.getTime()))
+    return toPersianDigits(raw)
+
+  return new Intl.DateTimeFormat(
+    "fa-IR-u-ca-persian",
+    {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    }
+  ).format(dateValue)
+}
+const displayDepartDate = computed(() =>
+  toJalaliDate(departDate.value)
+)
+
+const displayReturnDate = computed(() =>
+  toJalaliDate(returnDate.value)
+)
 /* -----------------------
 watch برای emit تاریخ رفت
 ----------------------- */
-watch(departDate, (newVal) => {
-  emit("update:departDate", newVal || null)
-})
+watch(
+  departDate,
+  (newVal, oldVal) => {
+
+    if (syncingDepart.value)
+      return
+
+    emit(
+      "update:departDate",
+      newVal || null
+    )
+
+    if (
+      !newVal ||
+      newVal === oldVal
+    )
+      return
+
+    showdepartDate.value = false
+
+    // رفت و برگشت:
+    // بعد از تاریخ رفت، برگشت باز شود
+    if (
+      props.sendTravelType ===
+      "round-trip"
+    ) {
+
+      setTimeout(() => {
+        showreturnDate.value = true
+      }, 100)
+
+      return
+    }
+
+    // یک طرفه:
+    // کار تاریخ تمام شده
+    emit("date-complete")
+  }
+)
 
 /* -----------------------
 watch برای emit تاریخ برگشت
 ----------------------- */
 watch(
   () => props.departDate,
+
   (value) => {
-    departDate.value = value || ""
+
+    syncingDepart.value = true
+
+    departDate.value =
+      value || ""
+
     showdepartDate.value = false
+
+    queueMicrotask(() => {
+      syncingDepart.value = false
+    })
   },
+
   {
     immediate: true
   }
@@ -87,17 +201,49 @@ watch(
 
 watch(
   () => props.returnDate,
+
   (value) => {
-    returnDate.value = value || ""
+
+    syncingReturn.value = true
+
+    returnDate.value =
+      value || ""
+
     showreturnDate.value = false
+
+    queueMicrotask(() => {
+      syncingReturn.value = false
+    })
   },
+
   {
     immediate: true
   }
 )
-watch(returnDate, (newVal) => {
-  emit("update:returnDate", newVal || null)
-})
+watch(
+  returnDate,
+  (newVal, oldVal) => {
+
+    if (syncingReturn.value)
+      return
+
+    emit(
+      "update:returnDate",
+      newVal || null
+    )
+
+    if (
+      !newVal ||
+      newVal === oldVal
+    )
+      return
+
+    showreturnDate.value = false
+
+    // تاریخ‌ها کامل شده‌اند
+    emit("date-complete")
+  }
+)
 
 /* -----------------------
 اگر نوع سفر یک‌طرفه شد،
@@ -109,6 +255,10 @@ watch(() => props.sendTravelType, (newType) => {
     showreturnDate.value = false
     emit("update:returnDate", null)
   }
+})
+defineExpose({
+  openDepartPicker,
+  openReturnPicker
 })
 </script>
 
@@ -127,13 +277,13 @@ watch(() => props.sendTravelType, (newType) => {
           تاریخ رفت
         </label>
 
-        <input
-          readonly
-          :value="departDate"
-          placeholder="تاریخ رفت"
-          @click="openDepartPicker"
-          class="w-full h-full px-4 pt-1.5 text-[10px] font-bold text-[var(--color-gray-800)] placeholder:text-[var(--color-gray-400)] bg-transparent outline-none cursor-pointer border-none"
-        />
+      <input
+  readonly
+  :value="displayDepartDate"
+  placeholder="تاریخ رفت"
+  @click="openDepartPicker"
+  class="w-full h-full px-4 pt-1.5 text-[10px] font-bold text-[var(--color-gray-800)] placeholder:text-[var(--color-gray-400)] bg-transparent outline-none cursor-pointer border-none"
+/>
 
         <!-- clear -->
         <button
@@ -182,14 +332,14 @@ watch(() => props.sendTravelType, (newType) => {
           تاریخ برگشت
         </label>
 
-        <input
-          :disabled="props.sendTravelType === 'one-way'"
-          readonly
-          :value="returnDate"
-          placeholder="تاریخ برگشت"
-          @click="openReturnPicker"
-          class="w-full h-full px-4 pt-1.5 text-[10px] font-bold text-[var(--color-gray-800)] placeholder:text-[var(--color-gray-400)] bg-transparent outline-none cursor-pointer border-none"
-        />
+       <input
+  :disabled="props.sendTravelType === 'one-way'"
+  readonly
+  :value="displayReturnDate"
+  placeholder="تاریخ برگشت"
+  @click="openReturnPicker"
+  class="w-full h-full px-4 pt-1.5 text-[10px] font-bold text-[var(--color-gray-800)] placeholder:text-[var(--color-gray-400)] bg-transparent outline-none cursor-pointer border-none"
+/>
 
         <!-- clear -->
         <button
@@ -224,3 +374,6 @@ watch(() => props.sendTravelType, (newType) => {
     </div>
   </div>
 </template>
+<style>
+
+</style>

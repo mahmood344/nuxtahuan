@@ -476,6 +476,16 @@ function isParoSessionResponseError(response){
     message.includes('session expired')
   )
 }
+function roundUpPrice(value) {
+
+  const number =
+    Number(value || 0)
+
+  if(!Number.isFinite(number))
+    return 0
+
+  return Math.ceil(number)
+}
 function getPassengerPrice(
   pricingInfo,
   passengerType
@@ -507,10 +517,11 @@ function getPassengerPrice(
         ?.baseFare||0
     ),
 
-    totalFare:Number(
-      item?.passengerFare
-        ?.totalFare||0
-    ),
+    totalFare:
+  roundUpPrice(
+    item?.passengerFare
+      ?.totalFare
+  ),
 
     tax:Number(
       item?.passengerFare
@@ -704,7 +715,8 @@ export function mapParoItineraryToFlight(
       mappedReturnSegments.length-1
     ]
 
-  const price=Number(
+  const rawPrice=
+  Number(
     totalFare?.totalFare||0
   )
 
@@ -729,7 +741,7 @@ export function mapParoItineraryToFlight(
       :null
 
   const disabled=
-    price<=0||
+    rawPrice<=0||
     capacity<=0||
     (
       mappedReturnSegments.length>0&&
@@ -754,7 +766,24 @@ export function mapParoItineraryToFlight(
       pricingInfo,
       3
     )
-
+const price=[
+  adultPrice,
+  childPrice,
+  infantPrice
+]
+.reduce(
+  (sum,item)=>
+    sum+
+    (
+      Number(
+        item?.totalFare||0
+      )*
+      Number(
+        item?.count||0
+      )
+    ),
+  0
+) || roundUpPrice(rawPrice)
   /*
    * طبق نمونه‌ای که فرستادی:
    * nonRefundableType = 0

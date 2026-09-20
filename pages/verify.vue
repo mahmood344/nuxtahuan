@@ -125,14 +125,14 @@
               v-if="isBankPayment"
               class="font-semibold leading-relaxed text-orange-800"
             >
-              پرداخت شما با موفقیت انجام شده است اما صدور بلیت ناموفق بود. در صورت وجود مبلغ قابل استرداد، نتیجه استرداد در پیام بالا نمایش داده می‌شود.
-            </p>
+پرداخت شما با موفقیت انجام شده است اما صدور بلیت ناموفق بود.
+  لطفاً جهت بررسی وضعیت پرداخت و صدور با پشتیبانی تماس بگیرید.            </p>
 
             <p
               v-else
               class="font-semibold leading-relaxed text-orange-800"
             >
-              توجه: فرآیند صدور بلیت با خطا مواجه شد. لطفاً جهت بررسی یا صدور دستی با پشتیبانی تماس بگیرید.
+              توجه: فرآیند صدور بلیت با خطا مواجه شد. لطفاً جهت بررسی با پشتیبانی تماس بگیرید.
             </p>
           </div>
         </div>
@@ -155,13 +155,76 @@
 </h1>
 
 <p class="mb-6 text-gray-700">
-  {{
+ {{
     isHotelBooking
-      ? 'واچر هتل شما با موفقیت صادر گردید.'
-      : 'بلیت شما با موفقیت صادر گردید.'
+      ? 'واچر هتل شما آماده دریافت است.'
+      : 'بلیت شما صادر شده و آماده دریافت است.'
   }}
 </p>
+<!-- اطلاعات تراکنش بانکی -->
+<div
+  v-if="successfulBankDetails"
+  class="
+    mb-6
+    rounded-xl
+    border
+    border-gray-200
+    bg-gray-50
+    p-4
+    text-right
+  "
+>
+  <div
+    class="
+      mb-3
+      text-[13px]
+      font-bold
+      text-gray-700
+    "
+  >
+    اطلاعات تراکنش بانکی
+  </div>
 
+  <div
+    class="
+      space-y-3
+      text-[12px]
+      text-gray-600
+    "
+  >
+    <div
+      v-if="successfulBankDetails.traceNo"
+      class="flex items-center justify-between gap-4"
+    >
+      <span>
+        شماره پیگیری:
+      </span>
+
+      <span
+        dir="ltr"
+        class="font-bold text-gray-800"
+      >
+        {{ successfulBankDetails.traceNo }}
+      </span>
+    </div>
+
+    <div
+      v-if="successfulBankDetails.rrn"
+      class="flex items-center justify-between gap-4"
+    >
+      <span>
+        شماره مرجع بانکی (RRN):
+      </span>
+
+      <span
+        dir="ltr"
+        class="font-bold text-gray-800"
+      >
+        {{ successfulBankDetails.rrn }}
+      </span>
+    </div>
+  </div>
+</div>
           <!-- اطلاعات پرواز صادر شده -->
           <div
             v-if="contractData && !isHotelBooking" 
@@ -275,6 +338,7 @@ import{
   issueParoFlight,
   getParoBooking
 }from'~/services/providers/paro'
+
 const flightStore = useFlightStore()
 const toast=useToast()
 definePageMeta({
@@ -378,7 +442,7 @@ const PARTO_MAX_RETRIES=3
 
 const statusStep = ref<'PENDING' | 'BANK_FAILED' | 'ISSUE_FAILED' | 'SUCCESS'>('PENDING')
 const PAYMENT_SESSION_KEY = 'flight_payment_session'
-
+const REFUND_ENABLED = false
 // محاسبه بررسی اینکه آیا پرداخت از نوع درگاه بانکی است یا خیر
 const isBankPayment = computed(() => {
   const type = paymentInfo.value?.type
@@ -840,7 +904,7 @@ ${ticketUrl}
 احتراماً به اطلاع می‌رساند که صدور ${ticketWord} شما در پرواز هواپیمایی ${airlineName} به شماره ${flightNumber} مورخ ${flightDate} ساعت ${flightTime} از ${origin} به ${destination} با موفقیت انجام نشد.
 
 کد رزرو: ${pnr}
-موضوع توسط کارشناسان آهوان در حال پیگیری است.
+لطفاً جهت پیگیری با پشتیبانی آهوان تماس بگیرید.
 شرکت خدمات مسافرتی آهوان`
 }
 
@@ -2471,6 +2535,41 @@ const getBankPaymentDetails=(
     ).trim()
   }
 }
+const successfulBankDetails = computed(() => {
+  if (!isBankPayment.value) {
+    return null
+  }
+
+  const storedPaymentId = String(
+    contractData.value?.paymentId || ''
+  ).trim()
+
+  const paymentParts =
+    storedPaymentId.split('-')
+
+  const rrn = String(
+    route.query.rrn ||
+    route.query.retrievalReferenceNumber ||
+    paymentParts[1] ||
+    ''
+  ).trim()
+
+  const traceNo = String(
+    route.query.traceNo ||
+    route.query.systemTraceAuditNumber ||
+    paymentParts[2] ||
+    ''
+  ).trim()
+
+  if (!rrn && !traceNo) {
+    return null
+  }
+
+  return {
+    rrn,
+    traceNo
+  }
+})
 const updateContract=async(
  contract:any
 ):Promise<any>=>{
@@ -2965,6 +3064,15 @@ const refundBankPayment=async(
   contract:any,
   amount:number
 ):Promise<RefundResult>=>{
+    if(!REFUND_ENABLED){
+    return{
+      attempted:false,
+      success:true,
+      amount:0,
+      response:null,
+      error:''
+    }
+  }
   const paymentId=String(
     contract?.paymentId||''
   ).trim()
@@ -3182,6 +3290,9 @@ const refundHotelBankPayment=async(
  session:PaymentSession,
  contract:any
 )=>{
+   if(!REFUND_ENABLED){
+  return null
+ }
  if(
   session.type!=='gateway'&&
   session.type!=='travelcard-gateway'
@@ -3601,7 +3712,8 @@ contractData.value=
     contractData.value=save.contract
   }
 
-  if(settlement.bankRefund>0){
+  if( REFUND_ENABLED &&
+  settlement.bankRefund > 0){
     markRefundPending(
       contractData.value,
       session,
@@ -3643,7 +3755,8 @@ contractData.value=
   break
 
       case'gateway':
-  if(settlement.bankRefund>0){
+  if( REFUND_ENABLED &&
+  settlement.bankRefund > 0){
     markRefundPending(
       contractData.value,
       session,

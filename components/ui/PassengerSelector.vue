@@ -174,6 +174,13 @@ import {
 } from "vue"
 const isSyncingFromParent = ref(false)
 const isOpen = ref(false)
+const openSelector = () => {
+  isOpen.value = true
+}
+
+const closeSelector = () => {
+  isOpen.value = false
+}
 const props = defineProps({
   adl: {
     type: Number,
@@ -300,6 +307,10 @@ const decrement = (type) => {
   if (type === "child" && canRemoveChild.value) counts.value.child--
   if (type === "infant" && canRemoveInfant.value) counts.value.infant--
 }
+defineExpose({
+  openSelector,
+  closeSelector
+})
 </script>
 
 <style scoped>
