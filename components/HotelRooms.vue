@@ -111,167 +111,322 @@
     class="overflow-hidden rounded-2xl border border-[var(--color-gray-200)] bg-white shadow-sm"
   >
     <!-- بخش بالای کارت -->
-    <div class="p-5 md:p-6">
-      <div
-        class="relative flex flex-col md:flex-row md:items-start md:justify-between gap-5"
+    <!-- بخش بالای کارت -->
+<div class="p-5 md:p-6">
+
+  <!-- ========================= -->
+  <!-- اطلاعات اصلی اتاق -->
+  <!-- ========================= -->
+  <div class="min-w-0">
+
+    <!-- عنوان اتاق + جزئیات -->
+    <div
+      class="flex items-start justify-between gap-3"
+    >
+
+      <!-- عنوان -->
+      <h4
+        class="
+          min-w-0
+          flex-1
+          text-[15px]
+          font-black
+          leading-6
+          text-[var(--color-gray-800)]
+          break-words
+        "
       >
-        <!-- اطلاعات -->
-        <div class="flex-1">
-
-          <h4
-            class="text-[15px] font-black text-[var(--color-gray-800)]"
-          >
-            {{room.type||room.name||'اتاق'}}
-          </h4>
-
-          <div
-            class="mt-3 flex flex-wrap items-center gap-2"
-          >
-            <UiBaseLabel
-              v-if="room.capacity"
-              :text="`${room.capacity} نفر`"
-              color="var(--color-primary)"
-              icon='<i class="bi bi-person-fill"></i>'
-            style="zoom:0.78"
-            />
-
-            <UiBaseLabel
-              v-if="hasRoomCapacity(room) && Number(room.extraBed||0)>0"
-              :text="`${room.extraBed} ${room.extraBedService || 'تخت اضافه'}`"              color="var(--color-primary)"
-              icon='<i class="bi bi-plus-circle"></i>'
-            style="zoom:0.78"
-            />
-
-            <UiBaseLabel
-              v-if="hasRoomCapacity(room) && Number(room.noBed||0)>0"
-              :text="`${room.noBed} نفر بدون تخت`"
-              color="var(--color-secondary)"
-              icon='<i class="bi bi-person"></i>'
-            style="zoom:0.78"
-            />
-
-            <UiBaseLabel
-              :text="room.breakfastIncluded === false ? 'بدون صبحانه' : 'اقامت + صبحانه'"
-              color="var(--color-primary-dark)"
-              icon='<i class="bi bi-cup-hot"></i>'
-            style="zoom:0.78"
-            />
-
-            <UiBaseLabel
-              v-if="room.doubleBedCount"
-              :text="`${room.doubleBedCount} تخت دبل`"
-              color="var(--color-gray-600)"
-              icon='<i class="bi bi-bed"></i>'
-            style="zoom:0.78"
-            />
-
-            <UiBaseLabel
-              v-if="room.singleBedCount"
-              :text="`${room.singleBedCount} تخت سینگل`"
-              color="var(--color-gray-600)"
-              icon='<i class="bi bi-bed"></i>'
-            style="zoom:0.78"
-            />
-
-            <UiBaseLabel
-              v-if="hasRoomCapacity(room) && Number(room.sofaBedCount||0)>0"
-              :text="`${room.sofaBedCount} کاناپه تختخواب‌شو`"
-              color="var(--color-gray-600)"
-              icon='<i class="bi bi-house-door"></i>'
-            style="zoom:0.78"
-            />
-          </div>
-
-          <div
-            v-if="room.name || room.roomView"
-            class="mt-3 flex flex-wrap items-center gap-2"
-          >
-            <span
-              v-if="room.name"
-              class="rounded bg-[var(--color-gray-100)] px-2 py-1 text-[10px] text-[var(--color-gray-700)]"
-            >
-              {{room.name}}
-            </span>
-
-            <span
-              v-if="room.roomView"
-              class="rounded bg-[var(--color-gray-100)] px-2 py-1 text-[10px] text-[var(--color-gray-700)]"
-            >
-              نمای {{room.roomView}}
-            </span>
-          </div>
-
-          <p
-            v-if="room.description"
-            class="mt-4 text-[11px] leading-6 text-[var(--color-gray-500)]"
-          >
-            {{room.description}}
-          </p>
-        </div>
-
-        <!-- جزئیات -->
-        <UiBaseButton
-          label="جزئیات اتاق و قوانین"
-          variant="soft"
-          color="primary"
-          icon='<i class="bi bi-chevron-left"></i>'
-          class="absolute left-0 top-0 shrink-0 !bg-transparent !border-0 !shadow-none !rounded-none !px-0 !py-0 text-[11px] font-medium md:static"
-          @click="openRoomModal(room)"
-        />
-      </div>
+        {{ room.type || room.name || 'اتاق' }}
+      </h4>
 
 
-      <!-- اسلایدر عکس -->
-      <div
- v-if="
-  !selectedView &&
-  room.hotelRoomImages?.length
- "
-        class="relative mt-5 h-[220px] overflow-hidden rounded-2xl bg-[var(--color-gray-100)]"
-      >
-        <img
-          :src="
-            getHotelImageUrl(
-              room.hotelRoomImages[
-                getRoomSlideIndex(room)
-              ]?.image
-            )
-          "
-          :alt="room.type||room.name"
-          class="absolute inset-0 h-full w-full object-cover"
-        >
+      <!-- جزئیات اتاق -->
+      <UiBaseButton
+        label="جزئیات اتاق و قوانین"
+        variant="soft"
+        color="primary"
+        icon='<i class="bi bi-chevron-left"></i>'
+        class="
+          shrink-0
+          !bg-transparent
+          !border-0
+          !shadow-none
+          !rounded-none
+          !px-0
+          !py-0
+          text-[11px]
+          font-medium
+          whitespace-nowrap
+        "
+        @click="openRoomModal(room)"
+      />
 
-        <!-- قبلی -->
-        <button
-          v-if="room.hotelRoomImages.length>1"
-          type="button"
-          class="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-white"
-          @click="prevRoomSlide(room,$event)"
-        >
-          <i class="bi bi-chevron-right"></i>
-        </button>
-
-        <!-- بعدی -->
-        <button
-          v-if="room.hotelRoomImages.length>1"
-          type="button"
-          class="absolute left-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-white"
-          @click="nextRoomSlide(room,$event)"
-        >
-          <i class="bi bi-chevron-left"></i>
-        </button>
-
-        <!-- شمارنده -->
-        <div
-          v-if="room.hotelRoomImages.length>1"
-          class="absolute bottom-3 left-3 rounded-full bg-black/60 px-3 py-1 text-[10px] text-white"
-        >
-          {{getRoomSlideIndex(room)+1}}
-          /
-          {{room.hotelRoomImages.length}}
-        </div>
-      </div>
     </div>
+
+
+    <!-- ========================= -->
+    <!-- ظرفیت و امکانات -->
+    <!-- ========================= -->
+    <div
+      class="mt-3 flex flex-wrap items-center gap-2"
+    >
+
+      <!-- ظرفیت -->
+      <UiBaseLabel
+        v-if="room.capacity"
+        :text="`${room.capacity} نفر`"
+        color="var(--color-primary)"
+        icon='<i class="bi bi-person-fill"></i>'
+        style="zoom:0.78"
+      />
+
+
+      <!-- تخت اضافه -->
+      <UiBaseLabel
+        v-if="
+          hasRoomCapacity(room) &&
+          Number(room.extraBed || 0) > 0
+        "
+        :text="
+          `${room.extraBed} ${
+            room.extraBedService ||
+            'تخت اضافه'
+          }`
+        "
+        color="var(--color-primary)"
+        icon='<i class="bi bi-plus-circle"></i>'
+        style="zoom:0.78"
+      />
+
+
+      <!-- بدون تخت -->
+      <UiBaseLabel
+        v-if="
+          hasRoomCapacity(room) &&
+          Number(room.noBed || 0) > 0
+        "
+        :text="`${room.noBed} نفر بدون تخت`"
+        color="var(--color-secondary)"
+        icon='<i class="bi bi-person"></i>'
+        style="zoom:0.78"
+      />
+
+
+      <!-- صبحانه -->
+      <UiBaseLabel
+        :text="
+          room.breakfastIncluded === false
+            ? 'بدون صبحانه'
+            : 'اقامت + صبحانه'
+        "
+        color="var(--color-primary-dark)"
+        icon='<i class="bi bi-cup-hot"></i>'
+        style="zoom:0.78"
+      />
+
+
+      <!-- تخت دبل -->
+      <UiBaseLabel
+        v-if="room.doubleBedCount"
+        :text="`${room.doubleBedCount} تخت دبل`"
+        color="var(--color-gray-600)"
+        icon='<i class="bi bi-bed"></i>'
+        style="zoom:0.78"
+      />
+
+
+      <!-- تخت سینگل -->
+      <UiBaseLabel
+        v-if="room.singleBedCount"
+        :text="`${room.singleBedCount} تخت سینگل`"
+        color="var(--color-gray-600)"
+        icon='<i class="bi bi-bed"></i>'
+        style="zoom:0.78"
+      />
+
+
+      <!-- کاناپه تختخواب شو -->
+      <UiBaseLabel
+        v-if="
+          hasRoomCapacity(room) &&
+          Number(room.sofaBedCount || 0) > 0
+        "
+        :text="
+          `${room.sofaBedCount}
+          کاناپه تختخواب‌شو`
+        "
+        color="var(--color-gray-600)"
+        icon='<i class="bi bi-house-door"></i>'
+        style="zoom:0.78"
+      />
+
+    </div>
+
+
+    <!-- ========================= -->
+    <!-- نام / نمای اتاق -->
+    <!-- ========================= -->
+    <div
+      v-if="room.name || room.roomView"
+      class="mt-3 flex flex-wrap items-center gap-2"
+    >
+
+      <span
+        v-if="room.name"
+        class="
+          rounded
+          bg-[var(--color-gray-100)]
+          px-2
+          py-1
+          text-[10px]
+          text-[var(--color-gray-700)]
+        "
+      >
+        {{ room.name }}
+      </span>
+
+
+      <span
+        v-if="room.roomView"
+        class="
+          rounded
+          bg-[var(--color-gray-100)]
+          px-2
+          py-1
+          text-[10px]
+          text-[var(--color-gray-700)]
+        "
+      >
+        نمای {{ room.roomView }}
+      </span>
+
+    </div>
+
+
+    <!-- توضیحات -->
+    <p
+      v-if="room.description"
+      class="
+        mt-4
+        text-[11px]
+        leading-6
+        text-[var(--color-gray-500)]
+      "
+    >
+      {{ room.description }}
+    </p>
+
+  </div>
+
+
+  <!-- ========================= -->
+  <!-- اسلایدر عکس -->
+  <!-- ========================= -->
+  <div
+    v-if="
+      !selectedView &&
+      room.hotelRoomImages?.length
+    "
+    class="
+      relative
+      mt-5
+      h-[220px]
+      overflow-hidden
+      rounded-2xl
+      bg-[var(--color-gray-100)]
+    "
+  >
+
+    <img
+      :src="
+        getHotelImageUrl(
+          room.hotelRoomImages[
+            getRoomSlideIndex(room)
+          ]?.image
+        )
+      "
+      :alt="room.type || room.name"
+      class="
+        absolute
+        inset-0
+        h-full
+        w-full
+        object-cover
+      "
+    >
+
+
+    <!-- قبلی -->
+    <button
+      v-if="room.hotelRoomImages.length > 1"
+      type="button"
+      class="
+        absolute
+        right-3
+        top-1/2
+        flex
+        h-9
+        w-9
+        -translate-y-1/2
+        items-center
+        justify-center
+        rounded-full
+        bg-black/50
+        text-white
+      "
+      @click="prevRoomSlide(room, $event)"
+    >
+      <i class="bi bi-chevron-right"></i>
+    </button>
+
+
+    <!-- بعدی -->
+    <button
+      v-if="room.hotelRoomImages.length > 1"
+      type="button"
+      class="
+        absolute
+        left-3
+        top-1/2
+        flex
+        h-9
+        w-9
+        -translate-y-1/2
+        items-center
+        justify-center
+        rounded-full
+        bg-black/50
+        text-white
+      "
+      @click="nextRoomSlide(room, $event)"
+    >
+      <i class="bi bi-chevron-left"></i>
+    </button>
+
+
+    <!-- شمارنده -->
+    <div
+      v-if="room.hotelRoomImages.length > 1"
+      class="
+        absolute
+        bottom-3
+        left-3
+        rounded-full
+        bg-black/60
+        px-3
+        py-1
+        text-[10px]
+        text-white
+      "
+    >
+      {{ getRoomSlideIndex(room) + 1 }}
+      /
+      {{ room.hotelRoomImages.length }}
+    </div>
+
+  </div>
+
+</div>
 
 
     <!-- پایین کارت -->

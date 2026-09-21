@@ -2401,67 +2401,47 @@ function getUserData(){
 }
 async function handleHotelSearch(data){
 
- const newHotelId=
-  Number(data?.hotelId||0)
+  const newHotelId =
+    Number(data?.hotelId || 0)
 
- const newCheckIn=
-  String(data?.checkIn||'').trim()
+  const newCheckIn =
+    String(data?.checkIn || '').trim()
 
- const newCheckOut=
-  String(data?.checkOut||'').trim()
+  const newCheckOut =
+    String(data?.checkOut || '').trim()
 
+  if(
+    !newHotelId ||
+    !newCheckIn ||
+    !newCheckOut
+  ){
+    return
+  }
 
- if(
-  !newHotelId ||
-  !newCheckIn ||
-  !newCheckOut
- ){
-  return
- }
-
-
- // آیا دقیقاً همان Search فعلی است؟
- const sameSearch=
-  newHotelId===hotelId.value &&
-  newCheckIn===checkIn.value &&
-  newCheckOut===checkOut.value
+  // بستن Modal بعد از زدن جستجو
+  isHotelFilterModalOpen.value = false
 
 
- // =========================
- // Search جدید یعنی رزرو قبلی پاک
- // =========================
-
- hotelStore.clearRooms()
-
-
- // =========================
- // هر جا هستیم برگردیم Step 0
- // =========================
-
- flightStore.setCurrentStep(0)
+  const sameSearch =
+    newHotelId === hotelId.value &&
+    newCheckIn === checkIn.value &&
+    newCheckOut === checkOut.value
 
 
- await nextTick()
+  hotelStore.clearRooms()
 
+  flightStore.setCurrentStep(0)
 
- window.scrollTo({
-  top:0,
-  behavior:'smooth'
- })
+  await nextTick()
 
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth'
+  })
 
- // =========================
- // اگر URL عوض نمی‌شود
- // Watch اجرا نمی‌شود
- // پس API را دستی دوباره بزن
- // =========================
-
- if(sameSearch){
-
-  await loadHotelAvailability()
-
- }
-
+  if(sameSearch){
+    await loadHotelAvailability()
+  }
 }
 function handleEditHotelRoom(){
 
