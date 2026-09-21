@@ -18,21 +18,31 @@
     <!-- در موبایل با margin-top منفی میاد بالا و در دسکتاپ هم همینطور -->
    <div class=" relative border border-l-gray-200 border-r-gray-200 border-b-gray-200 border-t-gray-50 z-20 mx-auto -mt-[250px] 0 md:mt-20 w-[95%] max-w-[462px] md:max-w-[1246px] bg-white rounded-3xl shadow-xl min-h-[auto] p-6">
     <div dir="rtl" class="mt-0 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-7 gap-3 md:-mt-[50px]">
-      <UiBaseButton
-        v-for="(s, index) in services"
-        :key="s.key"
-        :label="s.label"
-        :icon="s.icon"
-        :variant="activeService === s.key ? 'filled' : 'outline'"
-        :color="activeService === s.key ? 'primary' : 'white'"  
-        :active="activeService === s.key"
-        @click="selectService(s.key, index)"
-        class="text-[13px] font-black"
-        :class="{
-          'col-span-2 md:col-start-2 md:col-span-1 xl:col-span-1 xl:col-start-auto':
-            index === services.length - 1
-        }"
-      />
+      <UiBaseButton 
+  v-for="(s, index) in services" 
+  :key="s.key" 
+  :label="s.label" 
+  :icon="s.icon" 
+
+  variant="outline"
+  color="white"
+
+  :active="activeService === s.key" 
+  @click="selectService(s.key, index)" 
+
+  class="text-[13px] font-black lg:h-[72px] transition-colors"
+
+  :class="[
+    activeService === s.key
+      ? '!bg-[var(--color-primary)] !text-white !border-[var(--color-primary)]'
+      : '!bg-white !text-[var(--color-primary)] !border-[var(--color-primary)]',
+
+    {
+      'col-span-2 md:col-start-2 md:col-span-1 xl:col-span-1 xl:col-start-auto':
+        index === services.length - 1
+    }
+  ]"
+/>
     </div>
     <div class="w-full my-4 h-[1px] bg-[var(--color-gray-300)] md:hidden"></div>
      <div dir="rtl" v-if="activeService == 'flight'" id="app" class="flex flex-col justify-center">

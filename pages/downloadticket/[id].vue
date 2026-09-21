@@ -4290,9 +4290,7 @@ const fetchFlightPrintableTickets=async(
 }
 const downloadHotelVoucherPdf = async () => {
 
-  if(
-    typeof window === 'undefined'
-  ){
+  if(typeof window === 'undefined'){
     return
   }
 
@@ -4321,25 +4319,121 @@ const downloadHotelVoucherPdf = async () => {
         import('jspdf')
       ])
 
-    /*
-     * فعال شدن استایل مخصوص PDF
-     */
     element.classList.add(
       'pdf-exporting'
     )
 
     await nextTick()
 
+    if(document.fonts?.ready){
+      await document.fonts.ready
+    }
+
     const canvas =
       await html2canvas(
         element,
         {
-          scale:2,
+          scale:3,
+
           useCORS:true,
+
           backgroundColor:'#ffffff',
-          logging:false
+
+          logging:false,
+
+          width:794,
+          height:1123,
+
+          windowWidth:1200,
+          windowHeight:1400,
+
+          onclone:(clonedDocument:Document)=>{
+
+            const clonedVoucher =
+              clonedDocument.querySelector(
+                '#ticket-print-area .hotel-voucher'
+              ) as HTMLElement | null
+
+            const scaleLayer =
+              clonedVoucher?.closest(
+                '.voucher-scale-layer'
+              ) as HTMLElement | null
+
+            const shell =
+              clonedVoucher?.closest(
+                '.voucher-responsive-shell'
+              ) as HTMLElement | null
+
+
+            /*
+             * Responsive Scale را برای PDF کاملاً حذف کن
+             */
+            if(shell){
+
+              shell.style.width =
+                '794px'
+
+              shell.style.height =
+                '1123px'
+
+              shell.style.maxWidth =
+                'none'
+
+              shell.style.overflow =
+                'visible'
+            }
+
+
+            if(scaleLayer){
+
+              scaleLayer.style.position =
+                'static'
+
+              scaleLayer.style.width =
+                '794px'
+
+              scaleLayer.style.height =
+                '1123px'
+
+              scaleLayer.style.margin =
+                '0'
+
+              scaleLayer.style.left =
+                'auto'
+
+              scaleLayer.style.top =
+                'auto'
+
+              scaleLayer.style.transform =
+                'none'
+            }
+
+
+            if(clonedVoucher){
+
+              clonedVoucher.classList.add(
+                'pdf-exporting'
+              )
+
+              clonedVoucher.style.width =
+                '794px'
+
+              clonedVoucher.style.height =
+                '1123px'
+
+              clonedVoucher.style.maxWidth =
+                'none'
+
+              clonedVoucher.style.margin =
+                '0'
+
+              clonedVoucher.style.transform =
+                'none'
+            }
+          }
         }
       )
+
 
     const pdf =
       new jsPDF({
@@ -4349,41 +4443,37 @@ const downloadHotelVoucherPdf = async () => {
         compress:true
       })
 
-    const pageWidth =
-      pdf.internal.pageSize
-        .getWidth()
-
-    const pageHeight =
-      pdf.internal.pageSize
-        .getHeight()
 
     const imageData =
       canvas.toDataURL(
-        'image/jpeg',
-        0.95
+        'image/png'
       )
 
+
+    /*
+     * 794 × 1123 دقیقاً نسبت A4 دارد
+     */
     pdf.addImage(
       imageData,
-      'JPEG',
+      'PNG',
       0,
       0,
-      pageWidth,
-      pageHeight,
+      210,
+      297,
       undefined,
       'FAST'
     )
 
+
     const contractId =
       Number(
-        contractData.value?.id ||
-        0
+        contractData.value?.id || 0
       )
+
 
     pdf.save(
       `hotel-voucher-${
-        contractId ||
-        'ahuan'
+        contractId || 'ahuan'
       }.pdf`
     )
 
@@ -4402,9 +4492,6 @@ const downloadHotelVoucherPdf = async () => {
   }
   finally{
 
-    /*
-     * برگشت Preview به حالت عادی
-     */
     element.classList.remove(
       'pdf-exporting'
     )
