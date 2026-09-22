@@ -10,6 +10,15 @@ export default defineNuxtConfig({
   devtools: { enabled: false },
   app: {
     head: {
+       title: 'خدمات گردشگری آهوان',
+
+      link: [
+        {
+          rel: 'icon',
+          type: 'image/png',
+          href: '/logoSite.png'
+        }
+      ],
       htmlAttrs: {
         lang: 'fa',
         dir: 'rtl'

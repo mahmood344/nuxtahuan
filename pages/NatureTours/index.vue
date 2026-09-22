@@ -29,98 +29,111 @@
    <div
     class="grid grid-cols-1 gap-[10px] md:grid-cols-2"
    >
-    <div
-     v-for="tour in tours"
-     :key="tour.id"
-     class="
-      group
-      relative
-      h-[165px]
-      cursor-pointer
-      overflow-hidden
-      rounded-[6px]
-      bg-gray-200
-      shadow-sm
-     "
-     @click="openTour(tour)"
-    >
-     <!-- Image -->
-     <img
-      :src="tour.image"
-      :alt="tour.name"
+    <div 
+  v-for="tour in tours" 
+  :key="tour.id" 
+  class="
+    group 
+    relative 
+    h-[165px] 
+    cursor-pointer 
+    overflow-hidden 
+    rounded-[6px] 
+    bg-gray-200 
+    shadow-sm 
+  " 
+  @click="openTour(tour)" 
+>
+  <!-- Image --> 
+  <img 
+    :src="tour.image" 
+    :alt="tour.name" 
+    class="
+      h-full 
+      w-full 
+      object-cover 
+      transition 
+      duration-500 
+
+      md:group-hover:scale-105
+    " 
+  > 
+
+  <!-- Overlay --> 
+  <div 
+    class="
+      absolute 
+      inset-0 
+      flex 
+      items-center 
+      justify-center 
+
+      bg-black/45 
+      opacity-100 
+      backdrop-blur-[2px] 
+
+      transition-all 
+      duration-500 
+
+      md:bg-black/0 
+      md:opacity-0 
+      md:backdrop-blur-0 
+
+      md:group-hover:bg-black/45 
+      md:group-hover:opacity-100 
+      md:group-hover:backdrop-blur-[2px] 
+    " 
+  > 
+    <div 
       class="
-       h-full
-       w-full
-       object-cover
-       transition
-       duration-500
-       group-hover:scale-105
-      "
-     >
+        translate-y-0 
+        text-center 
+        text-white 
+        opacity-100 
 
-     <!-- Overlay -->
-     <div
-      class="
-       absolute
-       inset-0
-       flex
-       items-center
-       justify-center
-       bg-black/0
-       opacity-0
-       backdrop-blur-0
-       transition-all
-       duration-500
-       group-hover:bg-black/45
-       group-hover:opacity-100
-       group-hover:backdrop-blur-[2px]
-      "
-     >
-      <div
-       class="
-        translate-y-3
-        text-center
-        text-white
-        opacity-0
-        transition-all
-        duration-500
-        group-hover:translate-y-0
-        group-hover:opacity-100
-       "
-      >
-       <h2
-        class="text-[15px] font-black drop-shadow-lg"
-       >
-        {{tour.name}}
-       </h2>
+        transition-all 
+        duration-500 
 
-       <p
-        v-if="tour.title"
+        md:translate-y-3 
+        md:opacity-0 
+
+        md:group-hover:translate-y-0 
+        md:group-hover:opacity-100 
+      " 
+    > 
+      <h2 
+        class="text-[15px] font-black drop-shadow-lg" 
+      > 
+        {{tour.name}} 
+      </h2> 
+
+      <p 
+        v-if="tour.title" 
         class="
-         mt-1
-         text-[10px]
-         font-bold
-         text-white/90
-        "
-       >
-        {{tour.title}}
-       </p>
+          mt-1 
+          text-[10px] 
+          font-bold 
+          text-white/90 
+        " 
+      > 
+        {{tour.title}} 
+      </p> 
 
-       <p
-        v-if="tour.price"
+      <p 
+        v-if="tour.price" 
         class="
-         mt-2
-         text-[11px]
-         font-black
-         text-white
-         drop-shadow-lg
-        "
-       >
-        {{tour.price}} تومان
-       </p>
-      </div>
-     </div>
-    </div>
+          mt-2 
+          text-[11px] 
+          font-black 
+          text-white 
+          drop-shadow-lg 
+        " 
+      > 
+        {{tour.price}} تومان 
+      </p> 
+    </div> 
+  </div> 
+</div>
    </div>
   </main>
  </div>

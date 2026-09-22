@@ -5354,6 +5354,12 @@ if(!isHotelBooking.value){
 
 onMounted(() => {
 
+  document.body.style.removeProperty('overflow')
+  document.body.style.removeProperty('position')
+  document.body.style.removeProperty('height')
+
+  document.documentElement.style.removeProperty('overflow')
+
   initializePage()
 
 })

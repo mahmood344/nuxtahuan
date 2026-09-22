@@ -49,75 +49,81 @@
         "
       >
         <!-- Image -->
-        <img
-          :src="tour.image"
-          :alt="tour.title"
-          class="
-            h-full
-            w-full
-            object-cover
-            transition
-            duration-500
-            group-hover:scale-105
-          "
-        >
+        <img 
+  :src="tour.image" 
+  :alt="tour.title" 
+  class="
+    h-full 
+    w-full 
+    object-cover 
+
+    transition 
+    duration-500 
+
+    md:group-hover:scale-105
+  " 
+> 
 
         <!-- Overlay -->
-        <div
-          class="
-            absolute
-            inset-0
-            flex
-            items-center
-            justify-center
+       <div 
+  class="
+    absolute 
+    inset-0 
+    flex 
+    items-center 
+    justify-center 
 
-            bg-[var(--color-gray-800)]/0
-            opacity-0
-            backdrop-blur-0
+    bg-[var(--color-gray-800)]/50
+    opacity-100
+    backdrop-blur-[2px]
 
-            transition-all
-            duration-500
+    transition-all 
+    duration-500 
 
-            group-hover:bg-[var(--color-gray-800)]/50
-            group-hover:opacity-100
-            group-hover:backdrop-blur-[2px]
-          "
-        >
-          <div
-            class="
-              flex
-              items-center
-              gap-3
-              text-[var(--color-white)]
-            "
-          >
-            <span
-              class="
-                h-[1px]
-                w-8
-                bg-[var(--color-white)]/80
-              "
-            ></span>
+    md:bg-[var(--color-gray-800)]/0
+    md:opacity-0
+    md:backdrop-blur-0
 
-            <span
-              class="
-                text-[16px]
-                font-black
-                drop-shadow-md
-              "
-            >
-              {{ tour.title }}
-            </span>
+    md:group-hover:bg-[var(--color-gray-800)]/50 
+    md:group-hover:opacity-100 
+    md:group-hover:backdrop-blur-[2px] 
+  " 
+> 
+  <div 
+    class="
+      flex 
+      items-center 
+      gap-3 
+      text-[var(--color-white)] 
+    " 
+  > 
+    <span 
+      class="
+        h-[1px] 
+        w-8 
+        bg-[var(--color-white)]/80 
+      " 
+    ></span> 
 
-            <span
-              class="
-                h-[1px]
-                w-8
-                bg-[var(--color-white)]/80
-              "
-            ></span>
-          </div>
-        </div>
+    <span 
+      class="
+        text-[16px] 
+        font-black 
+        drop-shadow-md 
+      " 
+    > 
+      {{ tour.title }} 
+    </span> 
+
+    <span 
+      class="
+        h-[1px] 
+        w-8 
+        bg-[var(--color-white)]/80 
+      " 
+    ></span> 
+  </div> 
+</div>
       </NuxtLink>
     </div>
 

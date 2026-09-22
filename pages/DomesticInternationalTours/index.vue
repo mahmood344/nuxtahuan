@@ -57,69 +57,130 @@
      v-if="tours.length"
      class="grid grid-cols-1 gap-[10px] md:grid-cols-2"
     >
-  <div
- v-for="tour in tours"
- :key="tour.id"
- class="group relative h-[165px] cursor-pointer overflow-hidden rounded-[6px] bg-gray-200 shadow-sm"
- @click="openTour(tour)"
->
- <!-- Image -->
- <img
-  v-if="getTourImage(tour)"
-  :src="getTourImage(tour)"
-  :alt="tour.name"
-  class="h-full w-full object-cover transition duration-500 group-hover:scale-105"
- >
-
- <!-- No Image -->
  <div
-  v-else
-  class="flex h-full w-full items-center justify-center bg-gray-100"
- >
-  <i
-   class="bi bi-image text-[35px] text-gray-300"
-  ></i>
- </div>
-
- <!-- Hover Overlay -->
- <div
+  v-for="tour in tours"
+  :key="tour.id"
   class="
-   absolute inset-0
-   flex items-center justify-center
-   bg-black/0
-   opacity-0
-   backdrop-blur-0
-   transition-all duration-500
-   group-hover:bg-black/45
-   group-hover:opacity-100
-   group-hover:backdrop-blur-[2px]
+    group
+    relative
+    h-[165px]
+    cursor-pointer
+    overflow-hidden
+    rounded-[6px]
+    bg-gray-200
+    shadow-sm
   "
- >
-  <div
-   class="
-    translate-y-3
-    text-center
-    text-white
-    opacity-0
-    transition-all duration-500
-    group-hover:translate-y-0
-    group-hover:opacity-100
-   "
-  >
-   <h2
-    class="text-[15px] font-black drop-shadow-lg"
-   >
-    {{tour.name}}
-   </h2>
+  @click="openTour(tour)"
+>
+  <!-- Image -->
+  <img
+    v-if="getTourImage(tour)"
+    :src="getTourImage(tour)"
+    :alt="tour.name"
+    class="
+      h-full
+      w-full
+      object-cover
 
-   <p
-    v-if="tour.price"
-    class="mt-2 text-[11px] font-bold text-white/90 drop-shadow-lg"
-   >
-    {{tour.price}}
-   </p>
+      transition
+      duration-500
+
+      md:group-hover:scale-105
+    "
+  >
+
+  <!-- No Image -->
+  <div
+    v-else
+    class="
+      flex
+      h-full
+      w-full
+      items-center
+      justify-center
+      bg-gray-100
+    "
+  >
+    <i
+      class="
+        bi bi-image
+        text-[35px]
+        text-gray-300
+      "
+    ></i>
   </div>
- </div>
+
+
+  <!-- Overlay -->
+  <div
+    class="
+      absolute
+      inset-0
+
+      flex
+      items-center
+      justify-center
+
+      bg-black/45
+      opacity-100
+      backdrop-blur-[2px]
+
+      transition-all
+      duration-500
+
+      md:bg-black/0
+      md:opacity-0
+      md:backdrop-blur-0
+
+      md:group-hover:bg-black/45
+      md:group-hover:opacity-100
+      md:group-hover:backdrop-blur-[2px]
+    "
+  >
+
+    <!-- Content -->
+    <div
+      class="
+        translate-y-0
+        text-center
+        text-white
+        opacity-100
+
+        transition-all
+        duration-500
+
+        md:translate-y-3
+        md:opacity-0
+
+        md:group-hover:translate-y-0
+        md:group-hover:opacity-100
+      "
+    >
+      <h2
+        class="
+          text-[15px]
+          font-black
+          drop-shadow-lg
+        "
+      >
+        {{ tour.name }}
+      </h2>
+
+      <p
+        v-if="tour.price"
+        class="
+          mt-2
+          text-[11px]
+          font-bold
+          text-white/90
+          drop-shadow-lg
+        "
+      >
+        {{ tour.price }}
+      </p>
+    </div>
+
+  </div>
 </div>
     </div>
 

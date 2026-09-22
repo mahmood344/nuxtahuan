@@ -110,7 +110,7 @@
 </div>
   </div>
 <div
-  v-if="activeService==='hotelAhwan'"
+  v-else-if="activeService === 'hotelAhwan'"
   dir="rtl"
   class="flex flex-col justify-center"
 >
@@ -154,6 +154,29 @@
     </div>
 
   </div>
+</div>
+<div
+  v-else
+  dir="rtl"
+  class="
+    flex
+    min-h-[50px]
+    md:min-h-[100px]
+    w-full
+    items-center
+    justify-center
+  "
+>
+  <span
+    class="
+      text-[12px]
+      md:text-[12px]
+      font-black
+      text-[var(--color-primary)]
+    "
+  >
+     این قسمت از سایت در حال توسعه می‌باشد...
+  </span>
 </div>
   </div>
   </div>
@@ -310,13 +333,13 @@ const images = [
 ]
 
 const services = [
-  { key: "flight", label: "بلیط هواپیما", icon: "" },
-  { key: "package", label: "تور (گروهی)", icon: "" },
-  { key: "hotelAhwan", label: "هتل آهوان", icon: "" },
-  { key: "train", label: "قطار", icon: "" },
-  { key: "bus", label: "اتوبوس", icon: "" },
-  { key: "hotel", label: "هتل", icon: "" },
-  { key: "insurance", label: "بیمه سفر", icon: "" },
+  { key: 'flight', label: 'بلیط هواپیما', icon: '✈︎' },
+  { key: 'package', label: 'تور (گروهی)', icon: '🎒︎' },
+  { key: 'hotelAhwan', label: 'هتل آهوان', icon: '🏨︎' },
+  { key: 'hotel', label: 'هتل', icon: '🏢︎' },
+  { key: 'train', label: 'قطار', icon: '🚆︎' },
+  { key: 'bus', label: 'اتوبوس', icon: '🚌︎' },
+  { key: 'insurance', label: 'بیمه سفر', icon: '⛨' }
 ]
 
 const activeService = ref("flight")
