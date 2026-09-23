@@ -73,7 +73,7 @@
       </div>
 
       <!-- Availability -->
-      <div class="space-y-3 border-t border-[var(--color-gray-100)] pt-5">
+      <div class="space-y-3 border-t border-[var(--color-gray-100)] pt-5 text-[13px]">
         <UiBaseCheckbox
           v-model="availableOnlyModel"
           label="فقط اتاق‌های قابل رزرو"
@@ -91,7 +91,7 @@
           نوع اقامت
         </p>
 
-        <div class="space-y-2">
+        <div class="space-y-2 text-[13px]">
           <UiBaseCheckbox
             v-model="withBreakfastModel"
             label="با صبحانه"
@@ -113,7 +113,7 @@
           ظرفیت اتاق
         </p>
 
-        <div class="grid grid-cols-2 gap-2">
+        <div class="grid grid-cols-2 gap-2 text-[13px]">
           <UiBaseCheckbox
             v-for="capacity in capacityOptions"
             :key="capacity"
@@ -133,7 +133,7 @@
           نمای اتاق
         </p>
 
-        <div class="space-y-2">
+        <div class="space-y-2 text-[13px]">
           <UiBaseCheckbox
             v-for="view in roomViewOptions"
             :key="view"

@@ -20,23 +20,29 @@
         :style="{ left: `${positionLeft}%`, right: `${100 - positionRight}%`, backgroundColor: rangeColor }"
       ></div>
       
-      <!-- هندل چپ -->
-      <div 
-        class="absolute w-4 h-4 bg-primary rounded-full shadow-md cursor-grab top-1/2 -translate-y-1/2 z-20" 
-        :style="{ left: `${positionLeft}%` }"
-        @mousedown.prevent="startDrag($event, 'left')"
-        @touchstart.prevent="startDrag($event, 'left')"
-        ref="handleLeft"
-      ></div>
+  <!-- هندل چپ -->
+<div
+  ref="handleLeft"
+  class="range-handle absolute top-1/2 z-20 h-5 w-5 cursor-grab rounded-full shadow-md"
+  :style="{
+    left: `${positionLeft}%`,
+    borderColor: handleColor
+  }"
+  @mousedown.prevent="startDrag($event, 'left')"
+  @touchstart.prevent="startDrag($event, 'left')"
+></div>
 
-      <!-- هندل راست -->
-      <div 
-        class="absolute w-4 h-4 bg-primary rounded-full shadow-md cursor-grab top-1/2 -translate-y-1/2 z-20" 
-        :style="{ left: `${positionRight}%` }"
-        @mousedown.prevent="startDrag($event, 'right')"
-        @touchstart.prevent="startDrag($event, 'right')"
-        ref="handleRight"
-      ></div>
+<!-- هندل راست -->
+<div
+  ref="handleRight"
+  class="range-handle absolute top-1/2 z-20 h-5 w-5 cursor-grab rounded-full shadow-md"
+  :style="{
+    left: `${positionRight}%`,
+    borderColor: handleColor
+  }"
+  @mousedown.prevent="startDrag($event, 'right')"
+  @touchstart.prevent="startDrag($event, 'right')"
+></div>
     </div>
      <!-- مقادیر min/max اسمی (اختیاری) -->
      <!-- <div class="flex justify-between text-xs text-gray-400 mt-1 px-1">
@@ -73,12 +79,12 @@ const props = defineProps({
   },
   rangeColor: { // رنگ ناحیه بین دو هندل
     type: String,
-    default: '#2563eb' // blue-600
+    default: 'var(--color-primary)' // blue-600
   },
-  handleColor: { // رنگ هندل ها (در حال حاضر از CSS global استفاده شده)
-    type: String,
-    default: '#2563eb' // blue-600
-  },
+  handleColor: {
+  type: String,
+  default: 'var(--color-primary)'
+},
   formatValue: { // تابعی برای فرمت کردن نمایش مقادیر (مثلا اضافه کردن واحد پول)
     type: Function,
     default: (value) => value.toLocaleString('fa-IR') // فرمت فارسی پیش فرض
@@ -242,5 +248,24 @@ watch(() => props.modelValue, (newVal) => {
 /* استایل برای تاچ موبایل */
 .touch-none {
   touch-action: none;
+}
+.range-handle {
+  border: 3px solid;
+  background-color: white;
+  transform: translate(-50%, -50%);
+  touch-action: none;
+  transition:
+    box-shadow 0.2s ease,
+    scale 0.2s ease;
+}
+
+.range-handle:hover {
+  scale: 1.1;
+  box-shadow: 0 0 0 5px rgb(38 41 166 / 10%);
+}
+
+.range-handle:active {
+  cursor: grabbing;
+  scale: 1.15;
 }
 </style>
