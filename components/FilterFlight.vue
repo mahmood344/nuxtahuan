@@ -331,13 +331,6 @@ const isAirlineFilterChanged = computed(() => {
 })
 
 function isAirlineSelected(code) {
-  /*
-   * آرایه خالی یعنی همه ایرلاین‌ها فعال‌اند.
-   */
-  if (!selectedAirlines.value.length) {
-    return true
-  }
-
   return selectedAirlines.value.includes(
     normalizeAirlineCode(code)
   )
@@ -390,43 +383,35 @@ function getFlightBookingClass(flight){
     ''
   )
 }
-function toggleAirline(code,checked) {
+function toggleAirline(code, checked) {
+
   const normalizedCode =
     normalizeAirlineCode(code)
 
-  let nextAirlines =
-    selectedAirlines.value.length
-      ? [...selectedAirlines.value]
-      : availableAirlines.value.map(
-          (item) => item.code
-        )
+  let nextAirlines = [
+    ...selectedAirlines.value
+  ]
 
   if (checked) {
-    if (!nextAirlines.includes(normalizedCode)) {
+
+    if (
+      !nextAirlines.includes(normalizedCode)
+    ) {
       nextAirlines.push(normalizedCode)
     }
+
   } else {
-    nextAirlines = nextAirlines.filter(
-      (item) => item !== normalizedCode
-    )
+
+    nextAirlines =
+      nextAirlines.filter(
+        item =>
+          item !== normalizedCode
+      )
   }
 
-  /*
-   * وقتی دوباره تمام ایرلاین‌ها انتخاب شدند،
-   * آرایه را خالی می‌کنیم؛ خالی یعنی همه.
-   */
-  const allSelected =
-    availableAirlines.value.length > 0 &&
-    availableAirlines.value.every(
-      (item) =>
-        nextAirlines.includes(item.code)
-    )
-
-  emit('update:filters',{
+  emit('update:filters', {
     ...props.filters,
-    airlines: allSelected
-      ? []
-      : nextAirlines
+    airlines: nextAirlines
   })
 }
 function mapPartoCabinType(value){

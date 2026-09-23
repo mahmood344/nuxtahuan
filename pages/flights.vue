@@ -401,6 +401,43 @@
     :value="formshaparak.bankToken"
   />
 </form>
+<Transition name="fade">
+  <button
+    v-if="showBackToTop"
+    type="button"
+    aria-label="بازگشت به بالای صفحه"
+    title="بازگشت به بالا"
+    class="
+      fixed
+      bottom-24 right-5
+      md:bottom-8 md:right-8
+      z-[100]
+      flex h-12 w-12
+      items-center justify-center
+      rounded-full
+      bg-primary text-white
+      shadow-xl
+      transition-all duration-300
+      hover:scale-110
+      hover:bg-primary-dark
+    "
+    @click="scrollToTop"
+  >
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.5"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="m18 15-6-6-6 6" />
+    </svg>
+  </button>
+</Transition>
   </div>
 </template>
 
@@ -412,6 +449,7 @@ import {
   reactive,
   computed,
   onMounted,
+  onUnmounted,
   watch,
   nextTick
 } from 'vue'
@@ -428,7 +466,11 @@ moment.loadPersian({ usePersianDigits: false, dialect: 'persian-modern' })
 const route = useRoute()
 const router = useRouter()
 const flightStore = useFlightStore()
+const showBackToTop = ref(false)
 
+function handleWindowScroll() {
+  showBackToTop.value = window.scrollY > 400
+}
 console.log(flightStore.finalBookingPrice, 'flightStore.finalBookingPrice')
 const toast=useToast()
 const selectedDate = ref('')
@@ -1385,6 +1427,11 @@ async function loadRouteBasicInfo(){
   }
 }
 onMounted(async()=>{
+  window.addEventListener('scroll', handleWindowScroll, {
+    passive: true
+  })
+
+  handleWindowScroll()
   await loadRouteBasicInfo()
 
   const qDate=
@@ -1436,7 +1483,9 @@ onMounted(async()=>{
     })
   )
 })
-
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleWindowScroll)
+})
 watch(
   ()=>[
     route.query.origin,
