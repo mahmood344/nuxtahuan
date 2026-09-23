@@ -40,7 +40,7 @@
         <!-- Sidebar -->
         <!-- ========================= -->
         <aside
- class="hidden lg:block lg:col-span-4 order-1 lg:order-2"
+ class="hidden lg:block lg:col-span-3 order-1 lg:order-2"
 >
  <div
  class="top-24 space-y-4 mb-4"
@@ -85,7 +85,7 @@
   currentStep===0 ||
   currentStep===1 ||
   currentStep===2
-   ?'lg:col-span-8'
+   ?'lg:col-span-9'
    :'lg:col-span-12'
  "
 >

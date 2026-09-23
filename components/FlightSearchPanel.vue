@@ -37,13 +37,13 @@
               v-model="flightType" 
               value="domestic"
               label="پرواز داخلی" 
-              class="text-[13px]" 
+              class="text-[10px]" 
             />  
             <UiBaseRadio 
               v-model="flightType" 
               value="international"
               label="پرواز خارجی" 
-              class="text-[13px]" 
+              class="text-[10px]" 
             />
           </div>
 
@@ -53,13 +53,13 @@
               v-model="travelType" 
               value="one-way" 
               label="یک طرفه" 
-              class="text-[13px]" 
+              class="text-[10px]" 
             />  
             <UiBaseRadio 
               v-model="travelType" 
               value="round-trip"
               label="رفت و برگشت" 
-              class="text-[13px]" 
+              class="text-[10px]" 
             />  
           </div>
         </div>
@@ -70,6 +70,7 @@
           <!-- مبدا و مقصد -->
           <div class="w-full">
             <UiOriginDestinationSelector
+            :compact="isCompactSearch"
               :sendFlightType="flightType"
               v-model:mabda="origin"
               v-model:maghsad="destination"
@@ -79,6 +80,7 @@
           <!-- تاریخ رفت و برگشت -->
           <div class="w-full">
             <UiBaseDatePicker 
+            :compact="isCompactSearch"
               :sendTravelType="travelType"
               v-model:departDate="departDate"
               v-model:returnDate="returnDate"
@@ -88,6 +90,7 @@
           <!-- انتخاب مسافران -->
           <div class="w-full">
             <UiPassengerSelector 
+            :compact="isCompactSearch"
               v-model:adl="adl"
               v-model:chd="chd"
               v-model:inf="inf"
@@ -110,66 +113,130 @@
         </div>
       </div>
       <!-- بخش جستجوی هتل آهوان -->
+<!-- بخش جستجوی هتل آهوان -->
 <div
-  v-if="activeService==='hotelAhwan'"
+  v-if="activeService === 'hotelAhwan'"
   dir="rtl"
-  class="flex flex-col justify-center"
+  class="flex w-full flex-col justify-center"
 >
-
   <div
-    class="w-full flex flex-col gap-4 p-4 md:p-8"
+    class="flex w-full flex-col items-center gap-4"
+    :class="
+      isCompactSearch
+        ? 'p-0'
+        : 'p-4 md:p-8'
+    "
   >
 
     <!-- شهر -->
-    <div class="w-full mb-4">
-
+    <div
+      class="w-full"
+      :class="
+        isCompactSearch
+          ? 'max-w-[280px]'
+          : 'max-w-[500px]'
+      "
+    >
       <UiBaseAutocomplete
+        v-model="hotelCity"
         label="شهر"
         placeholder="نام شهر را جستجو کنید..."
         :items="hotelCities"
         item-text="name"
         item-value="code"
-        v-model="hotelCity"
         clearable
         icon='<i class="bi bi-geo-alt"></i>'
         iconPosition="right"
+        class="w-full"
+        :class="{
+          'hotel-city-compact': isCompactSearch
+        }"
       />
-
     </div>
 
 
-
-    <!-- تاریخ -->
-    <div class="w-full mb-4">
-
+    <!-- تاریخ ورود و خروج -->
+    <div
+      class="w-full"
+      :class="
+        isCompactSearch
+          ? 'max-w-[280px]'
+          : 'max-w-[500px]'
+      "
+    >
       <UiSingleDatePicker
+        :compact="isCompactSearch"
         v-model="hotelDate"
         label="تاریخ ورود و خروج"
         placeholder="انتخاب تاریخ"
       />
-
     </div>
 
 
-
-    <!-- دکمه -->
-    <div class="w-full">
-
+    <!-- دکمه جستجو -->
+    <div
+      class="flex w-full justify-center"
+    >
       <UiBaseButton
         label="جستجو"
         variant="filled"
         color="primary"
         :active="false"
         :disabled="!hotelCity || !hotelDate"
-        class="w-full max-w-[500px] h-[40px] !rounded-4xl text-[13px]"
         @click="searchAhuanHotel"
+        class="w-full !rounded-4xl text-[13px]"
+        :class="
+          isCompactSearch
+            ? 'max-w-[280px] h-[44px]'
+            : 'max-w-[500px] h-[40px]'
+        "
       />
-
     </div>
 
-
   </div>
+</div>
+<!-- بخش‌های در حال توسعه -->
+<div
+  v-if="!['flight', 'hotelAhwan'].includes(activeService)"
+  dir="rtl"
+  class="
+    flex
+    w-full
+    min-h-[180px]
+    items-center
+    justify-center
+    p-6
+  "
+>
+  <div
+    class="
+      flex
+      flex-col
+      items-center
+      justify-center
+      gap-3
+      text-center
+    "
+  >
+    <i
+      class="
+        bi
+        bi-tools
+        text-[32px]
+        text-[var(--color-gray-400)]
+      "
+    ></i>
 
+    <p
+      class="
+        text-[13px]
+        font-bold
+        text-[var(--color-gray-500)]
+      "
+    >
+      این قسمت از سایت در حال توسعه می‌باشد...
+    </p>
+  </div>
 </div>
     </div>
   </div>
@@ -190,6 +257,16 @@ import {
 import {useHotelStore} from '~/stores/hotels'
 const router = useRouter()
 const route = useRoute()
+const isHomePage = computed(() => {
+  return (
+    route.path === '/' ||
+    route.path === '/home'
+  )
+})
+
+const isCompactSearch = computed(() => {
+  return !isHomePage.value
+})
 const origin = ref('')
 const destination = ref('')
 
@@ -204,7 +281,8 @@ const flightType = ref('domestic')
 const travelType = ref('one-way')
 const hotelStore=useHotelStore()
 const emit=defineEmits([
- 'hotel-search'
+ 'hotel-search',
+ 'flight-search'
 ])
 const hotelCity=ref(null)
 
@@ -437,39 +515,33 @@ async function searchFlights() {
     return
   }
 
+  const searchData = {
+    origin: origin.value,
+    destination: destination.value,
+    departDate: departDate.value,
+
+    returnDate:
+      travelType.value === 'round-trip'
+        ? returnDate.value || undefined
+        : undefined,
+
+    adl: adl.value,
+    chd: chd.value,
+    inf: inf.value,
+
+    flightType: flightType.value,
+    travelType: travelType.value
+  }
+
+  // به Parent اعلام می‌کنیم جستجوی پرواز انجام شد
+  emit(
+    'flight-search',
+    searchData
+  )
+
   await router.push({
     path: '/flights',
-
-    query: {
-      origin:
-        origin.value,
-
-      destination:
-        destination.value,
-
-      departDate:
-        departDate.value,
-
-      returnDate:
-        travelType.value === 'round-trip'
-          ? returnDate.value || undefined
-          : undefined,
-
-      adl:
-        adl.value,
-
-      chd:
-        chd.value,
-
-      inf:
-        inf.value,
-
-      flightType:
-        flightType.value,
-
-      travelType:
-        travelType.value
-    }
+    query: searchData
   })
 }
 function syncHotelFormFromRoute() {
@@ -529,5 +601,14 @@ function syncHotelFormFromRoute() {
 </script>
 
 <style scoped>
+:deep(.hotel-city-compact input) {
+  height: 44px !important;
+  min-height: 44px !important;
+  font-size: 10px !important;
+}
+
+:deep(.hotel-city-compact > div) {
+  min-height: 44px !important;
+}
 /* در صورت نیاز به ترنزیشن یا استایل‌های خاص برای کامپوننت */
 </style>

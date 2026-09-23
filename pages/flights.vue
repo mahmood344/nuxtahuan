@@ -13,10 +13,14 @@
       <div class="grid grid-cols-1 gap-8 lg:grid-cols-12">
 
         <!-- سایدبار دسکتاپ -->
-        <aside class="hidden lg:block lg:col-span-4 order-1 lg:order-2">
+        <aside class="hidden lg:block lg:col-span-3 order-1 lg:order-2">
             <!-- sticky -->
   <div class=" top-24 space-y-4">
-    <FlightSearchPanel mode="aside" :showServices="true" />
+   <FlightSearchPanel
+  mode="aside"
+  :showServices="true"
+  @flight-search="isFilterModalOpen = false"
+/>
 <!-- showSearchResults -->
     <FilterFlight
       v-if="showSearchResults"
@@ -27,7 +31,7 @@
 </aside>
 
         <!-- نتایج -->
-        <div class="lg:col-span-8 order-2 lg:order-1 relative">
+        <div class="lg:col-span-9 order-2 lg:order-1 relative">
 
           <!-- Full loading -->
           <transition name="fade">
@@ -339,10 +343,11 @@
     <div class="space-y-5">
 
      <!-- تغییر جستجو -->
-     <FlightSearchPanel
-      mode="aside"
-      :showServices="true"
-     />
+    <FlightSearchPanel
+  mode="aside"
+  :showServices="true"
+  @flight-search="isFilterModalOpen = false"
+/>
 
      <!-- فیلتر واقعی پرواز -->
      <FilterFlight
