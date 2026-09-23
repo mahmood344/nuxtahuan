@@ -112,7 +112,7 @@
 <div
   v-else-if="activeService === 'hotelAhwan'"
   dir="rtl"
-  class="flex flex-col justify-center"
+  class="flex flex-col justify-center mt-4"
 >
   <div
     class="w-full grid grid-cols-1 md:grid-cols-[2fr_2fr_1fr] gap-4 items-center p-4 md:p-8"
@@ -155,29 +155,66 @@
 
   </div>
 </div>
-<div
+<Transition
   v-else
-  dir="rtl"
-  class="
-    flex
-    min-h-[50px]
-    md:min-h-[100px]
-    w-full
-    items-center
-    justify-center
-  "
+  name="development"
+  mode="out-in"
 >
-  <span
+  <div
+    :key="activeService"
+    dir="rtl"
     class="
-      text-[12px]
-      md:text-[12px]
-      font-black
-      text-[var(--color-primary)]
+      mt-4
+      flex
+      min-h-[50px]
+      w-full
+      items-center
+      justify-center
+      md:min-h-[100px]
     "
   >
-     این قسمت از سایت در حال توسعه می‌باشد...
-  </span>
-</div>
+    <div
+      class="
+        flex
+        flex-col
+        items-center
+        justify-center
+        gap-3
+        text-center
+      "
+    >
+      <!-- آیکن -->
+      <div class="development-icon">
+        <i
+          class="
+            bi
+            bi-tools
+            text-[32px]
+            text-[var(--color-gray-400)]
+          "
+        ></i>
+      </div>
+
+      <!-- متن -->
+      <p
+        class="
+          text-[13px]
+          font-bold
+          text-[var(--color-gray-500)]
+        "
+      >
+        این قسمت از سایت در حال توسعه می‌باشد...
+      </p>
+
+      <!-- سه نقطه متحرک -->
+      <div class="flex items-center gap-1">
+        <span class="development-dot"></span>
+        <span class="development-dot"></span>
+        <span class="development-dot"></span>
+      </div>
+    </div>
+  </div>
+</Transition>
   </div>
   </div>
 </template>
@@ -465,5 +502,80 @@ watch(returnDate, async (newValue, oldValue) => {
 img {
   transition: opacity 0.5s ease-in-out;
 }
+/* ورود و خروج کل بخش */
+.development-enter-active,
+.development-leave-active {
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s ease;
+}
 
+.development-enter-from {
+  opacity: 0;
+  transform: translateY(12px) scale(0.97);
+}
+
+.development-enter-to {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.development-leave-from {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.development-leave-to {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.97);
+}
+
+
+/* حرکت آرام آیکن */
+.development-icon {
+  animation: development-float 2s ease-in-out infinite;
+}
+
+@keyframes development-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+
+/* سه نقطه متحرک */
+.development-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 9999px;
+  background: var(--color-gray-400);
+  animation: development-dot 1.2s ease-in-out infinite;
+}
+
+.development-dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.development-dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes development-dot {
+  0%,
+  60%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+
+  30% {
+    opacity: 1;
+    transform: translateY(-4px);
+  }
+}
 </style>
