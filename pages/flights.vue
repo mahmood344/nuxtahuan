@@ -4274,12 +4274,7 @@ const contractFlights=
       contractId,
       origin: flight?.origin || flight?.from || flight?.originCode || '',
       destination: flight?.destination || flight?.to || flight?.destinationCode || '',
-      flightClass:
-        flight?.cabinClass ||
-        flight?.flightClass ||
-        flight?.class ||
-        flight?.bookingClass ||
-        'X',
+      flightClass: getContractFlightClass(flight),
       airlineId: resolveAirlineId(flight),
       flightNumber: flight?.flightNumber || flight?.flightNo || '',
       depDate: formatFlightDate(

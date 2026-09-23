@@ -1264,42 +1264,133 @@ export async function getParoCredit(){
     }
   )
 }
+function parsePartoJson(value) {
+  if (typeof value !== 'string') {
+    return value
+  }
 
+  try {
+    return JSON.parse(value)
+  } catch {
+    return value
+  }
+}
+
+function normalizePartoResponse(response) {
+  const outer = parsePartoJson(response)
+
+  const data = parsePartoJson(
+    outer?.data ?? outer?.Data
+  )
+
+  const nestedError = parsePartoJson(
+    outer?.error?.message ??
+    outer?.Error?.Message
+  )
+
+  const candidates = [
+    data,
+    outer,
+    nestedError
+  ].filter(
+    item =>
+      item &&
+      typeof item === 'object'
+  )
+
+  // پاسخ موفق را حتی در صورت قرار گرفتن
+  // داخل data یا error.message شناسایی می‌کنیم.
+  return (
+    candidates.find(
+      item =>
+        item.success === true ||
+        item.Success === true
+    ) ||
+    candidates.find(
+      item =>
+        item.success === false ||
+        item.Success === false
+    ) ||
+    outer
+  )
+}
 export async function revalidateParoFlight(
   fareSourceCode
-){
-  if(!fareSourceCode){
+) {
+  if (!fareSourceCode) {
     throw new Error(
       'FareSourceCode پرواز Parto مشخص نیست'
     )
   }
 
-  const response=
-    await executeParoRequest(
-      async sessionId=>{
-        return await $fetch(
-          `${BASE_URL}/PartoAir/revalidate`,
-          {
-            method:'POST',
-            body:{
-              sessionId,
-              fareSourceCode:
-                String(fareSourceCode),
-              isGenuine:true
-            }
+  const response = await executeParoRequest(
+    async sessionId => {
+      return await $fetch(
+        `${BASE_URL}/PartoAir/revalidate`,
+        {
+          method: 'POST',
+          body: {
+            sessionId,
+            fareSourceCode: String(fareSourceCode),
+            isGenuine: true
           }
-        )
-      }
-    )
+        }
+      )
+    }
+  )
 
-  if(response?.success!==true){
+  const result = normalizePartoResponse(
+    response
+  )
+
+  const success =
+    result?.success ??
+    result?.Success
+
+  if (success !== true) {
     throw new Error(
-      response?.error?.message||
+      result?.error?.message ||
+      result?.Error?.Message ||
+      result?.message ||
+      result?.Message ||
       'اعتبارسنجی پرواز Parto ناموفق بود'
     )
   }
 
-  return response
+  const itinerary =
+    result?.pricedItinerary ??
+    result?.PricedItinerary
+
+  if (!itinerary) {
+    throw new Error(
+      'اطلاعات پرواز در پاسخ Revalidate موجود نیست.'
+    )
+  }
+
+  const pricingInfo =
+    itinerary?.airItineraryPricingInfo ??
+    itinerary?.AirItineraryPricingInfo
+
+  return {
+    ...result,
+    success: true,
+
+    pricedItinerary: {
+      ...itinerary,
+
+      fareSourceCode:
+        itinerary?.fareSourceCode ??
+        itinerary?.FareSourceCode,
+
+      airItineraryPricingInfo: {
+        ...pricingInfo,
+
+        fareType:
+          pricingInfo?.fareType ??
+          pricingInfo?.FareType
+      }
+    }
+  }
 }
 export async function bookParoFlight(
   payload

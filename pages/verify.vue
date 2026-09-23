@@ -2570,59 +2570,109 @@ const successfulBankDetails = computed(() => {
     traceNo
   }
 })
-const updateContract=async(
- contract:any
-):Promise<any>=>{
- contract.reduceFlightLoad=null
- contract.reduceHotelLoad=null
+const updateContract = async (
+  contract: any
+): Promise<any> => {
 
- const response=await $fetch<any>(
-  'https://api.ahuan.ir/api/Contract/update',
-  {
-   method:'PUT',
-   body:contract,
-   headers:{
-    'Content-Type':'application/json'
-   }
+  contract.reduceFlightLoad = null
+  contract.reduceHotelLoad = null
+
+  const isHotel =
+    contract?.hotel === true ||
+    paymentInfo.value?.bookingType === 'hotel'
+
+  // مقدار stayNights در پاسخ GET
+  // به nights در درخواست Update تبدیل می‌شود.
+  if (isHotel && Array.isArray(contract.contractRoutes)) {
+    contract.contractRoutes = contract.contractRoutes.map(
+      (route: any) => ({
+        ...route,
+        nights:
+          route.stayNights != null
+            ? Number(route.stayNights)
+            : route.nights
+      })
+    )
   }
- )
 
- if(
-  response?.success===false||
-  response?.error
- ){
-  throw new Error(
-   response?.message||
-   'ذخیره اطلاعات قرارداد ناموفق بود.'
+  // فقط برای بررسی مقدار، بدون نمایش اطلاعات مسافر
+  if (isHotel) {
+    console.table(
+      contract.contractRoutes?.map((route: any) => ({
+        routeId: route.id,
+        stayNights: route.stayNights,
+        nights: route.nights
+      }))
+    )
+  }
+
+  const response = await $fetch<any>(
+    'https://api.ahuan.ir/api/Contract/update',
+    {
+      method: 'PUT',
+      body: contract,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }
   )
- }
 
- const responseData=response?.data
-
- if(
-  responseData&&
-  typeof responseData==='object'&&
-  !Array.isArray(responseData)
- ){
-  return{
-   ...contract,
-   ...responseData,
-   contractRoutes:
-    Array.isArray(responseData.contractRoutes)
-     ?responseData.contractRoutes
-     :contract.contractRoutes,
-   contractPassengers:
-    Array.isArray(responseData.contractPassengers)
-     ?responseData.contractPassengers
-     :contract.contractPassengers,
-   contractFlights:
-    Array.isArray(responseData.contractFlights)
-     ?responseData.contractFlights
-     :contract.contractFlights
+  if (
+    response?.success === false ||
+    response?.error
+  ) {
+    throw new Error(
+      response?.message ||
+      'ذخیره اطلاعات قرارداد ناموفق بود.'
+    )
   }
- }
 
- return contract
+  const responseData = response?.data
+
+  if (
+    responseData &&
+    typeof responseData === 'object' &&
+    !Array.isArray(responseData)
+  ) {
+    return {
+      ...contract,
+      ...responseData,
+
+      // حفظ nights حتی اگر پاسخ Update آن را null برگرداند
+      contractRoutes:
+        Array.isArray(responseData.contractRoutes)
+          ? responseData.contractRoutes.map(
+              (route: any, index: number) => {
+
+                const previousRoute =
+                  contract.contractRoutes?.find(
+                    (item: any) =>
+                      item.id === route.id
+                  ) || contract.contractRoutes?.[index]
+
+                return {
+                  ...route,
+                  nights:
+                    route.nights ??
+                    previousRoute?.nights
+                }
+              }
+            )
+          : contract.contractRoutes,
+
+      contractPassengers:
+        Array.isArray(responseData.contractPassengers)
+          ? responseData.contractPassengers
+          : contract.contractPassengers,
+
+      contractFlights:
+        Array.isArray(responseData.contractFlights)
+          ? responseData.contractFlights
+          : contract.contractFlights
+    }
+  }
+
+  return contract
 }
 const failedSaveSteps=ref<string[]>([])
 
