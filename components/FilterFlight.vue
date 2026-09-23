@@ -52,7 +52,7 @@
         نوع بلیت
       </h3>
 
-      <div class="space-y-3">
+      <div class="space-y-3 text-[13px]">
   <UiBaseCheckbox
     v-model="economySelected"
     label="اکونومی"
@@ -132,7 +132,7 @@
     </button>
   </div>
 
-  <div class="max-h-[260px] space-y-3 overflow-y-auto pl-1">
+  <div class="max-h-[260px] space-y-3 overflow-y-auto pl-1 text-[13px]">
     <UiBaseCheckbox
       v-for="airline in availableAirlines"
       :key="airline.code"
