@@ -4866,6 +4866,69 @@ function getPassengerTicketNumber(
   passengerIndex,
   flightIndex
 ){
+  const provider = normalizeFlightProvider(
+  flight?.flightSupplier ||
+  flight?.provider
+)
+
+if (provider === 'PARTO') {
+  // flightJson از API به‌صورت string می‌آید.
+  const documentValue = parseJsonValue(
+    flight?.flightJson
+  )
+
+  const issue = documentValue?.issue
+
+  const customers =
+    issue?.response
+      ?.booking
+      ?.travelItinerary
+      ?.itineraryInfo
+      ?.customerInfoes || []
+
+  const normalizeName = value =>
+    String(value || '')
+      .trim()
+      .replace(/\s+/g, '')
+      .toUpperCase()
+
+  const firstName = normalizeName(
+    passenger?.fName ||
+    passenger?.firstName
+  )
+
+  const lastName = normalizeName(
+    passenger?.lName ||
+    passenger?.lastName
+  )
+
+  // ابتدا شماره بلیت را بر اساس نام مسافر پیدا می‌کنیم.
+  const matchedCustomer = customers.find(item => {
+    const name = item?.customer?.paxName
+
+    return (
+      normalizeName(name?.passengerFirstName) === firstName &&
+      normalizeName(name?.passengerLastName) === lastName
+    )
+  })
+
+  const ticketNumber =
+    matchedCustomer?.eTicketNumbers?.[0]?.eTicketNumber ||
+    matchedCustomer?.eTickets
+
+  if (ticketNumber) {
+    return String(ticketNumber).trim()
+  }
+
+  // اگر اطلاعات تفکیکی مسافران موجود نبود،
+  // از آرایه شماره‌بلیت‌های ذخیره‌شده استفاده کن.
+  const fallbackTicket =
+    issue?.ticketNumbers?.[passengerIndex]
+
+  if (fallbackTicket) {
+    return String(fallbackTicket).trim()
+  }
+}
   const directTicket=
     flightIndex===0
       ?(
@@ -5220,19 +5283,29 @@ const ticketRows=computed(()=>{
               CANCELLATION_STATUS.MANUAL_REVIEW
           ),
 
-          canCancel:Boolean(
-            cancellationProviders[provider]&&
-            ticketNumber&&
-            !flightExpired&&
-            ticketStatus!=='cancelled'&&
-            !lockedStatuses.includes(
-              cancellationStatus
-            )
-          ),
+          canCancel: Boolean(
+  (
+    provider === 'PARTO'
+      ? String(
+          selectedContract.value?.ticketStatus || ''
+        ).trim().toLowerCase() === 'confirm'
+      : cancellationProviders[provider] && ticketNumber
+  ) &&
+  !flightExpired &&
+  ticketStatus !== 'cancelled' &&
+  !lockedStatuses.includes(cancellationStatus)
+),
 
-          canDownload:Boolean(
-            ticketNumber||ticketUrl
-          )
+          canDownload: Boolean(
+  ticketNumber ||
+  ticketUrl ||
+  (
+    provider === 'PARTO' &&
+    String(
+      selectedContract.value?.ticketStatus || ''
+    ).trim().toLowerCase() === 'confirm'
+  )
+)
         })
       }
     )
