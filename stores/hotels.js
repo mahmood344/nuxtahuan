@@ -18,11 +18,19 @@ export const useHotelStore=defineStore(
     }
    ],
 
-   selectedRooms:[],
+    /*
+ |--------------------------------------------------------------------------
+ | SnappTrip Cities
+ |--------------------------------------------------------------------------
+ */
 
-   selectedRoomsFinalPricing:[],
+ snappTripCities:[],
 
-   finalBookingPrice:0,
+ snappTripCitiesLoading:false,
+
+ snappTripCitiesLoaded:false,
+
+ snappTripCitiesError:null,
  // =========================
  // Search Results
  // =========================
@@ -69,6 +77,142 @@ getSearchRooms:(state)=>
 
 
   actions:{
+    /*
+|--------------------------------------------------------------------------
+| Load SnappTrip Cities
+|--------------------------------------------------------------------------
+*/
+
+async loadSnappTripCities(){
+
+ /*
+  * اگر قبلاً دریافت شده
+  */
+ if(
+  this.snappTripCitiesLoaded&&
+  this.snappTripCities.length>0
+ ){
+  return this.snappTripCities
+ }
+
+
+ /*
+  * جلوگیری از درخواست همزمان
+  */
+ if(
+  this.snappTripCitiesLoading
+ ){
+  return this.snappTripCities
+ }
+
+
+ this.snappTripCitiesLoading=true
+
+ this.snappTripCitiesError=null
+
+
+ try{
+
+  const response=
+   await $fetch(
+    'https://api.ahuan.ir/api/SnappTrip/cities'
+   )
+
+
+  console.log(
+   'SNAPPTRIP CITIES RESPONSE:',
+   response
+  )
+
+
+  const items=
+   Array.isArray(response)
+    ?response
+    :Array.isArray(response?.data)
+     ?response.data
+     :[]
+
+
+  this.snappTripCities=
+   items.map(
+    item=>({
+
+     id:
+      Number(
+       item?.id||
+       0
+      ),
+
+     title:
+      String(
+       item?.title_fa||
+       ''
+      ),
+
+     titleFa:
+      String(
+       item?.title_fa||
+       ''
+      ),
+
+     titleEn:
+      String(
+       item?.title_en||
+       ''
+      ),
+
+     stateId:
+      Number(
+       item?.state?.id||
+       0
+      ),
+
+     stateName:
+      String(
+       item?.state?.title||
+       ''
+      )
+
+    })
+   )
+
+
+  this.snappTripCitiesLoaded=true
+
+
+  console.log(
+   'SNAPPTRIP CITIES STORE:',
+   this.snappTripCities
+  )
+
+
+  return this.snappTripCities
+
+ }
+ catch(error){
+
+  console.error(
+   'SNAPPTRIP CITIES ERROR:',
+   error
+  )
+
+
+  this.snappTripCities=[]
+
+  this.snappTripCitiesError=
+   error
+
+
+  throw error
+
+ }
+ finally{
+
+  this.snappTripCitiesLoading=false
+
+ }
+
+},
 setSearchRooms(rooms){
 
  this.searchRooms=

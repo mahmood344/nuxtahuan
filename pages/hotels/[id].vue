@@ -17,11 +17,11 @@
       <div
         class="absolute -bottom-15 left-0 right-0 z-10 mx-auto max-w-3xl px-4"
       >
-        <Stepper
-          :steps="flightSteps"
-          :active-step="flightStore.currentStep"
-          active-color="var(--color-primary-dark)"
-        />
+       <Stepper
+  :steps="flightSteps"
+  :active-step="flightStore.currentStep + 1"
+  active-color="var(--color-primary-dark)"
+/>
       </div>
     </header>
 
@@ -1431,9 +1431,26 @@ const hotelAvailability=ref(null)
 const currentContractData=ref(null)
 const paymentLoading=ref(false)
 const paymentError=ref('')
-const hotelId=computed(()=>
- Number(route.params.id||0)
-)
+const hotelId=
+ computed(()=>
+  Number(
+   route.params.id||
+   0
+  )
+ )
+
+
+const isAhuanHotel=
+ computed(()=>
+  hotelId.value===3
+ )
+
+
+const isSnappTripHotel=
+ computed(()=>
+  hotelId.value>0&&
+  hotelId.value!==3
+ )
 
 const isAhuanChaboksar=computed(()=>
  hotelId.value===3
@@ -3325,10 +3342,26 @@ const checkOut=computed(()=>
 // Stepper
 // =========================
 const flightSteps=computed(()=>[
-  {icon:'✈️',label:'انتخاب اتاق'},
-  {icon:'📄',label:'تکمیل اطلاعات'},
-  {icon:'💳',label:'تایید و پرداخت'},
-  {icon:'🎫',label:'دریافت واچر'}
+   {
+    icon:'🏨',
+    label:'انتخاب هتل'
+  },
+  {
+    icon:'🛏️',
+    label:'انتخاب اتاق'
+  },
+  {
+    icon:'📄',
+    label:'تکمیل اطلاعات'
+  },
+  {
+    icon:'💳',
+    label:'تایید و پرداخت'
+  },
+  {
+    icon:'🎫',
+    label:'دریافت واچر'
+  }
 ])
 
 // =========================
@@ -3358,9 +3391,40 @@ const remainingImagesCount=computed(()=>
 // =========================
 // Image URL
 // =========================
-function getHotelImageUrl(image){
-  if(!image)return''
-  return`${HOTEL_IMAGE_BASE}/${image}`
+function getHotelImageUrl(
+ image
+){
+
+ const value=
+  String(
+   image||
+   ''
+  )
+   .trim()
+
+
+ if(!value)
+  return''
+
+
+ /*
+  * SnappTrip
+  */
+ if(
+  value.startsWith('http://')||
+  value.startsWith('https://')
+ ){
+  return value
+ }
+
+
+ /*
+  * AHUAN
+  */
+ return(
+  `${HOTEL_IMAGE_BASE}/${value}`
+ )
+
 }
 
 // =========================
@@ -3562,14 +3626,18 @@ function prevHotelGallery(){
     sortedHotelImages.value.length
 
 }
-function getFacilityKey(facility){
-  if(typeof facility==='string')return facility
+function getFacilityKey(
+ facility
+){
 
-  return(
-    facility?.id||
-    facility?.facilityId||
-    getFacilityTitle(facility)
-  )
+ return String(
+  facility?.id||
+  facility?.title||
+  facility?.name||
+  facility?.label||
+  ''
+ )
+  .trim()
 }
 
 // =========================
@@ -3631,57 +3699,67 @@ function closeRoomModal(){
 // Hotel Images + Facilities
 // =========================
 async function loadHotelExtras(){
-  if(!hotelId.value)return
 
-  try{
-    const[
-      imagesResponse,
-      facilitiesResponse
-    ]=await Promise.all([
-      $fetch(
-        `${BASE_URL}/Hotel/images/${hotelId.value}`
-      ),
-      $fetch(
-        `${BASE_URL}/Hotel/facility/${hotelId.value}`
-      )
-    ])
+ if(
+  !hotelId.value||
+  !isAhuanHotel.value
+ ){
+  return
+ }
 
-    hotelImages.value=
-      Array.isArray(imagesResponse)
-        ?imagesResponse
-        :Array.isArray(imagesResponse?.data)
-          ?imagesResponse.data
-          :Array.isArray(imagesResponse?.result)
-            ?imagesResponse.result
-            :[]
 
-    hotelFacilities.value=
-      Array.isArray(facilitiesResponse)
-        ?facilitiesResponse
-        :Array.isArray(facilitiesResponse?.data)
-          ?facilitiesResponse.data
-          :Array.isArray(facilitiesResponse?.result)
-            ?facilitiesResponse.result
-            :[]
+ try{
 
-    console.log(
-      'Hotel Images:',
-      hotelImages.value
+  const[
+   imagesResponse,
+   facilitiesResponse
+  ]=
+   await Promise.all([
+
+    $fetch(
+     `${BASE_URL}/Hotel/images/${hotelId.value}`
+    ),
+
+    $fetch(
+     `${BASE_URL}/Hotel/facility/${hotelId.value}`
     )
 
-    console.log(
-      'Hotel Facilities:',
-      hotelFacilities.value
-    )
-  }catch(error){
-    console.error(
-      'Hotel extras error:',
-      error
-    )
+   ])
 
-    hotelImages.value=[]
-    hotelFacilities.value=[]
-  }
+
+  hotelImages.value=
+   Array.isArray(imagesResponse)
+    ?imagesResponse
+    :Array.isArray(imagesResponse?.data)
+     ?imagesResponse.data
+     :Array.isArray(imagesResponse?.result)
+      ?imagesResponse.result
+      :[]
+
+
+  hotelFacilities.value=
+   Array.isArray(facilitiesResponse)
+    ?facilitiesResponse
+    :Array.isArray(facilitiesResponse?.data)
+     ?facilitiesResponse.data
+     :Array.isArray(facilitiesResponse?.result)
+      ?facilitiesResponse.result
+      :[]
+
+ }
+ catch(error){
+
+  console.error(
+   'AHUAN HOTEL EXTRAS ERROR:',
+   error
+  )
+
+
+  hotelImages.value=[]
+  hotelFacilities.value=[]
+
+ }
+
 }
 
 // =========================
@@ -4102,7 +4180,1248 @@ function mergeHotelRooms({
 // =========================
 // Load Availability + Rooms
 // =========================
+function normalizeHotelDate(
+ value
+){
 
+ return String(
+  value||
+  ''
+ )
+  .trim()
+  .replaceAll(
+   '/',
+   '-'
+  )
+
+}
+
+
+function normalizeArrayResponse(
+ response
+){
+
+ if(
+  Array.isArray(response)
+ ){
+  return response
+ }
+
+
+ if(
+  Array.isArray(
+   response?.data
+  )
+ ){
+  return response.data
+ }
+
+
+ if(
+  Array.isArray(
+   response?.result
+  )
+ ){
+  return response.result
+ }
+
+
+ if(
+  Array.isArray(
+   response?.facilities
+  )
+ ){
+  return response.facilities
+ }
+
+
+ return[]
+
+}
+async function loadAhuanHotel(){
+
+ /*
+  * همان اطلاعات جانبی فعلی آهوان
+  */
+ await loadHotelExtras()
+
+
+ /*
+  * Flow فعلی آهوان
+  */
+ const rooms=
+  await searchAllHotelProviders({
+
+   hotelId:
+    hotelId.value,
+
+   checkIn:
+    checkIn.value,
+
+   checkOut:
+    checkOut.value
+
+  })
+
+
+ hotelRooms.value=
+  Array.isArray(rooms)
+   ?rooms
+   :[]
+
+
+ hotelStore.setSearchRooms(
+  hotelRooms.value
+ )
+
+
+ const ahuanRoom=
+  hotelRooms.value.find(
+   room=>
+    String(
+     room?.provider||
+     ''
+    )
+     .toUpperCase()===
+    'AHUAN'
+  )
+
+
+ const providerHotel=
+  ahuanRoom
+   ?.meta
+   ?.hotel
+
+
+ if(providerHotel){
+
+  hotelAvailability.value=
+   providerHotel
+
+  hotel.value=
+   providerHotel
+
+ }
+
+}
+function normalizeSnappFacilities(
+ response
+){
+
+ let items=[]
+
+
+ if(
+  Array.isArray(
+   response
+  )
+ ){
+  items=
+   response
+ }
+ else if(
+  Array.isArray(
+   response?.data
+  )
+ ){
+  items=
+   response.data
+ }
+ else if(
+  Array.isArray(
+   response?.result
+  )
+ ){
+  items=
+   response.result
+ }
+ else if(
+  Array.isArray(
+   response?.facilities
+  )
+ ){
+  items=
+   response.facilities
+ }
+ else if(
+  Array.isArray(
+   response?.hotelFacilities
+  )
+ ){
+  items=
+   response.hotelFacilities
+ }
+
+
+ const flattened=[]
+
+
+ for(
+  const item
+  of items
+ ){
+
+  if(
+   Array.isArray(
+    item?.facilities
+   )
+  ){
+
+   flattened.push(
+    ...item.facilities
+   )
+
+   continue
+  }
+
+
+  flattened.push(
+   item
+  )
+
+ }
+
+
+ const result=[]
+ const seen=
+  new Set()
+
+
+ for(
+  const item
+  of flattened
+ ){
+
+  if(!item)
+   continue
+
+
+  const title=
+   String(
+    item?.title||
+    item?.name||
+    item?.facilityName||
+    item?.description||
+    ''
+   )
+    .trim()
+
+
+  if(!title)
+   continue
+
+
+  const id=
+   item?.id??
+   item?.facilityId??
+   item?.facility_id??
+   null
+
+
+  const icon=
+   String(
+    item?.icon||
+    item?.icon_url||
+    ''
+   )
+    .trim()
+
+
+  const key=
+   String(
+    id||
+    title
+   )
+    .trim()
+
+
+  if(
+   !key||
+   seen.has(
+    key
+   )
+  ){
+   continue
+  }
+
+
+  seen.add(
+   key
+  )
+
+
+  result.push({
+
+   ...item,
+
+   id,
+
+   title,
+
+   name:
+    title,
+
+   icon
+
+  })
+
+ }
+
+
+ return result
+
+}
+function stripHotelHtml(
+ value
+){
+
+ return String(
+  value||
+  ''
+ )
+  .replace(
+   /<br\s*\/?>/gi,
+   '\n'
+  )
+  .replace(
+   /<[^>]*>/g,
+   ' '
+  )
+  .replace(
+   /&nbsp;/gi,
+   ' '
+  )
+  .replace(
+   /\s+/g,
+   ' '
+  )
+  .trim()
+
+}
+
+
+function mapSnappTripHotelDetail(
+ response
+){
+
+ const detail=
+  Array.isArray(
+   response?.hotelDetails
+  )
+   ?response.hotelDetails[0]
+   :null
+
+
+ if(!detail){
+
+  throw new Error(
+   'اطلاعات هتل SnappTrip دریافت نشد.'
+  )
+
+ }
+
+
+ /*
+ |--------------------------------------------------------------------------
+ | Hotel
+ |--------------------------------------------------------------------------
+ */
+
+ hotel.value={
+
+  id:
+   Number(
+    detail?.id||
+    hotelId.value||
+    0
+   ),
+
+  provider:
+   'SNAPPTRIP',
+
+  name:
+   String(
+    detail?.title||
+    ''
+   )
+    .trim(),
+
+  nameEn:
+   String(
+    detail?.title_en||
+    ''
+   )
+    .trim(),
+
+  star:
+   Number(
+    detail?.stars||
+    0
+   ),
+
+  score:
+   Number(
+    detail?.reviews?.ratings||
+    0
+   )||
+   null,
+
+  reviewsCount:
+   Number(
+    detail?.reviews?.reviews||
+    0
+   ),
+
+  description:
+   stripHotelHtml(
+    detail?.description
+   ),
+
+  checkInTime:
+   String(
+    detail
+     ?.policies
+     ?.check_in_time||
+    ''
+   ),
+
+  checkOutTime:
+   String(
+    detail
+     ?.policies
+     ?.check_out_time||
+    ''
+   ),
+
+  address:
+   String(
+    detail?.address||
+    ''
+   )
+    .trim(),
+
+  cityId:
+   Number(
+    detail?.city?.id||
+    0
+   ),
+
+  cityName:
+   String(
+    detail?.city?.title||
+    ''
+   ),
+
+  latitude:
+   Number(
+    detail?.location?.lat||
+    0
+   ),
+
+  longitude:
+   Number(
+    detail?.location?.lon||
+    0
+   ),
+
+  policies:
+   detail?.policies||
+   null,
+
+  raw:
+   detail
+
+ }
+
+
+ /*
+ |--------------------------------------------------------------------------
+ | Gallery
+ |--------------------------------------------------------------------------
+ */
+
+ const images=[]
+ const seen=
+  new Set()
+
+
+ /*
+  * Cover اول باشد
+  */
+ const cover=
+  detail?.cover
+
+
+ if(
+  cover?.url
+ ){
+
+  const url=
+   String(
+    cover.url
+   )
+    .trim()
+
+
+  if(url){
+
+   seen.add(
+    url
+   )
+
+
+   images.push({
+
+    id:
+     0,
+
+    image:
+     url,
+
+    title:
+     String(
+      cover?.title||
+      ''
+     ),
+
+    description:
+     String(
+      cover?.description||
+      cover?.title||
+      ''
+     ),
+
+    orderId:
+     0,
+
+    isDefault:
+     true
+
+   })
+
+  }
+
+ }
+
+
+ /*
+  * Gallery
+  */
+ const gallery=
+  Array.isArray(
+   detail?.gallery
+  )
+   ?detail.gallery
+   :[]
+
+
+ for(
+  const item
+  of gallery
+ ){
+
+  const url=
+   String(
+    item?.url||
+    ''
+   )
+    .trim()
+
+
+  if(
+   !url||
+   seen.has(
+    url
+   )
+  ){
+   continue
+  }
+
+
+  seen.add(
+   url
+  )
+
+
+  images.push({
+
+   id:
+    images.length,
+
+   image:
+    url,
+
+   title:
+    String(
+     item?.title||
+     ''
+    ),
+
+   description:
+    String(
+     item?.description||
+     item?.title||
+     ''
+    ),
+
+   orderId:
+    images.length,
+
+   isDefault:
+    false
+
+  })
+
+ }
+
+
+ hotelImages.value=
+  images
+
+
+ /*
+ |--------------------------------------------------------------------------
+ | Facilities
+ |--------------------------------------------------------------------------
+ */
+
+ hotelFacilities.value=
+  Array.isArray(
+   detail?.facilities
+  )
+   ?detail.facilities
+   :[]
+
+
+ console.log(
+  'SNAPP HOTEL:',
+  hotel.value
+ )
+
+
+ console.log(
+  'SNAPP GALLERY:',
+  hotelImages.value
+ )
+
+
+ console.log(
+  'SNAPP FACILITIES:',
+  hotelFacilities.value
+ )
+
+}
+async function loadSnappTripHotel(){
+
+ const apiCheckIn=
+  String(
+   checkIn.value||
+   ''
+  )
+   .trim()
+   .replaceAll(
+    '/',
+    '-'
+   )
+
+
+ const apiCheckOut=
+  String(
+   checkOut.value||
+   ''
+  )
+   .trim()
+   .replaceAll(
+    '/',
+    '-'
+   )
+
+
+ const[
+  detailResponse,
+  availabilityResponse
+ ]=
+  await Promise.all([
+
+   /*
+   |--------------------------------------------------------------------------
+   | Hotel Detail
+   |--------------------------------------------------------------------------
+   |
+   | name
+   | description
+   | stars
+   | address
+   | location
+   | cover
+   | gallery
+   | facilities
+   | policies
+   |
+   |--------------------------------------------------------------------------
+   */
+
+   $fetch(
+    `${BASE_URL}/SnappTrip/hotel/${hotelId.value}`
+   ),
+
+
+   /*
+   |--------------------------------------------------------------------------
+   | Availability
+   |--------------------------------------------------------------------------
+   |
+   | rooms
+   | prices
+   | availability
+   |
+   |--------------------------------------------------------------------------
+   */
+
+   $fetch(
+    `${BASE_URL}/SnappTrip/availability/hotels`,
+    {
+     query:{
+
+      HotelIds:
+       hotelId.value,
+
+      CheckIn:
+       apiCheckIn,
+
+      CheckOut:
+       apiCheckOut
+
+     }
+    }
+   )
+
+  ])
+
+
+ /*
+ |--------------------------------------------------------------------------
+ | Hotel Detail
+ |--------------------------------------------------------------------------
+ */
+
+ mapSnappTripHotelDetail(
+  detailResponse
+ )
+
+
+ /*
+ |--------------------------------------------------------------------------
+ | Property
+ |--------------------------------------------------------------------------
+ */
+
+ const properties=
+  Array.isArray(
+   availabilityResponse?.properties
+  )
+   ?availabilityResponse.properties
+   :[]
+
+
+ const property=
+  properties.find(
+   item=>
+    Number(
+     item?.hotel_id||
+     0
+    )===
+    Number(
+     hotelId.value
+    )
+  )||
+  null
+
+
+ if(!property){
+
+  hotelAvailability.value=
+   null
+
+  hotelRooms.value=
+   []
+
+  hotelStore.setSearchRooms(
+   []
+  )
+
+
+  roomsError.value=
+   'در تاریخ انتخابی اتاق قابل رزرو یافت نشد.'
+
+
+  return
+
+ }
+
+
+ /*
+ |--------------------------------------------------------------------------
+ | Rooms
+ |--------------------------------------------------------------------------
+ */
+
+ const availabilityItems=
+  Array.isArray(
+   property?.availability
+  )
+   ?property.availability
+   :[]
+
+
+ const rooms=
+  availabilityItems
+   .map(
+    item=>
+     mapSnappAvailabilityRoom(
+      item
+     )
+   )
+   .filter(Boolean)
+
+
+ hotelAvailability.value=
+  property
+
+
+ hotelRooms.value=
+  rooms
+
+
+ hotelStore.setSearchRooms(
+  rooms
+ )
+
+
+ roomsFallbackMode.value=
+  false
+
+
+ if(!rooms.length){
+
+  roomsError.value=
+   'در تاریخ انتخابی اتاق قابل رزرو یافت نشد.'
+
+ }
+
+
+ console.log(
+  'SNAPP HOTEL DETAIL:',
+  detailResponse
+ )
+
+
+ console.log(
+  'SNAPP AVAILABILITY:',
+  availabilityResponse
+ )
+
+
+ console.log(
+  'SNAPP ROOMS:',
+  rooms
+ )
+
+}
+function mapSnappAvailabilityRoom(
+ item
+){
+
+ if(!item)
+  return null
+
+
+ const room=
+  item?.room||
+  {}
+
+
+ const pricing=
+  item?.pricing||
+  {}
+
+
+ const roomId=
+  Number(
+   room?.id||
+   0
+  )
+
+
+ if(!roomId)
+  return null
+
+
+ const availableCount=
+  Number(
+   item?.availability||
+   0
+  )
+
+
+ const finalPrice=
+  Number(
+   pricing?.price||
+   0
+  )
+
+
+ const originalPrice=
+  Number(
+   pricing?.original_sell_price||
+   0
+  )
+
+
+ const discountAmount=
+  Number(
+   pricing?.discount_amount||
+   0
+  )
+
+
+ const adults=
+  Number(
+   room?.adults||
+   0
+  )
+
+
+ const children=
+  Number(
+   room?.children||
+   0
+  )
+
+
+ const extraBed=
+  Number(
+   room?.extra_bed||
+   0
+  )
+
+
+ const boardType=
+  String(
+   room?.board_type||
+   ''
+  )
+   .trim()
+   .toLowerCase()
+
+
+ const breakfastIncluded=
+  [
+   'bed_breakfast',
+   'bb',
+   'half_board',
+   'hb',
+   'full_board',
+   'fb'
+  ].includes(
+   boardType
+  )
+
+
+ return{
+
+  id:
+   `SNAPPTRIP-${hotelId.value}-${roomId}`,
+
+  provider:
+   'SNAPPTRIP',
+
+  providerHotelId:
+   String(
+    hotelId.value
+   ),
+
+  providerRoomId:
+   String(
+    roomId
+   ),
+
+  hotelId:
+   Number(
+    room?.hotel_id||
+    hotelId.value
+   ),
+
+  roomId,
+
+
+  /*
+  |--------------------------------------------------------------------------
+  | Room Info
+  |--------------------------------------------------------------------------
+  */
+
+  roomName:
+   String(
+    room?.title||
+    ''
+   ),
+
+  name:
+   String(
+    room?.title||
+    ''
+   ),
+
+  type:
+   String(
+    room?.title||
+    ''
+   ),
+
+  roomType:
+   String(
+    room?.title||
+    ''
+   ),
+
+  accommodationType:
+   String(
+    room?.accommodation_type||
+    ''
+   ),
+
+  description:
+   String(
+    room?.description||
+    ''
+   ),
+
+
+  /*
+  |--------------------------------------------------------------------------
+  | Capacity
+  |--------------------------------------------------------------------------
+  */
+
+  adults,
+
+  children,
+
+  extraBed,
+
+  capacity:
+   adults,
+
+
+  /*
+  |--------------------------------------------------------------------------
+  | Board
+  |--------------------------------------------------------------------------
+  */
+
+  boardType,
+
+  breakfastIncluded,
+
+
+  /*
+  |--------------------------------------------------------------------------
+  | Availability
+  |--------------------------------------------------------------------------
+  */
+
+  availableCount,
+
+  loadNo:
+   availableCount,
+
+  minStay:
+   Number(
+    item?.min_stay||
+    0
+   ),
+
+  from:
+   String(
+    item?.from||
+    ''
+   ),
+
+  to:
+   String(
+    item?.to||
+    ''
+   ),
+
+
+  /*
+  |--------------------------------------------------------------------------
+  | Price
+  |--------------------------------------------------------------------------
+  */
+
+  price:
+   finalPrice,
+
+  priceFrom:
+   finalPrice,
+
+  priceOff:
+   finalPrice,
+
+  calculatedPrice:
+   finalPrice,
+
+  originalPrice,
+
+  discountAmount,
+
+  discountPercent:
+   originalPrice>0
+    ?Math.round(
+      (
+       discountAmount/
+       originalPrice
+      )*
+      100
+     )
+    :0,
+
+  childPrice:
+   Number(
+    pricing?.child_price||
+    0
+   ),
+
+  extraBedPrice:
+   Number(
+    pricing?.extra_bed_price||
+    0
+   ),
+
+
+  /*
+  |--------------------------------------------------------------------------
+  | State
+  |--------------------------------------------------------------------------
+  */
+
+  disabled:
+   availableCount<=0||
+   finalPrice<=0,
+
+  forShow:
+   false,
+
+  displayOnly:
+   false,
+
+
+  /*
+  |--------------------------------------------------------------------------
+  | Raw
+  |--------------------------------------------------------------------------
+  */
+
+  raw:
+   item,
+
+  meta:{
+   room,
+   pricing,
+   racks:
+    item?.racks||
+    null
+  }
+
+ }
+
+}
+function getSnappRoomFacilities(
+ room
+){
+
+ const result=[]
+ const seen=
+  new Set()
+
+
+ const groups=
+  Array.isArray(
+   room?.facilities_tags
+  )
+   ?room.facilities_tags
+   :[]
+
+
+ for(
+  const group
+  of groups
+ ){
+
+  const facilities=
+   Array.isArray(
+    group?.facilities
+   )
+    ?group.facilities
+    :[]
+
+
+  for(
+   const facility
+   of facilities
+  ){
+
+   const title=
+    String(
+     facility?.title||
+     ''
+    )
+     .trim()
+
+
+   if(!title)
+    continue
+
+
+   if(
+    seen.has(
+     title
+    )
+   ){
+    continue
+   }
+
+
+   seen.add(
+    title
+   )
+
+
+   result.push({
+
+    title,
+
+    name:
+     title,
+
+    icon:
+     String(
+      facility?.icon||
+      ''
+     )
+
+   })
+
+  }
+
+ }
+
+
+ return result
+
+}
 async function loadHotelAvailability(){
 
  if(
@@ -4121,107 +5440,93 @@ async function loadHotelAvailability(){
   !checkOut.value
  ){
 
-  hotelAvailability.value=null
+  hotelAvailability.value=
+   null
 
-  hotelRooms.value=[]
+  hotelRooms.value=
+   []
 
-  hotelStore.setSearchRooms([])
+  hotelStore.setSearchRooms(
+   []
+  )
 
-  roomsError.value=''
+  roomsError.value=
+   ''
 
   return
-
  }
 
 
- loading.value=true
+ loading.value=
+  true
 
- roomsLoading.value=true
+ roomsLoading.value=
+  true
 
- errorMessage.value=''
+ errorMessage.value=
+  ''
 
- roomsError.value=''
+ roomsError.value=
+  ''
+
+ hotelRooms.value=
+  []
+
+ hotelStore.setSearchRooms(
+  []
+ )
 
 
  try{
 
-  const rooms=
-   await searchAllHotelProviders({
-
-    hotelId:
-     hotelId.value,
-
-    checkIn:
-     checkIn.value,
-
-    checkOut:
-     checkOut.value
-
-   })
-
-
-  hotelRooms.value=
-   rooms
-
-
   /*
-   * فعلاً Hotel اصلی آهوان را
-   * از meta اولین اتاق می‌گیریم.
+   * فقط ID=3 آهوان است.
    */
+  if(
+   isAhuanHotel.value
+  ){
 
-  const ahuanRoom=
-   rooms.find(
-    room=>
-     room.provider===
-     'AHUAN'
-   )
+   await loadAhuanHotel()
 
-
-  const providerHotel=
-   ahuanRoom
-    ?.meta
-    ?.hotel
-
-
-  if(providerHotel){
-
-   hotelAvailability.value=
-    providerHotel
-
-   hotel.value=
-    providerHotel
-
+   return
   }
 
 
-  console.log(
-   'NORMALIZED HOTEL ROOMS:',
-   rooms
-  )
+  /*
+   * هر ID دیگری SnappTrip
+   */
+  await loadSnappTripHotel()
 
  }
  catch(error){
 
   console.error(
-   'Hotel Search Error:',
+   'HOTEL LOAD ERROR:',
    error
   )
 
 
-  hotelRooms.value=[]
+  hotelRooms.value=
+   []
 
-  hotelStore.setSearchRooms([])
+  hotelStore.setSearchRooms(
+   []
+  )
 
 
   roomsError.value=
+   error?.data?.message||
+   error?.message||
    'دریافت اطلاعات اتاق‌ها با خطا مواجه شد.'
 
  }
  finally{
 
-  loading.value=false
+  loading.value=
+   false
 
-  roomsLoading.value=false
+  roomsLoading.value=
+   false
 
  }
 
@@ -4229,13 +5534,7 @@ async function loadHotelAvailability(){
 // =========================
 // Init / Route Changes
 // =========================
-watch(
-  hotelId,
-  ()=>{
-    loadHotelExtras()
-  },
-  {immediate:true}
-)
+
 watch(
  () => hotelStore.selectedRooms.length,
  (roomsCount) => {
@@ -4658,46 +5957,85 @@ function formatPrice(value){
   return Number(value||0)
     .toLocaleString('fa-IR')
 }
-function getRoomAvailableCount(room){
+function getRoomAvailableCount(
+ room
+){
 
-  const details=
-    getRoomPriceDetails(room)
+ if(
+  String(
+   room?.provider||
+   ''
+  ).toUpperCase()==='SNAPPTRIP'
+ ){
+
+  return Math.max(
+   0,
+   Number(
+    room?.availableCount||
+    0
+   )
+  )
+
+ }
 
 
-  if(details.length){
+ /*
+  * AHUAN
+  */
+ const details=
+  getRoomPriceDetails(
+   room
+  )
 
-    return Math.max(
-      0,
-      Math.min(
-        ...details.map(item=>
-          Math.max(
-            0,
-            Number(item?.loadNo||0)-
-            Number(item?.bookNo||0)
-          )
-        )
+
+ if(details.length){
+
+  return Math.max(
+   0,
+   Math.min(
+    ...details.map(
+     item=>
+      Math.max(
+       0,
+       Number(
+        item?.loadNo||
+        0
+       )-
+       Number(
+        item?.bookNo||
+        0
+       )
       )
     )
+   )
+  )
 
-  }
-
-
-  const price=
-    room?.hotelRoomPrices?.[0]
+ }
 
 
-  if(price){
-
-    return Math.max(
-      0,
-      Number(price.loadNo||0)-
-      Number(price.bookNo||0)
-    )
-
-  }
+ const price=
+  room?.hotelRoomPrices?.[0]
 
 
-  return 0
+ if(price){
+
+  return Math.max(
+   0,
+   Number(
+    price?.loadNo||
+    0
+   )-
+   Number(
+    price?.bookNo||
+    0
+   )
+  )
+
+ }
+
+
+ return 0
+
 }
 function getSelectedRoomCount(room){
 

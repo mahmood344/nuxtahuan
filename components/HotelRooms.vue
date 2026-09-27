@@ -1533,26 +1533,115 @@ function getRoomFinalPrice(room){
 
 }
 
-function getRoomAvailableCount(room){
+function getRoomAvailableCount(
+ room
+){
+
+ /*
+ |--------------------------------------------------------------------------
+ | Direct Availability
+ |--------------------------------------------------------------------------
+ |
+ | SnappTrip:
+ | room.availableCount
+ | room.loadNo
+ |
+ | AHUAN جدید هم اگر availableCount داشته باشد
+ | از همین مقدار استفاده می‌کند.
+ |
+ |--------------------------------------------------------------------------
+ */
+
+ const directAvailable=
+  room?.availableCount??
+  room?.loadNo
+
+
+ if(
+  directAvailable!==undefined&&
+  directAvailable!==null&&
+  directAvailable!==''
+ ){
+
+  return Math.max(
+   0,
+   Number(
+    directAvailable
+   )||
+   0
+  )
+
+ }
+
+
+ /*
+ |--------------------------------------------------------------------------
+ | AHUAN Old Structure
+ |--------------------------------------------------------------------------
+ */
 
  const details=
-  getRoomPriceDetails(room)
+  getRoomPriceDetails(
+   room
+  )
 
- if(!details.length)
-  return 0
 
- return Math.max(
-  0,
-  Math.min(
-   ...details.map(item=>
-    Math.max(
-     0,
-     Number(item.loadNo||0)-
-     Number(item.bookNo||0)
+ if(
+  details.length
+ ){
+
+  return Math.max(
+   0,
+   Math.min(
+    ...details.map(
+     item=>
+      Math.max(
+       0,
+       Number(
+        item?.loadNo||
+        0
+       )-
+       Number(
+        item?.bookNo||
+        0
+       )
+      )
     )
    )
   )
- )
+
+ }
+
+
+ /*
+ |--------------------------------------------------------------------------
+ | AHUAN Price Fallback
+ |--------------------------------------------------------------------------
+ */
+
+ const price=
+  room?.hotelRoomPrices?.[0]
+
+
+ if(price){
+
+  return Math.max(
+   0,
+   Number(
+    price?.loadNo||
+    0
+   )-
+   Number(
+    price?.bookNo||
+    0
+   )
+  )
+
+ }
+
+
+ return 0
+
 }
 
 

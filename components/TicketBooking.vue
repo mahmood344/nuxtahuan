@@ -155,6 +155,94 @@
 
   </div>
 </div>
+<!--
+|--------------------------------------------------------------------------
+| SnappTrip Hotel
+|--------------------------------------------------------------------------
+-->
+
+<div
+  v-else-if="activeService === 'hotel'"
+  dir="rtl"
+  class="flex flex-col justify-center mt-4"
+>
+
+  <div
+    class="
+      w-full
+      grid
+      grid-cols-1
+      md:grid-cols-[2fr_2fr_1fr]
+      gap-4
+      items-center
+      p-4
+      md:p-8
+    "
+  >
+
+    <!-- City -->
+    <div class="w-full">
+
+      <UiBaseAutocomplete
+        label="شهر"
+        :placeholder="
+          hotelStore.snappTripCitiesLoading
+            ? 'در حال دریافت شهرها...'
+            : 'نام شهر را جستجو کنید...'
+        "
+        :items="snappTripCities"
+        item-text="name"
+        item-value="code"
+        v-model="snappTripCity"
+        :disabled="hotelStore.snappTripCitiesLoading"
+        clearable
+        icon='<i class="bi bi-geo-alt"></i>'
+        iconPosition="right"
+      />
+
+    </div>
+
+
+    <!-- Date -->
+    <div class="w-full">
+
+      <UiSingleDatePicker
+        v-model="snappTripDate"
+        label="تاریخ ورود و خروج"
+        placeholder="انتخاب تاریخ"
+      />
+
+    </div>
+
+
+    <!-- Search -->
+    <div class="w-full">
+
+      <UiBaseButton
+        label="جستجو"
+        variant="filled"
+        color="primary"
+        :active="false"
+        :disabled="
+          !snappTripCity||
+          !snappTripDate
+        "
+        class="
+          w-full
+          max-w-[500px]
+          xl:max-w-[500px]
+          h-[40px]
+          !rounded-4xl
+          text-[13px]
+        "
+        @click="searchSnappTripHotel"
+      />
+
+    </div>
+
+  </div>
+
+</div>
 <Transition
   v-else
   name="development"
@@ -273,6 +361,50 @@ const hotelCities=computed(()=>{
   }))
 
 })
+/*
+|--------------------------------------------------------------------------
+| SnappTrip Hotel
+|--------------------------------------------------------------------------
+*/
+
+const snappTripCity=
+ ref(null)
+
+
+const snappTripDate=
+ ref(null)
+
+
+const snappTripCities=
+ computed(()=>{
+
+  const items=
+   Array.isArray(
+    hotelStore.snappTripCities
+   )
+    ?hotelStore.snappTripCities
+    :[]
+
+
+  return items.map(
+   item=>({
+
+    code:
+     item.id,
+
+    name:
+     item.title,
+
+    stateName:
+     item.stateName,
+
+    titleEn:
+     item.titleEn
+
+   })
+  )
+
+})
 const openDatePicker = async () => {
 
   await nextTick()
@@ -359,6 +491,90 @@ function searchAhuanHotel(){
   })
 
 }
+/*
+|--------------------------------------------------------------------------
+| Search SnappTrip Hotel
+|--------------------------------------------------------------------------
+*/
+
+function searchSnappTripHotel(){
+
+ if(
+  !snappTripCity.value||
+  !snappTripDate.value
+ ){
+  return
+ }
+
+
+ const dates=
+  Array.isArray(
+   snappTripDate.value
+  )
+   ?snappTripDate.value
+   :String(
+     snappTripDate.value
+    )
+     .split(',')
+     .map(
+      item=>
+       item.trim()
+     )
+
+
+ const checkIn=
+  String(
+   dates[0]||
+   ''
+  )
+   .trim()
+   .replaceAll(
+    '/',
+    '-'
+   )
+
+
+ const checkOut=
+  String(
+   dates[1]||
+   ''
+  )
+   .trim()
+   .replaceAll(
+    '/',
+    '-'
+   )
+
+
+ if(
+  !checkIn||
+  !checkOut
+ ){
+  return
+ }
+
+
+ router.push({
+
+  path:
+   '/hotels',
+
+  query:{
+
+   cityId:
+    Number(
+     snappTripCity.value
+    ),
+
+   checkIn,
+
+   checkOut
+
+  }
+
+ })
+
+}
 const images = [
   '/imgs/ticketbooking/flightbackground.png',
   '/imgs/ticketbooking/flightbackground2.png',
@@ -384,10 +600,50 @@ const currentSlide = ref(0)
 
 const currentImage = computed(() => images[currentSlide.value] || images[0])
 
-const selectService = (serviceKey, index) => {
-  activeService.value = serviceKey
-  currentSlide.value = index
+const selectService=
+ async(
+  serviceKey,
+  index
+ )=>{
+
+  activeService.value=
+   serviceKey
+
+
+  currentSlide.value=
+   index
+
+
   resetAutoSlide()
+
+
+  /*
+  |--------------------------------------------------------------------------
+  | SnappTrip Hotel
+  |--------------------------------------------------------------------------
+  */
+
+  if(
+   serviceKey==='hotel'
+  ){
+
+   try{
+
+    await hotelStore
+     .loadSnappTripCities()
+
+   }
+   catch(error){
+
+    console.error(
+     'LOAD SNAPPTRIP CITIES ERROR:',
+     error
+    )
+
+   }
+
+  }
+
 }
 
 // تایمر برای اسلاید خودکار
