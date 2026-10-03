@@ -115,30 +115,113 @@ const positionRight = computed(() => {
 });
 
 // تابع برای دریافت موقعیت موس/تاچ نسبت به کانتینر اسلایدر
-const getSliderX = (event) => {
-  const sliderRect = sliderContainer.value.getBoundingClientRect();
-  const clientX = event.clientX || (event.touches && event.touches[0].clientX);
-  if (clientX === undefined) return 0;
+const getSliderX = (
+ event
+) => {
 
-  // محاسبه موقعیت نسبت به شروع کانتینر اسلایدر
-  let sliderX = clientX - sliderRect.left;
+ const rect =
+  sliderContainer.value
+   ?.getBoundingClientRect()
 
-  // اطمینان از اینکه مقدار بین 0 و عرض کانتینر است
-  sliderX = Math.max(0, Math.min(sliderX, sliderRect.width));
-  return sliderX;
-};
+
+ if(
+  !rect ||
+  rect.width <= 0
+ ){
+  return 0
+ }
+
+
+ const clientX =
+  event?.clientX ??
+  event?.touches?.[0]?.clientX
+
+
+ if(
+  clientX === undefined
+ ){
+  return 0
+ }
+
+
+ return Math.max(
+  0,
+  Math.min(
+   clientX - rect.left,
+   rect.width
+  )
+ )
+
+}
 
 // محاسبه مقدار عددی بر اساس موقعیت پیکسل
-const valueFromX = (x) => {
-  const percentage = (x / containerWidth.value) * 100;
-  const value = props.min + (percentage / 100) * (props.max - props.min);
-  
-  // اعمال گام (step)
-  const steppedValue = Math.round(value / props.step) * props.step;
-  
-  // اطمینان از اینکه مقدار بین min و max است
-  return Math.max(props.min, Math.min(props.max, steppedValue));
-};
+const valueFromX = (
+ x
+) => {
+
+ const rect =
+  sliderContainer.value
+   ?.getBoundingClientRect()
+
+ const width =
+  Number(
+   rect?.width ||
+   0
+  )
+
+
+ if(
+  width <= 0 ||
+  props.max <= props.min
+ ){
+  return props.min
+ }
+
+
+ const ratio =
+  Math.max(
+   0,
+   Math.min(
+    1,
+    x / width
+   )
+  )
+
+
+ const rawValue =
+  props.min +
+  ratio *
+  (
+   props.max -
+   props.min
+  )
+
+
+ /*
+  * Step باید نسبت به min محاسبه شود،
+  * نه نسبت به صفر.
+  */
+ const steppedValue =
+  props.min +
+  Math.round(
+   (
+    rawValue -
+    props.min
+   ) /
+   props.step
+  ) *
+  props.step
+
+
+ return Math.max(
+  props.min,
+  Math.min(
+   props.max,
+   steppedValue
+  )
+ )
+
+}
 
 // شروع کشیدن هندل
 const startDrag = (event, handleType) => {
@@ -156,24 +239,106 @@ const startDrag = (event, handleType) => {
 };
 
 // هنگام کشیدن هندل
-const onDrag = (event) => {
-  if (!dragging.value) return;
+const onDrag = (
+ event
+) => {
 
-  const sliderX = getSliderX(event);
-  const newValue = valueFromX(sliderX);
-  
-  let [currentMin, currentMax] = props.modelValue;
+ if(
+  !dragging.value
+ ){
+  return
+ }
 
-  if (currentDragging.value === 'left') {
-    // هندل چپ نباید از هندل راست یا مقدار max عبور کند
-    const newMinValue = Math.min(newValue, currentMax - props.step); // اطمینان از حداقل فاصله step
-    emit('update:modelValue', [newMinValue, currentMax]);
-  } else if (currentDragging.value === 'right') {
-    // هندل راست نباید از هندل چپ یا مقدار min عبور کند
-    const newMaxValue = Math.max(newValue, currentMin + props.step); // اطمینان از حداقل فاصله step
-    emit('update:modelValue', [currentMin, newMaxValue]);
-  }
-};
+
+ if(
+  event?.cancelable
+ ){
+  event.preventDefault()
+ }
+
+
+ const sliderX =
+  getSliderX(
+   event
+  )
+
+
+ const newValue =
+  valueFromX(
+   sliderX
+  )
+
+
+ const currentMin =
+  Number(
+   props.modelValue?.[0] ??
+   props.min
+  )
+
+
+ const currentMax =
+  Number(
+   props.modelValue?.[1] ??
+   props.max
+  )
+
+
+ if(
+  currentDragging.value ===
+  'left'
+ ){
+
+  const newMinValue =
+   Math.min(
+    newValue,
+    currentMax -
+    props.step
+   )
+
+
+  emit(
+   'update:modelValue',
+   [
+    Math.max(
+     props.min,
+     newMinValue
+    ),
+    currentMax
+   ]
+  )
+
+
+  return
+ }
+
+
+ if(
+  currentDragging.value ===
+  'right'
+ ){
+
+  const newMaxValue =
+   Math.max(
+    newValue,
+    currentMin +
+    props.step
+   )
+
+
+  emit(
+   'update:modelValue',
+   [
+    currentMin,
+    Math.min(
+     props.max,
+     newMaxValue
+    )
+   ]
+  )
+
+ }
+
+}
 
 // پایان کشیدن هندل
 const endDrag = () => {

@@ -1903,9 +1903,8 @@ const hotels=
 
   .map(
    room=>
-    Number(
-     room?.originalPrice||
-     0
+    getRoomOriginalPriceRial(
+     room
     )
   )
 
@@ -2056,10 +2055,8 @@ function getHotelOriginalPrice(
 
    .map(
     room=>
-     Number(
+     getRoomOriginalPriceRial(
       room
-       ?.originalPrice||
-      0
      )
    )
 
@@ -2671,6 +2668,62 @@ function getRoomImage(
 
 /*
 |--------------------------------------------------------------------------
+| SnappTrip Original Price -> Rial
+|--------------------------------------------------------------------------
+*/
+
+function getRoomOriginalPriceRial(
+ room
+){
+
+ const rawPrice=
+  Number(
+   room?.originalPrice||
+   room?.raw?.pricing?.original_sell_price||
+   room?.meta?.pricing?.original_sell_price||
+   0
+  )
+
+ if(
+  !Number.isFinite(rawPrice)||
+  rawPrice<=0
+ ){
+  return 0
+ }
+
+ const provider=
+  String(
+   room?.provider||
+   ''
+  )
+   .trim()
+   .toUpperCase()
+
+ if(
+  provider==='SNAPPTRIP'
+ ){
+
+  if(
+   String(
+    room?.currency||
+    ''
+   )
+    .trim()
+    .toUpperCase()==='IRR'
+  ){
+   return rawPrice
+  }
+
+  return rawPrice*10
+ }
+
+ return rawPrice
+
+}
+
+
+/*
+|--------------------------------------------------------------------------
 | Room Price
 |--------------------------------------------------------------------------
 */
@@ -2678,6 +2731,24 @@ function getRoomImage(
 function getRoomPrice(
   room
 ){
+
+  const provider=
+    String(
+      room?.provider||
+      ''
+    )
+      .trim()
+      .toUpperCase()
+
+
+  if(
+    provider==='SNAPPTRIP'
+  ){
+    return getRoomOriginalPriceRial(
+      room
+    )
+  }
+
 
   const price=
     Number(
@@ -2738,6 +2809,21 @@ function safePrice(
 function hasDiscount(
   room
 ){
+
+  const provider=
+    String(
+      room?.provider||
+      ''
+    )
+      .trim()
+      .toUpperCase()
+
+  if(
+    provider==='SNAPPTRIP'
+  ){
+    return false
+  }
+
 
   const originalPrice=
     Number(

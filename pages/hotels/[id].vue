@@ -51,8 +51,9 @@
  "
 >
  <FlightSearchPanel
- mode="aside"
+mode="aside"
  :showServices="true"
+ :snapp-trip-city-id="hotel?.cityId || null"
  @hotel-search="handleHotelSearch"
 />
 
@@ -833,9 +834,10 @@
       <div class="space-y-5">
 
        <FlightSearchPanel
-        mode="aside"
-        :showServices="true"
-        @hotel-search="handleHotelSearch"
+       mode="aside"
+ :showServices="true"
+ :snapp-trip-city-id="hotel?.cityId || null"
+ @hotel-search="handleHotelSearch"
        />
 
        <FilterHotel
@@ -1187,7 +1189,140 @@
           </p>
         </div>
 
+<!-- ====================== -->
+<!-- امکانات اتاق SnappTrip -->
+<!-- ====================== -->
 
+<div
+ v-if="
+  String(selectedRoom?.provider||'').toUpperCase()==='SNAPPTRIP' &&
+  Array.isArray(selectedRoom?.roomFacilities) &&
+  selectedRoom.roomFacilities.length>0
+ "
+ class="
+  mt-5
+  rounded-2xl
+  border
+  border-[var(--color-gray-100)]
+  p-4
+ "
+>
+
+ <h4
+  class="
+   text-[13px]
+   font-black
+   text-[var(--color-gray-800)]
+  "
+ >
+  امکانات اتاق
+ </h4>
+
+
+ <div
+  class="
+   mt-4
+   grid
+   grid-cols-2
+   gap-3
+   md:grid-cols-3
+  "
+ >
+
+  <div
+   v-for="
+    (facility,index)
+    in visibleRoomFacilities
+   "
+   :key="
+    facility?.title||
+    facility?.name||
+    index
+   "
+   class="
+    flex
+    items-center
+    gap-2
+    rounded-xl
+    bg-[var(--color-gray-100)]
+    px-3
+    py-2.5
+   "
+  >
+
+   <span
+    class="
+     flex
+     h-7
+     w-7
+     shrink-0
+     items-center
+     justify-center
+     rounded-lg
+     bg-white
+     text-[var(--color-primary)]
+    "
+   >
+    <i
+     class="bi bi-check2"
+    ></i>
+   </span>
+
+
+   <span
+    class="
+     text-[11px]
+     font-medium
+     text-[var(--color-gray-600)]
+    "
+   >
+    {{
+     facility?.title||
+     facility?.name||
+     ''
+    }}
+   </span>
+
+  </div>
+
+ </div>
+
+
+ <div
+  v-if="
+   selectedRoom.roomFacilities.length>6
+  "
+  class="
+   mt-4
+   flex
+   justify-center
+  "
+ >
+
+  <UiBaseButton
+   :label="
+    showAllRoomFacilities
+     ?'نمایش کمتر'
+     :'نمایش بیشتر'
+   "
+   variant="soft"
+   color="primary"
+   class="
+    !rounded-xl
+    !px-5
+    !py-2
+    text-[11px]
+    font-bold
+   "
+   @click="
+    showAllRoomFacilities=
+     !showAllRoomFacilities
+   "
+  />
+
+ </div>
+
+</div>
         <!-- توضیحات -->
         <div
           v-if="selectedRoom.description"
@@ -1633,6 +1768,7 @@ const roomsFallbackMode=ref(false)
 
 const selectedRoom=ref(null)
 const roomModalOpen=ref(false)
+const showAllRoomFacilities=ref(false)
 const roomSlideIndexes=ref({})
 const selectedRoomCounts=ref({})
 const hotelGalleryModalOpen=ref(false)
@@ -1643,7 +1779,29 @@ const hotelGalleryIndex=ref(0)
 // const hotelId=computed(()=>
 //   Number(route.params.id||0)
 // )
+const visibleRoomFacilities=computed(()=>{
 
+ const facilities=
+  Array.isArray(
+   selectedRoom.value?.roomFacilities
+  )
+   ?selectedRoom.value.roomFacilities
+   :[]
+
+
+ if(
+  showAllRoomFacilities.value
+ ){
+  return facilities
+ }
+
+
+ return facilities.slice(
+  0,
+  6
+ )
+
+})
 const checkIn=computed(()=>
   String(route.query.checkIn||'').trim()
 )
@@ -3519,6 +3677,13 @@ hotelStore.addRoom({
 
  count,
 
+ nightCount:
+  Number(
+   data?.nightCount||
+   calculateNights()||
+   0
+  ),
+
  unitPrice:
   Number(
    room.priceFrom||
@@ -3685,14 +3850,32 @@ function prevRoomSlide(room,event){
   )
 }
 
-function openRoomModal(room){
-  selectedRoom.value=room
-  roomModalOpen.value=true
+function openRoomModal(
+ room
+){
+
+ selectedRoom.value=
+  room
+
+ showAllRoomFacilities.value=
+  false
+
+ roomModalOpen.value=
+  true
+
 }
 
 function closeRoomModal(){
-  roomModalOpen.value=false
-  selectedRoom.value=null
+
+ roomModalOpen.value=
+  false
+
+ selectedRoom.value=
+  null
+
+ showAllRoomFacilities.value=
+  false
+
 }
 
 // =========================
@@ -5064,25 +5247,55 @@ function mapSnappAvailabilityRoom(
   )
 
 
- const finalPrice=
+ /*
+ |--------------------------------------------------------------------------
+ | SnappTrip Money
+ |--------------------------------------------------------------------------
+ |
+ | SnappTrip API price fields are Toman.
+ | Project standard is Rial.
+ |
+ | Business rule:
+ | booking/payment/display must use original_sell_price.
+ |
+ |--------------------------------------------------------------------------
+ */
+
+ const providerPriceToman=
   Number(
    pricing?.price||
    0
   )
 
-
- const originalPrice=
+ const originalSellPriceToman=
   Number(
    pricing?.original_sell_price||
    0
   )
 
-
- const discountAmount=
+ const providerDiscountAmountToman=
   Number(
    pricing?.discount_amount||
    0
   )
+
+ const bookingPrice=
+  (
+   originalSellPriceToman>0
+    ?originalSellPriceToman
+    :providerPriceToman
+  )*
+  10
+
+ const originalPrice=
+  bookingPrice
+
+ const finalPrice=
+  bookingPrice
+
+ const discountAmount=
+  providerDiscountAmountToman*
+  10
 
 
  const adults=
@@ -5196,7 +5409,10 @@ function mapSnappAvailabilityRoom(
     room?.description||
     ''
    ),
-
+roomFacilities:
+ getSnappRoomFacilities(
+  room
+ ),
 
   /*
   |--------------------------------------------------------------------------
@@ -5278,28 +5494,32 @@ function mapSnappAvailabilityRoom(
   discountAmount,
 
   discountPercent:
-   originalPrice>0
-    ?Math.round(
-      (
-       discountAmount/
-       originalPrice
-      )*
-      100
-     )
-    :0,
+   0,
 
   childPrice:
    Number(
     pricing?.child_price||
     0
-   ),
+   )*
+   10,
 
   extraBedPrice:
    Number(
     pricing?.extra_bed_price||
     0
-   ),
+   )*
+   10,
 
+
+  currency:
+   'IRR',
+
+  providerPriceToman,
+
+  providerOriginalSellPriceToman:
+   originalSellPriceToman,
+
+  providerDiscountAmountToman,
 
   /*
   |--------------------------------------------------------------------------
