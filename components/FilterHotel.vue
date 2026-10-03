@@ -55,14 +55,13 @@
               :'pointer-events-none opacity-40'
           "
         >
-         <UiBaseRangeSlider
- :model-value="priceRangeModel"
- :min="priceLimits[0]"
- :max="priceLimits[1]"
- :step="priceStep"
- :format-value="formatPrice"
- @update:model-value="handlePriceRangeChange"
-/>
+          <UiBaseRangeSlider
+            v-model="priceRangeModel"
+            :min="priceLimits[0]"
+            :max="priceLimits[1]"
+            :step="priceStep"
+            :formatValue="formatPrice"
+          />
         </div>
 
         <p
@@ -255,59 +254,7 @@ const roomViewOptions=computed(()=>
     )
   ]
 )
-function handlePriceRangeChange(
- value
-){
 
- if(
-  !Array.isArray(value) ||
-  value.length !== 2
- ){
-  return
- }
-
-
- const min =
-  Number(
-   value[0]
-  )
-
- const max =
-  Number(
-   value[1]
-  )
-
-
- if(
-  !Number.isFinite(min) ||
-  !Number.isFinite(max)
- ){
-  return
- }
-
-
- const normalized = [
-  Math.min(
-   min,
-   max
-  ),
-  Math.max(
-   min,
-   max
-  )
- ]
-
-
- priceRangeModel.value =
-  normalized
-
-
- updateFilter(
-  'priceRange',
-  normalized
- )
-
-}
 const selectedCapacities=computed(()=>
   Array.isArray(props.filters?.capacities)
     ?props.filters.capacities
@@ -387,7 +334,43 @@ watch(
   }
 )
 
+watch(
+  priceRangeModel,
+  value=>{
 
+    if(!canFilterByPrice.value)
+      return
+
+    if(
+      !Array.isArray(value)||
+      value.length!==2
+    ){
+      return
+    }
+
+    const min=Number(value[0])
+    const max=Number(value[1])
+
+    if(
+      !Number.isFinite(min)||
+      !Number.isFinite(max)
+    ){
+      return
+    }
+
+    updateFilter(
+      'priceRange',
+      [
+        Math.min(min,max),
+        Math.max(min,max)
+      ]
+    )
+
+  },
+  {
+    deep:true
+  }
+)
 
 const availableOnlyModel=computed({
   get:()=>props.filters?.availableOnly===true,

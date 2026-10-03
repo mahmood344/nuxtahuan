@@ -17,11 +17,11 @@
       <div
         class="absolute -bottom-15 left-0 right-0 z-10 mx-auto max-w-3xl px-4"
       >
-       <Stepper
-  :steps="flightSteps"
-  :active-step="flightStore.currentStep + 1"
-  active-color="var(--color-primary-dark)"
-/>
+        <Stepper
+          :steps="flightSteps"
+          :active-step="flightStore.currentStep"
+          active-color="var(--color-primary-dark)"
+        />
       </div>
     </header>
 
@@ -51,9 +51,8 @@
  "
 >
  <FlightSearchPanel
-mode="aside"
+ mode="aside"
  :showServices="true"
- :snapp-trip-city-id="hotel?.cityId || null"
  @hotel-search="handleHotelSearch"
 />
 
@@ -834,10 +833,9 @@ mode="aside"
       <div class="space-y-5">
 
        <FlightSearchPanel
-       mode="aside"
- :showServices="true"
- :snapp-trip-city-id="hotel?.cityId || null"
- @hotel-search="handleHotelSearch"
+        mode="aside"
+        :showServices="true"
+        @hotel-search="handleHotelSearch"
        />
 
        <FilterHotel
@@ -1189,140 +1187,7 @@ mode="aside"
           </p>
         </div>
 
-<!-- ====================== -->
-<!-- امکانات اتاق SnappTrip -->
-<!-- ====================== -->
 
-<div
- v-if="
-  String(selectedRoom?.provider||'').toUpperCase()==='SNAPPTRIP' &&
-  Array.isArray(selectedRoom?.roomFacilities) &&
-  selectedRoom.roomFacilities.length>0
- "
- class="
-  mt-5
-  rounded-2xl
-  border
-  border-[var(--color-gray-100)]
-  p-4
- "
->
-
- <h4
-  class="
-   text-[13px]
-   font-black
-   text-[var(--color-gray-800)]
-  "
- >
-  امکانات اتاق
- </h4>
-
-
- <div
-  class="
-   mt-4
-   grid
-   grid-cols-2
-   gap-3
-   md:grid-cols-3
-  "
- >
-
-  <div
-   v-for="
-    (facility,index)
-    in visibleRoomFacilities
-   "
-   :key="
-    facility?.title||
-    facility?.name||
-    index
-   "
-   class="
-    flex
-    items-center
-    gap-2
-    rounded-xl
-    bg-[var(--color-gray-100)]
-    px-3
-    py-2.5
-   "
-  >
-
-   <span
-    class="
-     flex
-     h-7
-     w-7
-     shrink-0
-     items-center
-     justify-center
-     rounded-lg
-     bg-white
-     text-[var(--color-primary)]
-    "
-   >
-    <i
-     class="bi bi-check2"
-    ></i>
-   </span>
-
-
-   <span
-    class="
-     text-[11px]
-     font-medium
-     text-[var(--color-gray-600)]
-    "
-   >
-    {{
-     facility?.title||
-     facility?.name||
-     ''
-    }}
-   </span>
-
-  </div>
-
- </div>
-
-
- <div
-  v-if="
-   selectedRoom.roomFacilities.length>6
-  "
-  class="
-   mt-4
-   flex
-   justify-center
-  "
- >
-
-  <UiBaseButton
-   :label="
-    showAllRoomFacilities
-     ?'نمایش کمتر'
-     :'نمایش بیشتر'
-   "
-   variant="soft"
-   color="primary"
-   class="
-    !rounded-xl
-    !px-5
-    !py-2
-    text-[11px]
-    font-bold
-   "
-   @click="
-    showAllRoomFacilities=
-     !showAllRoomFacilities
-   "
-  />
-
- </div>
-
-</div>
         <!-- توضیحات -->
         <div
           v-if="selectedRoom.description"
@@ -1566,26 +1431,9 @@ const hotelAvailability=ref(null)
 const currentContractData=ref(null)
 const paymentLoading=ref(false)
 const paymentError=ref('')
-const hotelId=
- computed(()=>
-  Number(
-   route.params.id||
-   0
-  )
- )
-
-
-const isAhuanHotel=
- computed(()=>
-  hotelId.value===3
- )
-
-
-const isSnappTripHotel=
- computed(()=>
-  hotelId.value>0&&
-  hotelId.value!==3
- )
+const hotelId=computed(()=>
+ Number(route.params.id||0)
+)
 
 const isAhuanChaboksar=computed(()=>
  hotelId.value===3
@@ -1768,7 +1616,6 @@ const roomsFallbackMode=ref(false)
 
 const selectedRoom=ref(null)
 const roomModalOpen=ref(false)
-const showAllRoomFacilities=ref(false)
 const roomSlideIndexes=ref({})
 const selectedRoomCounts=ref({})
 const hotelGalleryModalOpen=ref(false)
@@ -1779,29 +1626,7 @@ const hotelGalleryIndex=ref(0)
 // const hotelId=computed(()=>
 //   Number(route.params.id||0)
 // )
-const visibleRoomFacilities=computed(()=>{
 
- const facilities=
-  Array.isArray(
-   selectedRoom.value?.roomFacilities
-  )
-   ?selectedRoom.value.roomFacilities
-   :[]
-
-
- if(
-  showAllRoomFacilities.value
- ){
-  return facilities
- }
-
-
- return facilities.slice(
-  0,
-  6
- )
-
-})
 const checkIn=computed(()=>
   String(route.query.checkIn||'').trim()
 )
@@ -3500,26 +3325,10 @@ const checkOut=computed(()=>
 // Stepper
 // =========================
 const flightSteps=computed(()=>[
-   {
-    icon:'🏨',
-    label:'انتخاب هتل'
-  },
-  {
-    icon:'🛏️',
-    label:'انتخاب اتاق'
-  },
-  {
-    icon:'📄',
-    label:'تکمیل اطلاعات'
-  },
-  {
-    icon:'💳',
-    label:'تایید و پرداخت'
-  },
-  {
-    icon:'🎫',
-    label:'دریافت واچر'
-  }
+  {icon:'✈️',label:'انتخاب اتاق'},
+  {icon:'📄',label:'تکمیل اطلاعات'},
+  {icon:'💳',label:'تایید و پرداخت'},
+  {icon:'🎫',label:'دریافت واچر'}
 ])
 
 // =========================
@@ -3549,40 +3358,9 @@ const remainingImagesCount=computed(()=>
 // =========================
 // Image URL
 // =========================
-function getHotelImageUrl(
- image
-){
-
- const value=
-  String(
-   image||
-   ''
-  )
-   .trim()
-
-
- if(!value)
-  return''
-
-
- /*
-  * SnappTrip
-  */
- if(
-  value.startsWith('http://')||
-  value.startsWith('https://')
- ){
-  return value
- }
-
-
- /*
-  * AHUAN
-  */
- return(
-  `${HOTEL_IMAGE_BASE}/${value}`
- )
-
+function getHotelImageUrl(image){
+  if(!image)return''
+  return`${HOTEL_IMAGE_BASE}/${image}`
 }
 
 // =========================
@@ -3676,13 +3454,6 @@ hotelStore.addRoom({
   'اتاق',
 
  count,
-
- nightCount:
-  Number(
-   data?.nightCount||
-   calculateNights()||
-   0
-  ),
 
  unitPrice:
   Number(
@@ -3791,18 +3562,14 @@ function prevHotelGallery(){
     sortedHotelImages.value.length
 
 }
-function getFacilityKey(
- facility
-){
+function getFacilityKey(facility){
+  if(typeof facility==='string')return facility
 
- return String(
-  facility?.id||
-  facility?.title||
-  facility?.name||
-  facility?.label||
-  ''
- )
-  .trim()
+  return(
+    facility?.id||
+    facility?.facilityId||
+    getFacilityTitle(facility)
+  )
 }
 
 // =========================
@@ -3850,99 +3617,71 @@ function prevRoomSlide(room,event){
   )
 }
 
-function openRoomModal(
- room
-){
-
- selectedRoom.value=
-  room
-
- showAllRoomFacilities.value=
-  false
-
- roomModalOpen.value=
-  true
-
+function openRoomModal(room){
+  selectedRoom.value=room
+  roomModalOpen.value=true
 }
 
 function closeRoomModal(){
-
- roomModalOpen.value=
-  false
-
- selectedRoom.value=
-  null
-
- showAllRoomFacilities.value=
-  false
-
+  roomModalOpen.value=false
+  selectedRoom.value=null
 }
 
 // =========================
 // Hotel Images + Facilities
 // =========================
 async function loadHotelExtras(){
+  if(!hotelId.value)return
 
- if(
-  !hotelId.value||
-  !isAhuanHotel.value
- ){
-  return
- }
+  try{
+    const[
+      imagesResponse,
+      facilitiesResponse
+    ]=await Promise.all([
+      $fetch(
+        `${BASE_URL}/Hotel/images/${hotelId.value}`
+      ),
+      $fetch(
+        `${BASE_URL}/Hotel/facility/${hotelId.value}`
+      )
+    ])
 
+    hotelImages.value=
+      Array.isArray(imagesResponse)
+        ?imagesResponse
+        :Array.isArray(imagesResponse?.data)
+          ?imagesResponse.data
+          :Array.isArray(imagesResponse?.result)
+            ?imagesResponse.result
+            :[]
 
- try{
+    hotelFacilities.value=
+      Array.isArray(facilitiesResponse)
+        ?facilitiesResponse
+        :Array.isArray(facilitiesResponse?.data)
+          ?facilitiesResponse.data
+          :Array.isArray(facilitiesResponse?.result)
+            ?facilitiesResponse.result
+            :[]
 
-  const[
-   imagesResponse,
-   facilitiesResponse
-  ]=
-   await Promise.all([
-
-    $fetch(
-     `${BASE_URL}/Hotel/images/${hotelId.value}`
-    ),
-
-    $fetch(
-     `${BASE_URL}/Hotel/facility/${hotelId.value}`
+    console.log(
+      'Hotel Images:',
+      hotelImages.value
     )
 
-   ])
+    console.log(
+      'Hotel Facilities:',
+      hotelFacilities.value
+    )
+  }catch(error){
+    console.error(
+      'Hotel extras error:',
+      error
+    )
 
-
-  hotelImages.value=
-   Array.isArray(imagesResponse)
-    ?imagesResponse
-    :Array.isArray(imagesResponse?.data)
-     ?imagesResponse.data
-     :Array.isArray(imagesResponse?.result)
-      ?imagesResponse.result
-      :[]
-
-
-  hotelFacilities.value=
-   Array.isArray(facilitiesResponse)
-    ?facilitiesResponse
-    :Array.isArray(facilitiesResponse?.data)
-     ?facilitiesResponse.data
-     :Array.isArray(facilitiesResponse?.result)
-      ?facilitiesResponse.result
-      :[]
-
- }
- catch(error){
-
-  console.error(
-   'AHUAN HOTEL EXTRAS ERROR:',
-   error
-  )
-
-
-  hotelImages.value=[]
-  hotelFacilities.value=[]
-
- }
-
+    hotelImages.value=[]
+    hotelFacilities.value=[]
+  }
 }
 
 // =========================
@@ -4363,1285 +4102,7 @@ function mergeHotelRooms({
 // =========================
 // Load Availability + Rooms
 // =========================
-function normalizeHotelDate(
- value
-){
 
- return String(
-  value||
-  ''
- )
-  .trim()
-  .replaceAll(
-   '/',
-   '-'
-  )
-
-}
-
-
-function normalizeArrayResponse(
- response
-){
-
- if(
-  Array.isArray(response)
- ){
-  return response
- }
-
-
- if(
-  Array.isArray(
-   response?.data
-  )
- ){
-  return response.data
- }
-
-
- if(
-  Array.isArray(
-   response?.result
-  )
- ){
-  return response.result
- }
-
-
- if(
-  Array.isArray(
-   response?.facilities
-  )
- ){
-  return response.facilities
- }
-
-
- return[]
-
-}
-async function loadAhuanHotel(){
-
- /*
-  * همان اطلاعات جانبی فعلی آهوان
-  */
- await loadHotelExtras()
-
-
- /*
-  * Flow فعلی آهوان
-  */
- const rooms=
-  await searchAllHotelProviders({
-
-   hotelId:
-    hotelId.value,
-
-   checkIn:
-    checkIn.value,
-
-   checkOut:
-    checkOut.value
-
-  })
-
-
- hotelRooms.value=
-  Array.isArray(rooms)
-   ?rooms
-   :[]
-
-
- hotelStore.setSearchRooms(
-  hotelRooms.value
- )
-
-
- const ahuanRoom=
-  hotelRooms.value.find(
-   room=>
-    String(
-     room?.provider||
-     ''
-    )
-     .toUpperCase()===
-    'AHUAN'
-  )
-
-
- const providerHotel=
-  ahuanRoom
-   ?.meta
-   ?.hotel
-
-
- if(providerHotel){
-
-  hotelAvailability.value=
-   providerHotel
-
-  hotel.value=
-   providerHotel
-
- }
-
-}
-function normalizeSnappFacilities(
- response
-){
-
- let items=[]
-
-
- if(
-  Array.isArray(
-   response
-  )
- ){
-  items=
-   response
- }
- else if(
-  Array.isArray(
-   response?.data
-  )
- ){
-  items=
-   response.data
- }
- else if(
-  Array.isArray(
-   response?.result
-  )
- ){
-  items=
-   response.result
- }
- else if(
-  Array.isArray(
-   response?.facilities
-  )
- ){
-  items=
-   response.facilities
- }
- else if(
-  Array.isArray(
-   response?.hotelFacilities
-  )
- ){
-  items=
-   response.hotelFacilities
- }
-
-
- const flattened=[]
-
-
- for(
-  const item
-  of items
- ){
-
-  if(
-   Array.isArray(
-    item?.facilities
-   )
-  ){
-
-   flattened.push(
-    ...item.facilities
-   )
-
-   continue
-  }
-
-
-  flattened.push(
-   item
-  )
-
- }
-
-
- const result=[]
- const seen=
-  new Set()
-
-
- for(
-  const item
-  of flattened
- ){
-
-  if(!item)
-   continue
-
-
-  const title=
-   String(
-    item?.title||
-    item?.name||
-    item?.facilityName||
-    item?.description||
-    ''
-   )
-    .trim()
-
-
-  if(!title)
-   continue
-
-
-  const id=
-   item?.id??
-   item?.facilityId??
-   item?.facility_id??
-   null
-
-
-  const icon=
-   String(
-    item?.icon||
-    item?.icon_url||
-    ''
-   )
-    .trim()
-
-
-  const key=
-   String(
-    id||
-    title
-   )
-    .trim()
-
-
-  if(
-   !key||
-   seen.has(
-    key
-   )
-  ){
-   continue
-  }
-
-
-  seen.add(
-   key
-  )
-
-
-  result.push({
-
-   ...item,
-
-   id,
-
-   title,
-
-   name:
-    title,
-
-   icon
-
-  })
-
- }
-
-
- return result
-
-}
-function stripHotelHtml(
- value
-){
-
- return String(
-  value||
-  ''
- )
-  .replace(
-   /<br\s*\/?>/gi,
-   '\n'
-  )
-  .replace(
-   /<[^>]*>/g,
-   ' '
-  )
-  .replace(
-   /&nbsp;/gi,
-   ' '
-  )
-  .replace(
-   /\s+/g,
-   ' '
-  )
-  .trim()
-
-}
-
-
-function mapSnappTripHotelDetail(
- response
-){
-
- const detail=
-  Array.isArray(
-   response?.hotelDetails
-  )
-   ?response.hotelDetails[0]
-   :null
-
-
- if(!detail){
-
-  throw new Error(
-   'اطلاعات هتل SnappTrip دریافت نشد.'
-  )
-
- }
-
-
- /*
- |--------------------------------------------------------------------------
- | Hotel
- |--------------------------------------------------------------------------
- */
-
- hotel.value={
-
-  id:
-   Number(
-    detail?.id||
-    hotelId.value||
-    0
-   ),
-
-  provider:
-   'SNAPPTRIP',
-
-  name:
-   String(
-    detail?.title||
-    ''
-   )
-    .trim(),
-
-  nameEn:
-   String(
-    detail?.title_en||
-    ''
-   )
-    .trim(),
-
-  star:
-   Number(
-    detail?.stars||
-    0
-   ),
-
-  score:
-   Number(
-    detail?.reviews?.ratings||
-    0
-   )||
-   null,
-
-  reviewsCount:
-   Number(
-    detail?.reviews?.reviews||
-    0
-   ),
-
-  description:
-   stripHotelHtml(
-    detail?.description
-   ),
-
-  checkInTime:
-   String(
-    detail
-     ?.policies
-     ?.check_in_time||
-    ''
-   ),
-
-  checkOutTime:
-   String(
-    detail
-     ?.policies
-     ?.check_out_time||
-    ''
-   ),
-
-  address:
-   String(
-    detail?.address||
-    ''
-   )
-    .trim(),
-
-  cityId:
-   Number(
-    detail?.city?.id||
-    0
-   ),
-
-  cityName:
-   String(
-    detail?.city?.title||
-    ''
-   ),
-
-  latitude:
-   Number(
-    detail?.location?.lat||
-    0
-   ),
-
-  longitude:
-   Number(
-    detail?.location?.lon||
-    0
-   ),
-
-  policies:
-   detail?.policies||
-   null,
-
-  raw:
-   detail
-
- }
-
-
- /*
- |--------------------------------------------------------------------------
- | Gallery
- |--------------------------------------------------------------------------
- */
-
- const images=[]
- const seen=
-  new Set()
-
-
- /*
-  * Cover اول باشد
-  */
- const cover=
-  detail?.cover
-
-
- if(
-  cover?.url
- ){
-
-  const url=
-   String(
-    cover.url
-   )
-    .trim()
-
-
-  if(url){
-
-   seen.add(
-    url
-   )
-
-
-   images.push({
-
-    id:
-     0,
-
-    image:
-     url,
-
-    title:
-     String(
-      cover?.title||
-      ''
-     ),
-
-    description:
-     String(
-      cover?.description||
-      cover?.title||
-      ''
-     ),
-
-    orderId:
-     0,
-
-    isDefault:
-     true
-
-   })
-
-  }
-
- }
-
-
- /*
-  * Gallery
-  */
- const gallery=
-  Array.isArray(
-   detail?.gallery
-  )
-   ?detail.gallery
-   :[]
-
-
- for(
-  const item
-  of gallery
- ){
-
-  const url=
-   String(
-    item?.url||
-    ''
-   )
-    .trim()
-
-
-  if(
-   !url||
-   seen.has(
-    url
-   )
-  ){
-   continue
-  }
-
-
-  seen.add(
-   url
-  )
-
-
-  images.push({
-
-   id:
-    images.length,
-
-   image:
-    url,
-
-   title:
-    String(
-     item?.title||
-     ''
-    ),
-
-   description:
-    String(
-     item?.description||
-     item?.title||
-     ''
-    ),
-
-   orderId:
-    images.length,
-
-   isDefault:
-    false
-
-  })
-
- }
-
-
- hotelImages.value=
-  images
-
-
- /*
- |--------------------------------------------------------------------------
- | Facilities
- |--------------------------------------------------------------------------
- */
-
- hotelFacilities.value=
-  Array.isArray(
-   detail?.facilities
-  )
-   ?detail.facilities
-   :[]
-
-
- console.log(
-  'SNAPP HOTEL:',
-  hotel.value
- )
-
-
- console.log(
-  'SNAPP GALLERY:',
-  hotelImages.value
- )
-
-
- console.log(
-  'SNAPP FACILITIES:',
-  hotelFacilities.value
- )
-
-}
-async function loadSnappTripHotel(){
-
- const apiCheckIn=
-  String(
-   checkIn.value||
-   ''
-  )
-   .trim()
-   .replaceAll(
-    '/',
-    '-'
-   )
-
-
- const apiCheckOut=
-  String(
-   checkOut.value||
-   ''
-  )
-   .trim()
-   .replaceAll(
-    '/',
-    '-'
-   )
-
-
- const[
-  detailResponse,
-  availabilityResponse
- ]=
-  await Promise.all([
-
-   /*
-   |--------------------------------------------------------------------------
-   | Hotel Detail
-   |--------------------------------------------------------------------------
-   |
-   | name
-   | description
-   | stars
-   | address
-   | location
-   | cover
-   | gallery
-   | facilities
-   | policies
-   |
-   |--------------------------------------------------------------------------
-   */
-
-   $fetch(
-    `${BASE_URL}/SnappTrip/hotel/${hotelId.value}`
-   ),
-
-
-   /*
-   |--------------------------------------------------------------------------
-   | Availability
-   |--------------------------------------------------------------------------
-   |
-   | rooms
-   | prices
-   | availability
-   |
-   |--------------------------------------------------------------------------
-   */
-
-   $fetch(
-    `${BASE_URL}/SnappTrip/availability/hotels`,
-    {
-     query:{
-
-      HotelIds:
-       hotelId.value,
-
-      CheckIn:
-       apiCheckIn,
-
-      CheckOut:
-       apiCheckOut
-
-     }
-    }
-   )
-
-  ])
-
-
- /*
- |--------------------------------------------------------------------------
- | Hotel Detail
- |--------------------------------------------------------------------------
- */
-
- mapSnappTripHotelDetail(
-  detailResponse
- )
-
-
- /*
- |--------------------------------------------------------------------------
- | Property
- |--------------------------------------------------------------------------
- */
-
- const properties=
-  Array.isArray(
-   availabilityResponse?.properties
-  )
-   ?availabilityResponse.properties
-   :[]
-
-
- const property=
-  properties.find(
-   item=>
-    Number(
-     item?.hotel_id||
-     0
-    )===
-    Number(
-     hotelId.value
-    )
-  )||
-  null
-
-
- if(!property){
-
-  hotelAvailability.value=
-   null
-
-  hotelRooms.value=
-   []
-
-  hotelStore.setSearchRooms(
-   []
-  )
-
-
-  roomsError.value=
-   'در تاریخ انتخابی اتاق قابل رزرو یافت نشد.'
-
-
-  return
-
- }
-
-
- /*
- |--------------------------------------------------------------------------
- | Rooms
- |--------------------------------------------------------------------------
- */
-
- const availabilityItems=
-  Array.isArray(
-   property?.availability
-  )
-   ?property.availability
-   :[]
-
-
- const rooms=
-  availabilityItems
-   .map(
-    item=>
-     mapSnappAvailabilityRoom(
-      item
-     )
-   )
-   .filter(Boolean)
-
-
- hotelAvailability.value=
-  property
-
-
- hotelRooms.value=
-  rooms
-
-
- hotelStore.setSearchRooms(
-  rooms
- )
-
-
- roomsFallbackMode.value=
-  false
-
-
- if(!rooms.length){
-
-  roomsError.value=
-   'در تاریخ انتخابی اتاق قابل رزرو یافت نشد.'
-
- }
-
-
- console.log(
-  'SNAPP HOTEL DETAIL:',
-  detailResponse
- )
-
-
- console.log(
-  'SNAPP AVAILABILITY:',
-  availabilityResponse
- )
-
-
- console.log(
-  'SNAPP ROOMS:',
-  rooms
- )
-
-}
-function mapSnappAvailabilityRoom(
- item
-){
-
- if(!item)
-  return null
-
-
- const room=
-  item?.room||
-  {}
-
-
- const pricing=
-  item?.pricing||
-  {}
-
-
- const roomId=
-  Number(
-   room?.id||
-   0
-  )
-
-
- if(!roomId)
-  return null
-
-
- const availableCount=
-  Number(
-   item?.availability||
-   0
-  )
-
-
- /*
- |--------------------------------------------------------------------------
- | SnappTrip Money
- |--------------------------------------------------------------------------
- |
- | SnappTrip API price fields are Toman.
- | Project standard is Rial.
- |
- | Business rule:
- | booking/payment/display must use original_sell_price.
- |
- |--------------------------------------------------------------------------
- */
-
- const providerPriceToman=
-  Number(
-   pricing?.price||
-   0
-  )
-
- const originalSellPriceToman=
-  Number(
-   pricing?.original_sell_price||
-   0
-  )
-
- const providerDiscountAmountToman=
-  Number(
-   pricing?.discount_amount||
-   0
-  )
-
- const bookingPrice=
-  (
-   originalSellPriceToman>0
-    ?originalSellPriceToman
-    :providerPriceToman
-  )*
-  10
-
- const originalPrice=
-  bookingPrice
-
- const finalPrice=
-  bookingPrice
-
- const discountAmount=
-  providerDiscountAmountToman*
-  10
-
-
- const adults=
-  Number(
-   room?.adults||
-   0
-  )
-
-
- const children=
-  Number(
-   room?.children||
-   0
-  )
-
-
- const extraBed=
-  Number(
-   room?.extra_bed||
-   0
-  )
-
-
- const boardType=
-  String(
-   room?.board_type||
-   ''
-  )
-   .trim()
-   .toLowerCase()
-
-
- const breakfastIncluded=
-  [
-   'bed_breakfast',
-   'bb',
-   'half_board',
-   'hb',
-   'full_board',
-   'fb'
-  ].includes(
-   boardType
-  )
-
-
- return{
-
-  id:
-   `SNAPPTRIP-${hotelId.value}-${roomId}`,
-
-  provider:
-   'SNAPPTRIP',
-
-  providerHotelId:
-   String(
-    hotelId.value
-   ),
-
-  providerRoomId:
-   String(
-    roomId
-   ),
-
-  hotelId:
-   Number(
-    room?.hotel_id||
-    hotelId.value
-   ),
-
-  roomId,
-
-
-  /*
-  |--------------------------------------------------------------------------
-  | Room Info
-  |--------------------------------------------------------------------------
-  */
-
-  roomName:
-   String(
-    room?.title||
-    ''
-   ),
-
-  name:
-   String(
-    room?.title||
-    ''
-   ),
-
-  type:
-   String(
-    room?.title||
-    ''
-   ),
-
-  roomType:
-   String(
-    room?.title||
-    ''
-   ),
-
-  accommodationType:
-   String(
-    room?.accommodation_type||
-    ''
-   ),
-
-  description:
-   String(
-    room?.description||
-    ''
-   ),
-roomFacilities:
- getSnappRoomFacilities(
-  room
- ),
-
-  /*
-  |--------------------------------------------------------------------------
-  | Capacity
-  |--------------------------------------------------------------------------
-  */
-
-  adults,
-
-  children,
-
-  extraBed,
-
-  capacity:
-   adults,
-
-
-  /*
-  |--------------------------------------------------------------------------
-  | Board
-  |--------------------------------------------------------------------------
-  */
-
-  boardType,
-
-  breakfastIncluded,
-
-
-  /*
-  |--------------------------------------------------------------------------
-  | Availability
-  |--------------------------------------------------------------------------
-  */
-
-  availableCount,
-
-  loadNo:
-   availableCount,
-
-  minStay:
-   Number(
-    item?.min_stay||
-    0
-   ),
-
-  from:
-   String(
-    item?.from||
-    ''
-   ),
-
-  to:
-   String(
-    item?.to||
-    ''
-   ),
-
-
-  /*
-  |--------------------------------------------------------------------------
-  | Price
-  |--------------------------------------------------------------------------
-  */
-
-  price:
-   finalPrice,
-
-  priceFrom:
-   finalPrice,
-
-  priceOff:
-   finalPrice,
-
-  calculatedPrice:
-   finalPrice,
-
-  originalPrice,
-
-  discountAmount,
-
-  discountPercent:
-   0,
-
-  childPrice:
-   Number(
-    pricing?.child_price||
-    0
-   )*
-   10,
-
-  extraBedPrice:
-   Number(
-    pricing?.extra_bed_price||
-    0
-   )*
-   10,
-
-
-  currency:
-   'IRR',
-
-  providerPriceToman,
-
-  providerOriginalSellPriceToman:
-   originalSellPriceToman,
-
-  providerDiscountAmountToman,
-
-  /*
-  |--------------------------------------------------------------------------
-  | State
-  |--------------------------------------------------------------------------
-  */
-
-  disabled:
-   availableCount<=0||
-   finalPrice<=0,
-
-  forShow:
-   false,
-
-  displayOnly:
-   false,
-
-
-  /*
-  |--------------------------------------------------------------------------
-  | Raw
-  |--------------------------------------------------------------------------
-  */
-
-  raw:
-   item,
-
-  meta:{
-   room,
-   pricing,
-   racks:
-    item?.racks||
-    null
-  }
-
- }
-
-}
-function getSnappRoomFacilities(
- room
-){
-
- const result=[]
- const seen=
-  new Set()
-
-
- const groups=
-  Array.isArray(
-   room?.facilities_tags
-  )
-   ?room.facilities_tags
-   :[]
-
-
- for(
-  const group
-  of groups
- ){
-
-  const facilities=
-   Array.isArray(
-    group?.facilities
-   )
-    ?group.facilities
-    :[]
-
-
-  for(
-   const facility
-   of facilities
-  ){
-
-   const title=
-    String(
-     facility?.title||
-     ''
-    )
-     .trim()
-
-
-   if(!title)
-    continue
-
-
-   if(
-    seen.has(
-     title
-    )
-   ){
-    continue
-   }
-
-
-   seen.add(
-    title
-   )
-
-
-   result.push({
-
-    title,
-
-    name:
-     title,
-
-    icon:
-     String(
-      facility?.icon||
-      ''
-     )
-
-   })
-
-  }
-
- }
-
-
- return result
-
-}
 async function loadHotelAvailability(){
 
  if(
@@ -5660,93 +4121,107 @@ async function loadHotelAvailability(){
   !checkOut.value
  ){
 
-  hotelAvailability.value=
-   null
+  hotelAvailability.value=null
 
-  hotelRooms.value=
-   []
+  hotelRooms.value=[]
 
-  hotelStore.setSearchRooms(
-   []
-  )
+  hotelStore.setSearchRooms([])
 
-  roomsError.value=
-   ''
+  roomsError.value=''
 
   return
+
  }
 
 
- loading.value=
-  true
+ loading.value=true
 
- roomsLoading.value=
-  true
+ roomsLoading.value=true
 
- errorMessage.value=
-  ''
+ errorMessage.value=''
 
- roomsError.value=
-  ''
-
- hotelRooms.value=
-  []
-
- hotelStore.setSearchRooms(
-  []
- )
+ roomsError.value=''
 
 
  try{
 
+  const rooms=
+   await searchAllHotelProviders({
+
+    hotelId:
+     hotelId.value,
+
+    checkIn:
+     checkIn.value,
+
+    checkOut:
+     checkOut.value
+
+   })
+
+
+  hotelRooms.value=
+   rooms
+
+
   /*
-   * فقط ID=3 آهوان است.
+   * فعلاً Hotel اصلی آهوان را
+   * از meta اولین اتاق می‌گیریم.
    */
-  if(
-   isAhuanHotel.value
-  ){
 
-   await loadAhuanHotel()
+  const ahuanRoom=
+   rooms.find(
+    room=>
+     room.provider===
+     'AHUAN'
+   )
 
-   return
+
+  const providerHotel=
+   ahuanRoom
+    ?.meta
+    ?.hotel
+
+
+  if(providerHotel){
+
+   hotelAvailability.value=
+    providerHotel
+
+   hotel.value=
+    providerHotel
+
   }
 
 
-  /*
-   * هر ID دیگری SnappTrip
-   */
-  await loadSnappTripHotel()
+  console.log(
+   'NORMALIZED HOTEL ROOMS:',
+   rooms
+  )
 
  }
  catch(error){
 
   console.error(
-   'HOTEL LOAD ERROR:',
+   'Hotel Search Error:',
    error
   )
 
 
-  hotelRooms.value=
-   []
+  hotelRooms.value=[]
 
-  hotelStore.setSearchRooms(
-   []
-  )
+  hotelStore.setSearchRooms([])
 
 
   roomsError.value=
-   error?.data?.message||
-   error?.message||
    'دریافت اطلاعات اتاق‌ها با خطا مواجه شد.'
 
  }
  finally{
 
-  loading.value=
-   false
+  loading.value=false
 
-  roomsLoading.value=
-   false
+  roomsLoading.value=false
 
  }
 
@@ -5754,7 +4229,13 @@ async function loadHotelAvailability(){
 // =========================
 // Init / Route Changes
 // =========================
-
+watch(
+  hotelId,
+  ()=>{
+    loadHotelExtras()
+  },
+  {immediate:true}
+)
 watch(
  () => hotelStore.selectedRooms.length,
  (roomsCount) => {
@@ -6177,85 +4658,46 @@ function formatPrice(value){
   return Number(value||0)
     .toLocaleString('fa-IR')
 }
-function getRoomAvailableCount(
- room
-){
+function getRoomAvailableCount(room){
 
- if(
-  String(
-   room?.provider||
-   ''
-  ).toUpperCase()==='SNAPPTRIP'
- ){
-
-  return Math.max(
-   0,
-   Number(
-    room?.availableCount||
-    0
-   )
-  )
-
- }
+  const details=
+    getRoomPriceDetails(room)
 
 
- /*
-  * AHUAN
-  */
- const details=
-  getRoomPriceDetails(
-   room
-  )
+  if(details.length){
 
-
- if(details.length){
-
-  return Math.max(
-   0,
-   Math.min(
-    ...details.map(
-     item=>
-      Math.max(
-       0,
-       Number(
-        item?.loadNo||
-        0
-       )-
-       Number(
-        item?.bookNo||
-        0
-       )
+    return Math.max(
+      0,
+      Math.min(
+        ...details.map(item=>
+          Math.max(
+            0,
+            Number(item?.loadNo||0)-
+            Number(item?.bookNo||0)
+          )
+        )
       )
     )
-   )
-  )
 
- }
+  }
 
 
- const price=
-  room?.hotelRoomPrices?.[0]
+  const price=
+    room?.hotelRoomPrices?.[0]
 
 
- if(price){
+  if(price){
 
-  return Math.max(
-   0,
-   Number(
-    price?.loadNo||
-    0
-   )-
-   Number(
-    price?.bookNo||
-    0
-   )
-  )
+    return Math.max(
+      0,
+      Number(price.loadNo||0)-
+      Number(price.bookNo||0)
+    )
 
- }
+  }
 
 
- return 0
-
+  return 0
 }
 function getSelectedRoomCount(room){
 

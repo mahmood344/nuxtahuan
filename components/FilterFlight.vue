@@ -276,43 +276,22 @@ function getAirlineLogo(flight,code){
     basicAirline?.image||
     ''
 
-  if(basicLogo){
-    const value=
-      String(basicLogo).trim()
-
-    if(
-      value.startsWith('http://')||
-      value.startsWith('https://')||
-      value.startsWith('/')
-    ){
-      return value
-    }
-
-    return `/imgs/flight/airlines/${value}`
-  }
-
-  /*
-   * fallback:
-   * اگر هیچ لوگویی وجود نداشت،
-   * از کد ایرلاین استفاده کن و .png اضافه کن.
-   *
-   * مثال:
-   * W5 -> /imgs/flight/airlines/W5.png
-   */
-  const yataCode=
-    normalizeAirlineCode(
-      oldAirline?.yataCode||
-      oldAirline?.iataCode||
-      basicAirline?.yataCode||
-      basicAirline?.iataCode||
-      code
-    )
-
-  if(!yataCode){
+  if(!basicLogo){
     return''
   }
 
-  return `/imgs/flight/airlines/${yataCode}.png`
+  const value=
+    String(basicLogo).trim()
+
+  if(
+    value.startsWith('http://')||
+    value.startsWith('https://')||
+    value.startsWith('/')
+  ){
+    return value
+  }
+
+  return `/imgs/flight/airlines/${value}`
 }
 const availableAirlines = computed(() => {
   const airlineMap = new Map()
