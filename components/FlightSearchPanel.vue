@@ -195,87 +195,9 @@
 
   </div>
 </div>
-<!-- بخش جستجوی هتل SnappTrip -->
-<div
-  v-if="activeService === 'hotel'"
-  dir="rtl"
-  class="flex w-full flex-col justify-center"
->
-  <div
-    class="flex w-full flex-col items-center gap-4"
-    :class="
-      isCompactSearch
-        ? 'p-0'
-        : 'p-4 md:p-8'
-    "
-  >
-    <div
-      class="w-full"
-      :class="
-        isCompactSearch
-          ? 'max-w-[280px]'
-          : 'max-w-[500px]'
-      "
-    >
-      <UiBaseAutocomplete
-        v-model="snappTripCity"
-        label="شهر"
-        :placeholder="
-          hotelStore.snappTripCitiesLoading
-            ? 'در حال دریافت شهرها...'
-            : 'نام شهر را جستجو کنید...'
-        "
-        :items="snappTripCities"
-        item-text="name"
-        item-value="code"
-        :disabled="hotelStore.snappTripCitiesLoading"
-        clearable
-        icon='<i class="bi bi-geo-alt"></i>'
-        iconPosition="right"
-        class="w-full"
-        :class="{
-          'hotel-city-compact': isCompactSearch
-        }"
-      />
-    </div>
-
-    <div
-      class="w-full"
-      :class="
-        isCompactSearch
-          ? 'max-w-[280px]'
-          : 'max-w-[500px]'
-      "
-    >
-      <UiSingleDatePicker
-        :compact="isCompactSearch"
-        v-model="snappTripDate"
-        label="تاریخ ورود و خروج"
-        placeholder="انتخاب تاریخ"
-      />
-    </div>
-
-    <div class="flex w-full justify-center">
-      <UiBaseButton
-        label="جستجو"
-        variant="filled"
-        color="primary"
-        :active="false"
-        :disabled="!snappTripCity || !snappTripDate"
-        @click="searchSnappTripHotel"
-        class="w-full !rounded-4xl text-[13px]"
-        :class="
-          isCompactSearch
-            ? 'max-w-[280px] h-[44px]'
-            : 'max-w-[500px] h-[40px]'
-        "
-      />
-    </div>
-  </div>
-</div>
 <!-- بخش‌های در حال توسعه -->
 <div
-  v-if="!['flight', 'hotelAhwan', 'hotel'].includes(activeService)"
+  v-if="!['flight', 'hotelAhwan'].includes(activeService)"
   dir="rtl"
   class="
     flex
@@ -335,13 +257,6 @@ import {
 import {useHotelStore} from '~/stores/hotels'
 const router = useRouter()
 const route = useRoute()
-
-const props=defineProps({
-  snappTripCityId:{
-    type:[Number,String],
-    default:null
-  }
-})
 const isHomePage = computed(() => {
   return (
     route.path === '/' ||
@@ -383,83 +298,6 @@ const hotelCities=computed(()=>{
  }))
 
 })
-
-/* SnappTrip cities: فقط از Store */
-const snappTripCity=ref(null)
-const snappTripDate=ref(null)
-const snappTripCities=computed(()=>{
- const items=Array.isArray(hotelStore.snappTripCities)
-  ?hotelStore.snappTripCities
-  :[]
- return items.map(item=>({
-  code:Number(item?.id||0),
-  name:String(item?.title||item?.name||''),
-  stateName:String(item?.stateName||''),
-  titleEn:String(item?.titleEn||'')
- })).filter(item=>item.code>0&&item.name)
-})
-
-
-async function ensureSnappTripCities(){
-
-  const items=
-    Array.isArray(hotelStore.snappTripCities)
-      ?hotelStore.snappTripCities
-      :[]
-
-  if(items.length)
-    return
-
-  try{
-
-    await hotelStore.loadSnappTripCities()
-
-  }
-  catch(error){
-
-    console.error(
-      'LOAD SNAPPTRIP CITIES ERROR:',
-      error
-    )
-
-  }
-}
-
-async function applySnappTripCity(){
-
-  if(
-    !route.path.startsWith('/hotels/') ||
-    Number(route.params.id||0)===3
-  ){
-    return
-  }
-
-  activeService.value='hotel'
-
-  await ensureSnappTripCities()
-
-  const cityId=
-    Number(
-      props.snappTripCityId ||
-      route.query.cityId ||
-      0
-    )
-
-  if(cityId<=0){
-    snappTripCity.value=null
-    return
-  }
-
-  const exists=
-    snappTripCities.value.some(
-      item=>Number(item.code)===cityId
-    )
-
-  snappTripCity.value=
-    exists
-      ?cityId
-      :null
-}
 const services = [
   { key: "flight", label: "بلیط هواپیما", icon: "" },
   { key: "package", label: "تور (گروهی)", icon: "" },
@@ -544,89 +382,6 @@ async function searchAhuanHotel(){
  })
 
 }
-
-/*
-|--------------------------------------------------------------------------
-| Search SnappTrip Hotel
-|--------------------------------------------------------------------------
-*/
-
-async function searchSnappTripHotel(){
-
- if(
-  !snappTripCity.value ||
-  !snappTripDate.value
- ){
-  return
- }
-
- const dates=
-  Array.isArray(snappTripDate.value)
-   ?snappTripDate.value
-   :String(snappTripDate.value)
-     .split(',')
-
- const checkIn=
-  String(
-   dates[0]||
-   ''
-  )
-   .trim()
-
- const checkOut=
-  String(
-   dates[1]||
-   ''
-  )
-   .trim()
-
- if(
-  !checkIn ||
-  !checkOut
- ){
-  return
- }
-
- const searchData={
-
-  cityId:
-   Number(
-    snappTripCity.value
-   ),
-
-  checkIn,
-
-  checkOut
-
- }
-
- emit(
-  'hotel-search',
-  searchData
- )
-
- await router.push({
-
-  path:
-   '/hotels',
-
-  query:{
-
-   cityId:
-    searchData.cityId,
-
-   checkIn:
-    searchData.checkIn,
-
-   checkOut:
-    searchData.checkOut
-
-  }
-
- })
-
-}
-
 function syncFlightFormFromRoute() {
 
   origin.value =
@@ -700,42 +455,7 @@ function syncFlightFormFromRoute() {
     returnDate.value = ''
   }
 }
-async function syncSnappTripHotelFormFromRoute(){
-
- if(route.path!=='/hotels')
-  return
-
- const cityId=
-  Number(route.query.cityId||0)
-
- const checkIn=
-  String(route.query.checkIn||'').trim()
-
- const checkOut=
-  String(route.query.checkOut||'').trim()
-
- activeService.value='hotel'
-
- await ensureSnappTripCities()
-
- const exists=
-  cityId>0 &&
-  snappTripCities.value.some(
-   item=>Number(item.code)===cityId
-  )
-
- snappTripCity.value=
-  exists
-   ?cityId
-   :null
-
- snappTripDate.value=
-  (checkIn&&checkOut)
-   ?[checkIn,checkOut]
-   :null
-}
-
-onMounted(async() => {
+onMounted(() => {
 
   if (
     route.path.startsWith('/flights')
@@ -745,15 +465,10 @@ onMounted(async() => {
   }
 
   if (
-    route.path === '/hotels'
-  ) {
-    await syncSnappTripHotelFormFromRoute()
-  }
-
-  if (
     route.path.startsWith('/hotels/')
   ) {
-    await syncHotelFormFromRoute()
+
+    syncHotelFormFromRoute()
   }
 })
 watch(
@@ -763,28 +478,15 @@ watch(
     route.query.checkOut
   ],
 
-  async() => {
+  () => {
 
     if (
       route.path.startsWith('/hotels/')
     ) {
-      await syncHotelFormFromRoute()
+      syncHotelFormFromRoute()
     }
   }
 )
-watch(
- () => [
-  route.query.cityId,
-  route.query.checkIn,
-  route.query.checkOut
- ],
- async() => {
-  if(route.path==='/hotels'){
-   await syncSnappTripHotelFormFromRoute()
-  }
- }
-)
-
 watch(
   () => [
     route.query.origin,
@@ -802,22 +504,6 @@ watch(
     syncFlightFormFromRoute()
   }
 )
-
-watch(
-  () => props.snappTripCityId,
-
-  async() => {
-
-    await applySnappTripCity()
-
-  },
-
-  {
-    immediate:true
-  }
-)
-
-
 async function searchFlights() {
 
   if (
@@ -858,8 +544,11 @@ async function searchFlights() {
     query: searchData
   })
 }
-async function syncHotelFormFromRoute() {
+function syncHotelFormFromRoute() {
 
+  /*
+   * فقط وقتی داخل route هتل هستیم
+   */
   if (!route.path.startsWith('/hotels/')) {
     return
   }
@@ -878,53 +567,36 @@ async function syncHotelFormFromRoute() {
     ).trim()
 
 
-  const isAhuanHotel =
-    hotelId === 3
-
-
-  if (isAhuanHotel) {
-
-    activeService.value =
-      'hotelAhwan'
-
-    hotelCity.value =
-      hotelId > 0
-        ? hotelId
-        : null
-
-    hotelDate.value =
-      checkIn && checkOut
-        ? [
-          checkIn,
-          checkOut
-        ]
-        : null
-
-    return
-  }
+  /*
+   * تب هتل آهوان فعال شود
+   */
+  activeService.value = 'hotelAhwan'
 
 
   /*
-   * SnappTrip Detail
+   * هتل انتخاب شود
    */
-  activeService.value =
-    'hotel'
-
-  snappTripDate.value =
-    checkIn && checkOut
-      ? [
-        checkIn,
-        checkOut
-      ]
+  hotelCity.value =
+    hotelId > 0
+      ? hotelId
       : null
 
 
   /*
-   * بعد از Refresh ابتدا Cities Store را آماده می‌کنیم
-   * و سپس cityId واقعی هتل را روی Autocomplete می‌گذاریم.
+   * تاریخ ورود و خروج
    */
-  await applySnappTripCity()
+  if (checkIn && checkOut) {
 
+    hotelDate.value = [
+      checkIn,
+      checkOut
+    ]
+
+  }
+  else {
+
+    hotelDate.value = null
+  }
 }
 </script>
 
