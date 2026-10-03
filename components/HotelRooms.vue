@@ -302,6 +302,10 @@
 
     </div>
 
+<!-- ====================== -->
+<!-- امکانات اتاق SnappTrip -->
+<!-- ====================== -->
+
 
     <!-- توضیحات -->
     <p
@@ -656,7 +660,7 @@
     برای
     {{Number(room.count||1)}}
     اتاق و
-    {{Number(room.nightCount||0)}}
+    {{getRoomNightCount(room)}}
     شب
    </p>
 
@@ -911,7 +915,7 @@ v-else
    <!-- قیمت نهایی؛ همیشه بالای دکمه رزرو -->
    <div
     v-if="
-     Number(room.calculatedPrice||0)>0 &&
+     getRoomBookingUnitPrice(room)>0 &&
      getRoomAvailableCount(room)>0
     "
     class="text-right"
@@ -947,7 +951,7 @@ v-else
    <div
     v-else-if="
      getRoomAvailableCount(room)>0 &&
-     Number(room.calculatedPrice||0)<=0
+     getRoomBookingUnitPrice(room)<=0
     "
     class="rounded-xl bg-[var(--color-gray-100)] px-4 py-3 text-center text-[11px] font-bold text-[var(--color-gray-500)]"
    >
@@ -1454,6 +1458,33 @@ function getExtraBedLimit(room) {
 
 function getExtraBedTotalPrice(room){
 
+ const provider=
+  String(
+   room?.provider||
+   ''
+  )
+   .trim()
+   .toUpperCase()
+
+ if(
+  provider==='SNAPPTRIP'
+ ){
+
+  const price=
+   Number(
+    room?.extraBedPrice||
+    0
+   )
+
+  return(
+   Number.isFinite(price)&&
+   price>0
+  )
+   ?price
+   :0
+
+ }
+
  const details=
   getRoomPriceDetails(room)
 
@@ -1505,13 +1536,111 @@ function decreaseExtraBed(room){
 }
 
 
+/*
+|--------------------------------------------------------------------------
+| Booking Unit Price
+|--------------------------------------------------------------------------
+|
+| SnappTrip:
+| original_sell_price is Toman at API boundary.
+| Internally we use Rial and original price for display/reserve/payment.
+|
+|--------------------------------------------------------------------------
+*/
+
+function getRoomBookingUnitPrice(room){
+
+ const provider=
+  String(
+   room?.provider||
+   ''
+  )
+   .trim()
+   .toUpperCase()
+
+ if(
+  provider==='SNAPPTRIP'
+ ){
+
+  /*
+   * New normalized mapper
+   */
+  if(
+   String(
+    room?.currency||
+    ''
+   )
+    .trim()
+    .toUpperCase()==='IRR'
+  ){
+
+   const normalized=
+    Number(
+     room?.originalPrice||
+     room?.calculatedPrice||
+     room?.priceFrom||
+     room?.price||
+     0
+    )
+
+   return(
+    Number.isFinite(normalized)&&
+    normalized>0
+   )
+    ?normalized
+    :0
+  }
+
+
+  /*
+   * Fallback for old/raw SnappTrip room objects
+   */
+  const toman=
+   Number(
+    room?.raw?.pricing?.original_sell_price||
+    room?.meta?.pricing?.original_sell_price||
+    room?.originalPrice||
+    0
+   )
+
+  return(
+   Number.isFinite(toman)&&
+   toman>0
+  )
+   ?toman*10
+   :0
+
+ }
+
+
+ /*
+  * AHUAN and other providers
+  */
+ const price=
+  Number(
+   room?.calculatedPrice||
+   room?.priceFrom||
+   room?.price||
+   0
+  )
+
+ return(
+  Number.isFinite(price)&&
+  price>0
+ )
+  ?price
+  :0
+
+}
+
+
 function getRoomFinalPrice(room){
 
  const roomCount=
   getSelectedRoomCount(room)
 
  const basePrice=
-  Number(room?.calculatedPrice||0)*
+  getRoomBookingUnitPrice(room)*
   roomCount
 
 
@@ -1533,26 +1662,115 @@ function getRoomFinalPrice(room){
 
 }
 
-function getRoomAvailableCount(room){
+function getRoomAvailableCount(
+ room
+){
+
+ /*
+ |--------------------------------------------------------------------------
+ | Direct Availability
+ |--------------------------------------------------------------------------
+ |
+ | SnappTrip:
+ | room.availableCount
+ | room.loadNo
+ |
+ | AHUAN جدید هم اگر availableCount داشته باشد
+ | از همین مقدار استفاده می‌کند.
+ |
+ |--------------------------------------------------------------------------
+ */
+
+ const directAvailable=
+  room?.availableCount??
+  room?.loadNo
+
+
+ if(
+  directAvailable!==undefined&&
+  directAvailable!==null&&
+  directAvailable!==''
+ ){
+
+  return Math.max(
+   0,
+   Number(
+    directAvailable
+   )||
+   0
+  )
+
+ }
+
+
+ /*
+ |--------------------------------------------------------------------------
+ | AHUAN Old Structure
+ |--------------------------------------------------------------------------
+ */
 
  const details=
-  getRoomPriceDetails(room)
+  getRoomPriceDetails(
+   room
+  )
 
- if(!details.length)
-  return 0
 
- return Math.max(
-  0,
-  Math.min(
-   ...details.map(item=>
-    Math.max(
-     0,
-     Number(item.loadNo||0)-
-     Number(item.bookNo||0)
+ if(
+  details.length
+ ){
+
+  return Math.max(
+   0,
+   Math.min(
+    ...details.map(
+     item=>
+      Math.max(
+       0,
+       Number(
+        item?.loadNo||
+        0
+       )-
+       Number(
+        item?.bookNo||
+        0
+       )
+      )
     )
    )
   )
- )
+
+ }
+
+
+ /*
+ |--------------------------------------------------------------------------
+ | AHUAN Price Fallback
+ |--------------------------------------------------------------------------
+ */
+
+ const price=
+  room?.hotelRoomPrices?.[0]
+
+
+ if(price){
+
+  return Math.max(
+   0,
+   Number(
+    price?.loadNo||
+    0
+   )-
+   Number(
+    price?.bookNo||
+    0
+   )
+  )
+
+ }
+
+
+ return 0
+
 }
 
 
@@ -1822,7 +2040,7 @@ function reserveRoom(room){
  if(
   !room||
   room.forShow===true||
-  Number(room.calculatedPrice||0)<=0
+  getRoomBookingUnitPrice(room)<=0
  ){
   return
  }
@@ -1837,7 +2055,7 @@ function reserveRoom(room){
  // =====================
 
  const basePrice=
-  Number(room.calculatedPrice||0)*
+  getRoomBookingUnitPrice(room)*
   count
 
 
@@ -1880,6 +2098,9 @@ function reserveRoom(room){
   room,
 
   count,
+
+  nightCount:
+   getRoomNightCount(room),
 
   basePrice,
 
