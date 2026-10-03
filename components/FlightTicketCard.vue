@@ -170,7 +170,7 @@
               @error="handleLogoError"
             >
             <p
-            v-else
+              v-if="isParto"
               class="mt-2 text-[12px] font-bold text-gray-700"
               dir="rtl"
             >
@@ -404,8 +404,8 @@
       @error="handleLogoError"
     >
     <p
-    v-else
-      class="mt-2 text-[13px] font-bold text-gray-700"
+      v-if="isParto"
+      class="mt-2 w-[150px] text-center text-[13px] font-bold text-gray-700"
       dir="rtl"
     >
       {{ airlineName }}
@@ -1196,12 +1196,6 @@ const airlineLogo=computed(()=>{
     return'/imgs/flight/airlines/mahan.png'
   }
 
-  /*
-   * لوگوی Store قدیمی اولویت دارد.
-   * این باعث می‌شود کیش‌ایر، پارس‌ایر، نفت،
-   * وارش و سایر ایرلاین‌های داخلی لوگوی محلی
-   * خودشان را از دست ندهند.
-   */
   const logo=
     oldAirline.value?.logo||
     oldAirline.value?.image||
@@ -1211,7 +1205,31 @@ const airlineLogo=computed(()=>{
     basicAirline.value?.image||
     ''
 
-  return normalizeAirlineLogo(logo)
+  if(
+    String(logo||'').trim()
+  ){
+    return normalizeAirlineLogo(logo)
+  }
+
+  const yataCode=
+    String(
+      oldAirline.value?.yataCode||
+      oldAirline.value?.iataCode||
+      props.airlineInfo?.yataCode||
+      props.airlineInfo?.iataCode||
+      basicAirline.value?.yataCode||
+      basicAirline.value?.iataCode||
+      airlineCode.value||
+      ''
+    )
+      .trim()
+      .toUpperCase()
+
+  if(!yataCode){
+    return''
+  }
+
+  return `/imgs/flight/airlines/${yataCode}.png`
 })
 
 onMounted(async()=>{
