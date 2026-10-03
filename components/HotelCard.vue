@@ -731,19 +731,53 @@ function getDisplayPrice(
   return 0
 
 
- const price=
+ const rawPrice=
   Number(
    room?.originalPrice||
+   room?.raw?.pricing?.original_sell_price||
+   room?.meta?.pricing?.original_sell_price||
    0
   )
 
 
- return(
-  Number.isFinite(price)&&
-  price>0
- )
-  ?price
-  :0
+ if(
+  !Number.isFinite(rawPrice)||
+  rawPrice<=0
+ ){
+  return 0
+ }
+
+
+ const provider=
+  String(
+   room?.provider||
+   props.hotel?.provider||
+   ''
+  )
+   .trim()
+   .toUpperCase()
+
+
+ if(
+  provider==='SNAPPTRIP'
+ ){
+
+  if(
+   String(
+    room?.currency||
+    ''
+   )
+    .trim()
+    .toUpperCase()==='IRR'
+  ){
+   return rawPrice
+  }
+
+  return rawPrice*10
+ }
+
+
+ return rawPrice
 
 }
 
