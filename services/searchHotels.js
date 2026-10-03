@@ -6,6 +6,9 @@ import{
  searchAhuanHotels
 }from'./providers/ahuanHotel.js'
 
+import{
+ searchSnappTripHotels
+}from'./providers/snappTripHotel.js'
 
 let latestSearchId=0
 
@@ -59,7 +62,42 @@ export async function searchAllHotelProviders(
  const hotelStore=
   useHotelStore()
 
+const snappTripCity=
+ ref(null)
 
+
+const snappTripDate=
+ ref(null)
+ const snappTripCities=
+ computed(()=>{
+
+  const items=
+   Array.isArray(
+    hotelStore.snappTripCities
+   )
+    ?hotelStore.snappTripCities
+    :[]
+
+
+  return items.map(
+   item=>({
+
+    code:
+     item.id,
+
+    name:
+     item.title,
+
+    stateName:
+     item.stateName,
+
+    titleEn:
+     item.titleEn
+
+   })
+  )
+
+})
  /*
  |--------------------------------------------------------------------------
  | Search Id
@@ -88,46 +126,51 @@ export async function searchAllHotelProviders(
 
  const params={
 
-  ...searchParams,
+ ...searchParams,
 
-  hotelId:
-   Number(
-    searchParams?.hotelId||
-    searchParams?.id||
-    0
-   ),
+ hotelId:
+  Number(
+   searchParams?.hotelId||
+   searchParams?.id||
+   0
+  ),
 
-  cityId:
-   Number(
-    searchParams?.cityId||
-    0
-   ),
+ cityId:
+  Number(
+   searchParams?.cityId||
+   searchParams?.city_id||
+   0
+  ),
 
-  checkIn:
-   String(
-    searchParams?.checkIn||
-    ''
-   ).trim(),
+ checkIn:
+  String(
+   searchParams?.checkIn||
+   ''
+  ).trim(),
 
-  checkOut:
-   String(
-    searchParams?.checkOut||
-    ''
-   ).trim(),
+ checkOut:
+  String(
+   searchParams?.checkOut||
+   ''
+  ).trim(),
 
-  adults:
-   Number(
-    searchParams?.adults||
-    1
-   ),
+ occupancies:
+  Array.isArray(
+   searchParams?.occupancies
+  )&&
+  searchParams.occupancies.length
 
-  children:
-   Number(
-    searchParams?.children||
-    0
-   )
+   ?searchParams.occupancies
 
- }
+   :[
+     {
+      adultsNo:1,
+      childsNo:0,
+      childsAges:[]
+     }
+    ]
+
+}
 
 
  console.log(
@@ -596,54 +639,104 @@ export async function searchAllHotelProviders(
  }
 
 
- /*
- |--------------------------------------------------------------------------
- | SNAPPTRIP
- |--------------------------------------------------------------------------
- |
- | بعداً:
- |
- | const snappTripTask=
- |  (async()=>{
- |
- |   try{
- |
- |    const result=
- |     await withTimeout(
- |      searchSnappTripHotels(params),
- |      15000
- |     )
- |
- |    if(!isCurrentSearch())
- |     return
- |
- |    appendRooms(
- |     result?.rooms,
- |     'SNAPPTRIP'
- |    )
- |
- |   }
- |   catch(error){
- |
- |    if(!isCurrentSearch())
- |     return
- |
- |    console.error(
- |     'SNAPPTRIP HOTEL ERROR:',
- |     error
- |    )
- |
- |   }
- |
- |  })()
- |
- |
- | providerTasks.push(
- |  snappTripTask
- | )
- |
- |--------------------------------------------------------------------------
- */
+ 
+//  |--------------------------------------------------------------------------
+//  | SNAPPTRIP
+//  |--------------------------------------------------------------------------
+//  |
+//  | بعداً:
+/*
+|--------------------------------------------------------------------------
+| SNAPPTRIP
+|--------------------------------------------------------------------------
+*/
+
+if(params.cityId){
+
+ const snappTripTask=
+  (async()=>{
+
+   try{
+
+    console.log(
+     'START SNAPPTRIP SEARCH:',
+     params
+    )
+
+
+    const result=
+     await withTimeout(
+
+      searchSnappTripHotels(
+       params
+      ),
+
+      20000
+
+     )
+
+
+    if(
+     !isCurrentSearch()
+    ){
+     return
+    }
+
+
+    const rooms=
+     Array.isArray(
+      result?.rooms
+     )
+
+      ?result.rooms
+
+      :[]
+
+
+    appendRooms(
+     rooms,
+     'SNAPPTRIP'
+    )
+
+
+    console.log(
+     'SNAPPTRIP ROOMS APPENDED:',
+     {
+      providerRooms:
+       rooms.length,
+
+      allRooms:
+       allRooms.length
+     }
+    )
+
+   }
+   catch(error){
+
+    if(
+     !isCurrentSearch()
+    ){
+     return
+    }
+
+
+    console.error(
+     'SNAPPTRIP HOTEL ERROR:',
+     error
+    )
+
+   }
+
+  })()
+
+
+ providerTasks.push(
+  snappTripTask
+ )
+
+}
+//  |--------------------------------------------------------------------------
+ 
 
 
  /*
