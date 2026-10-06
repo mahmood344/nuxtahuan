@@ -1424,6 +1424,29 @@ const hotelStore = useHotelStore()
 const route=useRoute()
 const router=useRouter()
 const flightStore=useFlightStore()
+const toast=useToast()
+
+function getErrorMessage(
+ error,
+ fallback='خطایی رخ داده است'
+){
+ return String(
+  error?.response?._data?.error?.message||
+  error?.response?._data?.message||
+  error?.response?.data?.error?.message||
+  error?.response?.data?.message||
+  error?.data?.error?.message||
+  error?.data?.message||
+  (
+   typeof error?.data==='string'
+    ?error.data
+    :''
+  )||
+  error?.error?.message||
+  error?.message||
+  fallback
+ )
+}
 const selectedRooms = computed(()=>hotelStore.selectedRooms)
 const selectedRoomsForView=
  computed(()=>
@@ -1637,6 +1660,16 @@ const hotelDisplay=computed(()=>{
   address:
    hotel.value?.address||
    '',
+
+  cityName:String(
+   hotel.value?.cityName||
+   hotel.value?.city?.title||
+   hotel.value?.city?.name||
+   route.query.cityName||
+   (isChaboksar
+    ?'چابکسر'
+    :'')
+  ).trim(),
 
   latitude:Number(
    hotel.value?.latitude||
@@ -1884,245 +1917,345 @@ function buildHotelContractPayload(
    ? passenger[0]
    : passenger
 
- const room =
-   selectedRooms.value[0]
-const totalExtraBedCount=
- selectedRooms.value.reduce(
-  (sum,room)=>
-   sum+Number(room?.extraBedCount||0),
-  0
- )
+ const totalExtraBedCount=
+  selectedRooms.value.reduce(
+   (sum,room)=>
+    sum+Number(room?.extraBedCount||0),
+   0
+  )
 
+ const totalNoBedCount=
+  selectedRooms.value.reduce(
+   (sum,room)=>
+    sum+Number(room?.noBedCount||0),
+   0
+  )
 
-const totalNoBedCount=
- selectedRooms.value.reduce(
-  (sum,room)=>
-   sum+Number(room?.noBedCount||0),
-  0
- )
+ /*
+  * هتل آهوان:
+  * اطلاعات اقامت داخل ContractRoutes ذخیره می‌شود.
+  *
+  * سایر هتل‌ها:
+  * ContractRoutes خالی است و اطلاعات داخل ContractHotels می‌رود.
+  */
+ const contractRoutes=
+  isAhuanHotel.value
+   ?selectedRooms.value.map(room=>({
+
+     id:0,
+
+     contractId:0,
+
+     checkIn:
+      normalizeDate(checkIn.value),
+
+     checkOut:
+      normalizeDate(checkOut.value),
+
+     cityId:
+      Number(
+       hotel.value?.cityId||
+       route.query.cityId||
+       route.params.id||
+       0
+      ),
+
+     hotelId:
+      Number(hotelId.value),
+
+     roomId:
+      Number(room.roomId||0),
+
+     roomServiceId:
+      Number(
+       room?.hotelRoomPrices?.[0]?.roomServiceId||
+       room?.roomServiceId||
+       0
+      ),
+
+     nights:
+      calculateNights(),
+
+     extBedNo:
+      Number(room.extraBedCount||0),
+
+     noBedNo:
+      Number(room.noBedCount||0),
+
+     adultNo:
+      Number(room.capacity||0)*
+      Number(room.count||1),
+
+     infantNo:0,
+
+     tourPriceId:0,
+
+     description:[
+      `${Number(room.count||1)} اتاق`,
+
+      Number(room.extraBedCount||0)>0
+       ?`${room.extraBedCount} ${room.extraBedService||'تخت اضافه'}`
+       :'',
+
+      Number(room.noBedCount||0)>0
+       ?`${room.noBedCount} بدون تخت`
+       :''
+
+     ]
+     .filter(Boolean)
+     .join(' - ')
+
+    }))
+   :[]
+
+ const contractHotels=
+  !isAhuanHotel.value
+   ?selectedRooms.value.map(room=>{
+
+     const reservationCode=
+      String(
+       room?.reservationCode||
+       room?.reservation_code||
+       room?.booking?.reservationCode||
+       room?.booking?.reservation_code||
+       ''
+      ).trim()
+
+     const roomServiceId=
+      String(
+       room?.hotelRoomPrices?.[0]?.roomServiceId||
+       room?.roomServiceId||
+       room?.boardType||
+       room?.raw?.room?.board_type||
+       ''
+      ).trim()
+
+     const roomServiceName=
+      String(
+       room?.hotelRoomPrices?.[0]?.roomService?.name||
+       room?.hotelRoomPrices?.[0]?.roomServiceName||
+       room?.roomServiceName||
+       (
+        room?.breakfastIncluded===true
+         ?'اقامت + صبحانه'
+         :room?.breakfastIncluded===false
+          ?'اقامت بدون صبحانه'
+          :room?.boardType||
+           room?.raw?.room?.board_type||
+           ''
+       )
+      ).trim()
+
+     return{
+
+      id:0,
+
+      contractId:0,
+
+      cityId:
+       String(
+        hotel.value?.cityId||
+        route.query.cityId||
+        ''
+       ),
+
+      cityName:
+       String(
+        hotel.value?.cityName||
+        hotel.value?.city?.title||
+        route.query.cityName||
+        ''
+       ).trim(),
+
+      hotelId:
+       String(
+        room?.providerHotelId||
+        room?.hotelId||
+        hotelId.value||
+        ''
+       ),
+
+      hotelName:
+       String(
+        hotelDisplay.value?.name||
+        hotel.value?.name||
+        ''
+       ).trim(),
+
+      roomId:
+       String(
+        room?.providerRoomId||
+        room?.roomId||
+        ''
+       ),
+
+      roomName:
+       String(
+        room?.roomName||
+        room?.roomType||
+        room?.type||
+        room?.name||
+        ''
+       ).trim(),
+
+      roomServiceId,
+
+      roomServiceName,
+
+      description:[
+       `${Number(room.count||1)} اتاق`,
+
+       Number(room.extraBedCount||0)>0
+        ?`${room.extraBedCount} ${room.extraBedService||'تخت اضافه'}`
+        :'',
+
+       Number(room.noBedCount||0)>0
+        ?`${room.noBedCount} بدون تخت`
+        :'',
+
+       reservationCode
+        ?`کد رزرو: ${reservationCode}`
+        :''
+
+      ]
+      .filter(Boolean)
+      .join(' - '),
+
+      nights:
+       calculateNights(),
+
+      checkIn:
+       normalizeDate(checkIn.value),
+
+      checkOut:
+       normalizeDate(checkOut.value),
+
+      source:
+       String(
+        room?.provider||
+        hotel.value?.provider||
+        'SNAPPTRIP'
+       ).trim()
+
+     }
+
+    })
+   :[]
 
  return {
 
   id:0,
 
-
   customerId:4,
 
-
   userName:
-    contact.phone,
-
+   contact.phone,
 
   issueDate:
-    new Date()
-      .toISOString()
-      .substring(0,10),
-
+   new Date()
+    .toISOString()
+    .substring(0,10),
 
   issueTime:
- getIssueTime(),
-
-
+   getIssueTime(),
 
   confirmStatus:"temp",
 
-
   contractType:0,
-
 
   contractingPartyType:0,
 
-
   hotel:true,
-
 
   ticket:false,
 
-
   tour:false,
-
 
   insurance:false,
 
-
   visa:false,
-
 
   other:false,
 
-
   cruise:false,
-
 
   travelVehicle:"هتل تک",
 
-
   manualOrAutomatic:true,
-
 
   systemOrCharter:false,
 
-
   showDetail:false,
-
 
   taxType:0,
 
-
   ipAddress:"0",
-
-
 
   adultNo:1,
 
-
   childExtraBedNo:
- totalExtraBedCount,
+   totalExtraBedCount,
 
-childNoBedNo:
- totalNoBedCount,
-
+  childNoBedNo:
+   totalNoBedCount,
 
   infantNo:"0",
 
-
-
   passengersNo:1,
 
-
-
-  reduceHotelLoad:1,
-
+  /*
+   * فقط آهوان موجودی داخلی خودش را کم می‌کند.
+   * هتل Provider خارجی نباید موجودی HotelRoom داخلی را تغییر دهد.
+   */
+  reduceHotelLoad:
+   isAhuanHotel.value
+    ?1
+    :0,
 
   reduceFlightLoad:0,
 
-
-
   ticketStatus:"temp-first",
-
-
 
   contractFlights:[],
 
-
-
   contractPassengers:[{
-
 
    id:0,
 
-
    contractId:0,
-
 
    fName:
     passengerInfo.firstName,
 
-
    lName:
     passengerInfo.lastName,
 
-
    age:"ADL",
 
-
    gender:
-    passengerInfo.gender === 'male',
-
+    passengerInfo.gender==='male',
 
    birthDate:
-     toIsoBirthDate(passengerInfo.birthDate),
-
+    toIsoBirthDate(
+     passengerInfo.birthDate
+    ),
 
    codeMelli:
- passengerInfo.nationalCode,
-
+    passengerInfo.nationalCode,
 
    nationality:
-  passengerInfo.nationality,
-
+    passengerInfo.nationality,
 
    description:"",
-
 
    price:
     getRoomPrice()
 
   }],
 
+  contractRoutes,
 
-
- contractRoutes:
- selectedRooms.value.map(room=>({
-
-  id:0,
-
-  contractId:0,
-
-  checkIn:
-   normalizeDate(checkIn.value),
-
-  checkOut:
-   normalizeDate(checkOut.value),
-
-  cityId:
-   Number(route.params.id),
-
-  hotelId:
-   Number(hotelId.value),
-
-  roomId:
-   Number(room.roomId),
-
-roomServiceId:
- Number(
-  room?.hotelRoomPrices?.[0]
-   ?.roomServiceId || 0
- ),
-
-  nights:
-   calculateNights(),
-
-
-  // تعداد تخت اضافه
-  extBedNo:
-   Number(room.extraBedCount||0),
-
-
-  // تعداد بدون تخت
-  noBedNo:
-   Number(room.noBedCount||0),
-
-
-  // تعداد نفر پایه
-  adultNo:
-  Number(room.capacity || 0) *
-  Number(room.count || 1),
-
-
-  infantNo:
-   0,
-
-  tourPriceId:
-   0,
-
-
-  description:[
-   `${room.count} اتاق`,
-
-  Number(room.extraBedCount||0)>0
- ?`${room.extraBedCount} ${room.extraBedService || 'تخت اضافه'}`
- :'',
-
-   Number(room.noBedCount||0)>0
-    ?`${room.noBedCount} بدون تخت`
-    :''
-
-  ]
-  .filter(Boolean)
-  .join(' - ')
-
- }))
+  contractHotels
 
  }
 
@@ -2241,6 +2374,13 @@ async function continueHotelBooking(){
       error
     )
 
+    toast.error(
+      getErrorMessage(
+        error,
+        'ادامه فرایند رزرو هتل با خطا مواجه شد.'
+      )
+    )
+
   }
   finally{
 
@@ -2272,13 +2412,17 @@ async function updateHotelContract(payload){
   )
 
   throw new Error(
-   'افزودن اطلاعات به دیتابیس موفقیت‌آمیز نبود.'
+   getErrorMessage(
+    error,
+    'افزودن اطلاعات به دیتابیس موفقیت‌آمیز نبود.'
+   )
   )
  }
 }
 function buildHotelUpdateContractPayload({
  passengers,
- contact
+ contact,
+ reservationCode=''
 }){
 
  const addPayload=
@@ -2290,11 +2434,6 @@ function buildHotelUpdateContractPayload({
   currentContractData.value?.addResponse||
   {}
 
-
- // =========================
- // Contract Id
- // =========================
-
  const contractId=
   Number(
    addResponse?.id||
@@ -2303,22 +2442,12 @@ function buildHotelUpdateContractPayload({
    0
   )
 
-
- // =========================
- // Passengers قبلی
- // =========================
-
  const savedPassengers=
   Array.isArray(
    addResponse?.contractPassengers
   )
    ?addResponse.contractPassengers
    :[]
-
-
- // =========================
- // Routes قبلی
- // =========================
 
  const savedRoutes=
   Array.isArray(
@@ -2327,10 +2456,12 @@ function buildHotelUpdateContractPayload({
    ?addResponse.contractRoutes
    :[]
 
-
- // =========================
- // تعداد کل تخت اضافه
- // =========================
+ const savedHotels=
+  Array.isArray(
+   addResponse?.contractHotels
+  )
+   ?addResponse.contractHotels
+   :[]
 
  const totalExtraBedCount=
   selectedRooms.value.reduce(
@@ -2341,11 +2472,6 @@ function buildHotelUpdateContractPayload({
    0
   )
 
-
- // =========================
- // تعداد کل بدون تخت
- // =========================
-
  const totalNoBedCount=
   selectedRooms.value.reduce(
    (sum,room)=>
@@ -2354,11 +2480,6 @@ function buildHotelUpdateContractPayload({
     ),
    0
   )
-
-
- // =========================
- // Passenger Mapping
- // =========================
 
  const mappedPassengers=
   passengers.map(
@@ -2390,11 +2511,6 @@ function buildHotelUpdateContractPayload({
    })
   )
 
-
- // =========================
- // Contract Passengers
- // =========================
-
  const contractPassengers=
   mappedPassengers.map(
    (passenger,index)=>({
@@ -2414,125 +2530,268 @@ function buildHotelUpdateContractPayload({
    })
   )
 
-
- // =========================
- // Contract Routes
- // =========================
-
+ /*
+  * فقط هتل آهوان در ContractRoutes قرار می‌گیرد.
+  */
  const contractRoutes=
-  selectedRooms.value.map(
-   (room,index)=>{
+  isAhuanHotel.value
+   ?selectedRooms.value.map(
+     (room,index)=>{
 
-    const savedRoute=
-     savedRoutes[index]||{}
+      const savedRoute=
+       savedRoutes[index]||{}
 
-    return{
+      return{
 
-     ...savedRoute,
+       ...savedRoute,
 
-     id:
-      Number(
-       savedRoute?.id||0
-      ),
+       id:
+        Number(
+         savedRoute?.id||0
+        ),
 
-     contractId,
+       contractId,
 
-     checkIn:
-      normalizeDate(
-       checkIn.value
-      ),
+       checkIn:
+        normalizeDate(
+         checkIn.value
+        ),
 
-     checkOut:
-      normalizeDate(
-       checkOut.value
-      ),
+       checkOut:
+        normalizeDate(
+         checkOut.value
+        ),
 
-     cityId:
-      Number(
-       route.params.id
-      ),
+       cityId:
+        Number(
+         hotel.value?.cityId||
+         route.query.cityId||
+         route.params.id||
+         0
+        ),
 
-     hotelId:
-      Number(
-       hotelId.value
-      ),
+       hotelId:
+        Number(
+         hotelId.value
+        ),
 
-     roomId:
-      Number(
-       room.roomId
-      ),
-roomServiceId:
- Number(
-  room?.hotelRoomPrices?.[0]
-   ?.roomServiceId || 0
- ),
-     nights:
-      calculateNights(),
+       roomId:
+        Number(
+         room.roomId||0
+        ),
 
+       roomServiceId:
+        Number(
+         room?.hotelRoomPrices?.[0]?.roomServiceId||
+         room?.roomServiceId||
+         0
+        ),
 
-     // =====================
-     // تعداد تخت اضافه
-     // =====================
+       nights:
+        calculateNights(),
 
-     extBedNo:
-      Number(
-       room.extraBedCount||0
-      ),
+       extBedNo:
+        Number(
+         room.extraBedCount||0
+        ),
 
+       noBedNo:
+        Number(
+         room.noBedCount||0
+        ),
 
-     // =====================
-     // تعداد بدون تخت
-     // =====================
+       adultNo:
+        Number(room.capacity||0)*
+        Number(room.count||1),
 
-     noBedNo:
-      Number(
-       room.noBedCount||0
-      ),
+       infantNo:0,
 
+       tourPriceId:
+        Number(
+         savedRoute?.tourPriceId||
+         0
+        ),
 
-     // تعداد پایه
-     adultNo:
-  Number(room.capacity || 0) *
-  Number(room.count || 1),
+       description:[
+        `${Number(room.count||1)} اتاق`,
 
-     infantNo:
-      0,
+        Number(room.extraBedCount||0)>0
+         ?`${room.extraBedCount} ${room.extraBedService||'تخت اضافه'}`
+         :'',
 
-     tourPriceId:
-      Number(
-       savedRoute?.tourPriceId||
-       0
-      ),
+        Number(room.noBedCount||0)>0
+         ?`${room.noBedCount} بدون تخت`
+         :''
 
+       ]
+       .filter(Boolean)
+       .join(' - ')
 
-     description:[
-      `${room.count} اتاق`,
+      }
 
-      Number(
-       room.extraBedCount||0
-      )>0
-       ?`${room.extraBedCount} تخت اضافه`
-       :'',
+     }
+    )
+   :[]
 
-      Number(
-       room.noBedCount||0
-      )>0
-       ?`${room.noBedCount} بدون تخت`
-       :''
+ /*
+  * تمام هتل‌های غیر آهوان در ContractHotels قرار می‌گیرند.
+  */
+ const contractHotels=
+  !isAhuanHotel.value
+   ?selectedRooms.value.map(
+     (room,index)=>{
 
-     ]
-     .filter(Boolean)
-     .join(' - ')
+      const savedHotel=
+       savedHotels[index]||{}
 
-    }
+      const reservationCode=
+       String(
+        room?.reservationCode||
+        room?.reservation_code||
+        room?.booking?.reservationCode||
+        room?.booking?.reservation_code||
+        ''
+       ).trim()
 
-   }
-  )
+      const roomServiceId=
+       String(
+        room?.hotelRoomPrices?.[0]?.roomServiceId||
+        room?.roomServiceId||
+        room?.boardType||
+        room?.raw?.room?.board_type||
+        savedHotel?.roomServiceId||
+        ''
+       ).trim()
 
+      const roomServiceName=
+       String(
+        room?.hotelRoomPrices?.[0]?.roomService?.name||
+        room?.hotelRoomPrices?.[0]?.roomServiceName||
+        room?.roomServiceName||
+        (
+         room?.breakfastIncluded===true
+          ?'اقامت + صبحانه'
+          :room?.breakfastIncluded===false
+           ?'اقامت بدون صبحانه'
+           :room?.boardType||
+            room?.raw?.room?.board_type||
+            savedHotel?.roomServiceName||
+            ''
+        )
+       ).trim()
 
- // =========================
- // Update Payload
- // =========================
+      return{
+
+       ...savedHotel,
+
+       id:
+        Number(
+         savedHotel?.id||0
+        ),
+
+       contractId,
+
+       cityId:
+        String(
+         hotel.value?.cityId||
+         route.query.cityId||
+         savedHotel?.cityId||
+         ''
+        ),
+
+       cityName:
+        String(
+         hotel.value?.cityName||
+         hotel.value?.city?.title||
+         route.query.cityName||
+         savedHotel?.cityName||
+         ''
+        ).trim(),
+
+       hotelId:
+        String(
+         room?.providerHotelId||
+         room?.hotelId||
+         hotelId.value||
+         savedHotel?.hotelId||
+         ''
+        ),
+
+       hotelName:
+        String(
+         hotelDisplay.value?.name||
+         hotel.value?.name||
+         savedHotel?.hotelName||
+         ''
+        ).trim(),
+
+       roomId:
+        String(
+         room?.providerRoomId||
+         room?.roomId||
+         savedHotel?.roomId||
+         ''
+        ),
+
+       roomName:
+        String(
+         room?.roomName||
+         room?.roomType||
+         room?.type||
+         room?.name||
+         savedHotel?.roomName||
+         ''
+        ).trim(),
+
+       roomServiceId,
+
+       roomServiceName,
+
+       description:[
+        `${Number(room.count||1)} اتاق`,
+
+        Number(room.extraBedCount||0)>0
+         ?`${room.extraBedCount} ${room.extraBedService||'تخت اضافه'}`
+         :'',
+
+        Number(room.noBedCount||0)>0
+         ?`${room.noBedCount} بدون تخت`
+         :'',
+
+        reservationCode
+         ?`کد رزرو: ${reservationCode}`
+         :''
+
+       ]
+       .filter(Boolean)
+       .join(' - '),
+
+       nights:
+        calculateNights(),
+
+       checkIn:
+        normalizeDate(
+         checkIn.value
+        ),
+
+       checkOut:
+        normalizeDate(
+         checkOut.value
+        ),
+
+       source:
+        String(
+         room?.provider||
+         hotel.value?.provider||
+         savedHotel?.source||
+         'SNAPPTRIP'
+        ).trim()
+
+      }
+
+     }
+    )
+   :[]
 
  return{
 
@@ -2543,10 +2802,23 @@ roomServiceId:
   id:
    contractId,
 
-
-  // =========================
-  // Contact
-  // =========================
+  /*
+   * کد رزرو SnappTrip روی خود Contract ذخیره می‌شود.
+   * برای آهوان مقدار قبلی دست‌نخورده می‌ماند.
+   */
+  mainContractNo:
+   isSnappTripHotel.value
+    ?String(
+      reservationCode||
+      addResponse?.mainContractNo||
+      addPayload?.mainContractNo||
+      ''
+     ).trim()
+    :(
+      addResponse?.mainContractNo||
+      addPayload?.mainContractNo||
+      null
+     ),
 
   userName:
    String(
@@ -2561,34 +2833,29 @@ roomServiceId:
     ''
    ).trim(),
 
-
-  // =========================
-  // تعداد سرویس‌ها
-  // =========================
-
   childExtraBedNo:
    totalExtraBedCount,
 
   childNoBedNo:
    totalNoBedCount,
 
-
-  // =========================
-  // Passengers
-  // =========================
-
   passengersNo:
    contractPassengers.length,
 
   contractPassengers,
 
+  /*
+   * مقادیر نهایی بعد از ...addResponse قرار دارند
+   * تا داده قبلی پاسخ، این دو آرایه را Override نکند.
+   */
+  contractRoutes,
 
-  // =========================
-  // Routes
-  // حتماً بعد از ...addResponse باشد
-  // =========================
+  contractHotels,
 
-  contractRoutes
+  reduceHotelLoad:
+   isAhuanHotel.value
+    ?1
+    :0
 
  }
 
@@ -2961,7 +3228,9 @@ function createHotelPaymentData(){
 }
 function saveHotelPaymentSession({
  contractId,
- paymentData
+ paymentData,
+ providerResult=null,
+ reservationCode=''
 }){
 
  if(typeof window==='undefined')
@@ -2980,6 +3249,28 @@ function saveHotelPaymentSession({
    'شناسه قرارداد معتبر نیست'
   )
  }
+
+ const normalizedReservationCode=
+  String(
+   reservationCode||
+   ''
+  ).trim()
+
+ const providerResults=
+  providerResult
+   ?[{
+     provider:
+      isSnappTripHotel.value
+       ?'SNAPPTRIP'
+       :'AHUAN',
+
+     reservationCode:
+      normalizedReservationCode,
+
+     response:
+      providerResult
+    }]
+   :[]
 
  const paymentSession={
 
@@ -3018,27 +3309,74 @@ function saveHotelPaymentSession({
     paymentData.mobile||''
    ).trim(),
 
-  providerResults:[],
+  reservationCode:
+   normalizedReservationCode,
+
+  providerResults,
 
   bookingType:'hotel',
 
   hotel:{
-   hotelId:hotelId.value,
-   checkIn:checkIn.value,
-   checkOut:checkOut.value,
-   rooms:selectedRooms.value.map(
-    room=>({
-     roomId:room.roomId,
-     roomName:room.roomName,
-     count:room.count,
-     unitPrice:Number(
-      room.unitPrice||0
-     ),
-     price:Number(
-      room.price||0
-     )
-    })
-   )
+   provider:
+    isSnappTripHotel.value
+     ?'SNAPPTRIP'
+     :'AHUAN',
+
+   hotelId:
+    hotelId.value,
+
+   hotelName:
+    String(
+     hotelDisplay.value?.name||
+     hotel.value?.name||
+     ''
+    ).trim(),
+
+   cityId:
+    hotel.value?.cityId||
+    route.query.cityId||
+    null,
+
+   cityName:
+    String(
+     hotel.value?.cityName||
+     hotel.value?.city?.title||
+     route.query.cityName||
+     ''
+    ).trim(),
+
+   checkIn:
+    checkIn.value,
+
+   checkOut:
+    checkOut.value,
+
+   rooms:
+    selectedRooms.value.map(
+     room=>({
+
+      roomId:
+       room?.providerRoomId||
+       room?.roomId,
+
+      roomName:
+       room.roomName,
+
+      count:
+       room.count,
+
+      unitPrice:
+       Number(
+        room.unitPrice||0
+       ),
+
+      price:
+       Number(
+        room.price||0
+       )
+
+     })
+    )
   }
  }
 
@@ -3108,7 +3446,10 @@ async function requestBankToken({
   )
 
   throw new Error(
-   'ارسال به بانک موفقیت‌آمیز نبود.'
+   getErrorMessage(
+    error,
+    'ارسال به بانک موفقیت‌آمیز نبود.'
+   )
   )
  }
 }
@@ -3205,6 +3546,548 @@ async function continueHotelPayment(
    )
  }
 }
+async function getSnappTripBalance(){
+
+ try{
+
+  const response=
+   await $fetch(
+    `${BASE_URL}/SnappTrip/balance`,
+    {
+     method:'GET'
+    }
+   )
+
+  console.log(
+   'SNAPPTRIP BALANCE:',
+   response
+  )
+
+  const balance=
+   Number(
+    response?.balance
+   )
+
+  if(
+   !Number.isFinite(balance)||
+   balance<0
+  ){
+   throw new Error(
+    'موجودی SnappTrip معتبر نیست.'
+   )
+  }
+
+  /*
+   * تمام مبالغ پروژه، از جمله موجودی SnappTrip
+   * و مبلغ اتاق انتخاب‌شده، بر حسب ریال هستند.
+   * بنابراین هیچ تبدیل تومان/ریال انجام نمی‌شود.
+   */
+  const selectedRoomPriceRial=
+   Number(
+    hotelFinalPrice.value||
+    0
+   )
+
+  if(
+   !Number.isFinite(
+    selectedRoomPriceRial
+   )||
+   selectedRoomPriceRial<=0
+  ){
+   throw new Error(
+    'مبلغ اتاق انتخاب‌شده معتبر نیست.'
+   )
+  }
+
+  console.log(
+   'SNAPPTRIP BALANCE CHECK:',
+   {
+    balance,
+    selectedRoomPriceRial,
+    enough:
+     balance>=
+     selectedRoomPriceRial
+   }
+  )
+
+  if(
+   balance<
+   selectedRoomPriceRial
+  ){
+   throw new Error(
+    'در حال حاضر امکان خرید وجود ندارد.'
+   )
+  }
+
+  return{
+   balance,
+   requiredAmount:
+    selectedRoomPriceRial,
+   remainingBalance:
+    balance-
+    selectedRoomPriceRial,
+   raw:
+    response
+  }
+
+ }
+ catch(error){
+
+  console.error(
+   'SNAPPTRIP BALANCE ERROR:',
+   error
+  )
+
+  throw new Error(
+   getErrorMessage(
+    error,
+    'دریافت موجودی SnappTrip ناموفق بود.'
+   )
+  )
+ }
+}
+
+function isSnappTripForeigner(
+ passenger
+){
+
+ const nationality=
+  String(
+   passenger?.nationality||
+   ''
+  )
+   .trim()
+   .toUpperCase()
+
+ if(!nationality)
+  return false
+
+ return ![
+  'IR',
+  'IRN',
+  'IRAN',
+  'ایران'
+ ].includes(
+  nationality
+ )
+}
+
+function getSnappPassengerType(
+ passenger
+){
+
+ return String(
+  passenger?.type||
+  passenger?.age||
+  'ADL'
+ )
+  .trim()
+  .toUpperCase()
+}
+
+function isSnappChildPassenger(
+ passenger
+){
+
+ return[
+  'CHD',
+  'CHILD',
+  'CNN'
+ ].includes(
+  getSnappPassengerType(
+   passenger
+  )
+ )
+}
+
+function isSnappInfantPassenger(
+ passenger
+){
+
+ return[
+  'INF',
+  'INFANT'
+ ].includes(
+  getSnappPassengerType(
+   passenger
+  )
+ )
+}
+
+function buildSnappTripBookingRooms(
+ passengers
+){
+
+ const roomInstances=[]
+
+ /*
+  * اگر کاربر از یک Room چند اتاق انتخاب کرده باشد،
+  * برای API رزرو هر اتاق را به یک آیتم مستقل تبدیل می‌کنیم.
+  */
+ for(
+  const selectedRoom
+  of selectedRooms.value
+ ){
+
+  const roomCount=
+   Math.max(
+    Number(
+     selectedRoom?.count||
+     1
+    ),
+    1
+   )
+
+  const totalExtraBeds=
+   Math.max(
+    Number(
+     selectedRoom?.extraBedCount||
+     0
+    ),
+    0
+   )
+
+  const extraBedBase=
+   Math.floor(
+    totalExtraBeds/
+    roomCount
+   )
+
+  const extraBedRemainder=
+   totalExtraBeds%
+   roomCount
+
+  for(
+   let index=0;
+   index<roomCount;
+   index++
+  ){
+
+   roomInstances.push({
+
+    selectedRoom,
+
+    room_id:
+     Number(
+      selectedRoom?.providerRoomId||
+      selectedRoom?.roomId||
+      0
+     ),
+
+    children:0,
+
+    extra_beds:
+     extraBedBase+
+     (
+      index<extraBedRemainder
+       ?1
+       :0
+     ),
+
+    infants:0,
+
+    guests:[]
+
+   })
+  }
+ }
+
+ if(!roomInstances.length)
+  throw new Error(
+   'اتاقی برای رزرو SnappTrip انتخاب نشده است.'
+  )
+
+ if(
+  roomInstances.some(
+   item=>
+    !Number.isInteger(item.room_id)||
+    item.room_id<=0
+  )
+ ){
+  throw new Error(
+   'شناسه اتاق SnappTrip معتبر نیست.'
+  )
+ }
+
+ const normalizedPassengers=
+  Array.isArray(passengers)
+   ?passengers
+   :[]
+
+ /*
+  * مسافرها را به ترتیب و با توجه به ظرفیت پایه اتاق‌ها
+  * بین Roomهای رزرو تقسیم می‌کنیم.
+  */
+ let passengerIndex=0
+
+ for(
+  const instance
+  of roomInstances
+ ){
+
+  const baseCapacity=
+   Math.max(
+    Number(
+     instance.selectedRoom?.capacity||
+     instance.selectedRoom?.adults||
+     1
+    ),
+    1
+   )
+
+  while(
+   passengerIndex<
+    normalizedPassengers.length&&
+   instance.guests.length<
+    baseCapacity
+  ){
+
+   const passenger=
+    normalizedPassengers[
+     passengerIndex
+    ]
+
+   instance.guests.push(
+    passenger
+   )
+
+   passengerIndex++
+  }
+ }
+
+ /*
+  * اگر تعداد مسافر از ظرفیت پایه بیشتر بود
+  * (مثلاً به دلیل تخت اضافه)، باقی‌مانده روی اتاق آخر قرار می‌گیرد.
+  */
+ while(
+  passengerIndex<
+   normalizedPassengers.length
+ ){
+
+  roomInstances[
+   roomInstances.length-1
+  ].guests.push(
+   normalizedPassengers[
+    passengerIndex
+   ]
+  )
+
+  passengerIndex++
+ }
+
+ return roomInstances.map(
+  item=>{
+
+   const children=
+    item.guests.filter(
+     isSnappChildPassenger
+    ).length
+
+   const infants=
+    item.guests.filter(
+     isSnappInfantPassenger
+    ).length
+
+   return{
+
+    children,
+
+    extra_beds:
+     Number(
+      item.extra_beds||
+      0
+     ),
+
+    guests:
+     item.guests.map(
+      passenger=>({
+
+       first_name:
+        String(
+         passenger?.firstName||
+         ''
+        ).trim(),
+
+       foreigner:
+        isSnappTripForeigner(
+         passenger
+        ),
+
+       last_name:
+        String(
+         passenger?.lastName||
+         ''
+        ).trim()
+
+      })
+     ),
+
+    infants,
+
+    room_id:
+     item.room_id
+
+   }
+
+  }
+ )
+}
+
+function buildSnappTripBookingPayload(){
+
+ const contact=
+  bookingData.value?.contact||
+  {}
+
+ const passengers=
+  bookingData.value?.passengers||
+  []
+
+ const payload={
+
+  checkin:
+   normalizeDate(
+    checkIn.value
+   ),
+
+  checkout:
+   normalizeDate(
+    checkOut.value
+   ),
+
+  email:
+   String(
+    contact?.email||
+    ''
+   ).trim(),
+
+  hotel_id:
+   Number(
+    hotelId.value
+   ),
+
+  note:'',
+
+  phone:
+   String(
+    contact?.mobile||
+    contact?.phone||
+    ''
+   ).trim(),
+
+  rooms:
+   buildSnappTripBookingRooms(
+    passengers
+   )
+
+ }
+
+ if(
+  !payload.checkin||
+  !payload.checkout
+ ){
+  throw new Error(
+   'تاریخ ورود یا خروج برای رزرو SnappTrip معتبر نیست.'
+  )
+ }
+
+ if(
+  !Number.isInteger(payload.hotel_id)||
+  payload.hotel_id<=0
+ ){
+  throw new Error(
+   'شناسه هتل SnappTrip معتبر نیست.'
+  )
+ }
+
+ if(!payload.phone){
+  throw new Error(
+   'شماره تماس برای رزرو SnappTrip وارد نشده است.'
+  )
+ }
+
+ return payload
+}
+
+async function createSnappTripBooking(
+ payload
+){
+
+ try{
+
+  console.log(
+   'SNAPPTRIP BOOKING PAYLOAD:',
+   payload
+  )
+
+  const response=
+   await $fetch(
+    `${BASE_URL}/SnappTrip/booking/create`,
+    {
+     method:'POST',
+
+     body:
+      payload,
+
+     headers:{
+      'Content-Type':
+       'application/json'
+     }
+    }
+   )
+
+  console.log(
+   'SNAPPTRIP BOOKING RESPONSE:',
+   response
+  )
+
+  return response
+
+ }
+ catch(error){
+
+  console.error(
+   'SNAPPTRIP BOOKING ERROR:',
+   error
+  )
+
+  throw new Error(
+   getErrorMessage(
+    error,
+    'رزرو هتل در SnappTrip ناموفق بود.'
+   )
+  )
+ }
+}
+
+function extractSnappTripReservationCode(
+ response
+){
+
+ const reservationCode=
+  String(
+   response?.reservation_code||
+   response?.reservationCode||
+   response?.data?.reservation_code||
+   response?.data?.reservationCode||
+   ''
+  ).trim()
+
+ if(!reservationCode){
+
+  console.error(
+   'SNAPPTRIP BOOKING RESPONSE WITHOUT RESERVATION CODE:',
+   response
+  )
+
+  throw new Error(
+   'کد رزرو SnappTrip از پاسخ رزرو دریافت نشد.'
+  )
+ }
+
+ return reservationCode
+}
+
 async function handleFinalPayment(){
 
  if(paymentLoading.value)
@@ -3220,46 +4103,133 @@ async function handleFinalPayment(){
     'اطلاعات قرارداد موجود نیست.'
    )
 
-  /*
-   * 1. ساخت payload برای update
-   */
- const updatePayload=
- buildHotelUpdateContractPayload({
-  passengers:
-   bookingData.value.passengers,
-  contact:
-   bookingData.value.contact
- })
+  let providerResult=null
+  let reservationCode=''
 
   /*
-   * 2. Contract/update
+   * برای SnappTrip ترتیب دقیق عملیات:
+   *
+   * 1) balance
+   * 2) booking/create
+   * 3) دریافت reservation_code
+   * 4) Contract/update + mainContractNo
+   * 5) SessionStorage
+   * 6) agency / travelcard / gateway
    */
+  if(
+   isSnappTripHotel.value
+  ){
+
+   /*
+    * اگر همین بار قبلاً Booking ساخته شده ولی Update خطا داده،
+    * دوباره Booking جدید ایجاد نکن.
+    */
+   reservationCode=
+    String(
+     currentContractData.value
+      ?.snappReservationCode||
+     ''
+    ).trim()
+
+   providerResult=
+    currentContractData.value
+     ?.snappBookingResponse||
+    null
+
+   if(!reservationCode){
+
+    const snappBalance=
+     await getSnappTripBalance()
+
+    console.log(
+     'SNAPPTRIP BALANCE APPROVED:',
+     snappBalance
+    )
+
+    const snappBookingPayload=
+     buildSnappTripBookingPayload()
+
+    providerResult=
+     await createSnappTripBooking(
+      snappBookingPayload
+     )
+
+    reservationCode=
+     extractSnappTripReservationCode(
+      providerResult
+     )
+
+    /*
+     * در حافظه صفحه نگه می‌داریم تا اگر Contract/update خطا داد
+     * با کلیک مجدد رزرو Provider تکراری ساخته نشود.
+     */
+    currentContractData.value
+     .snappReservationCode=
+      reservationCode
+
+    currentContractData.value
+     .snappBookingResponse=
+      providerResult
+   }
+  }
+
+  /*
+   * Contract/update
+   * برای SnappTrip، reservationCode داخل mainContractNo می‌رود.
+   */
+  const updatePayload=
+   buildHotelUpdateContractPayload({
+
+    passengers:
+     bookingData.value.passengers,
+
+    contact:
+     bookingData.value.contact,
+
+    reservationCode
+
+   })
+
+  console.log(
+   'HOTEL UPDATE PAYLOAD:',
+   updatePayload
+  )
+
   const updateResponse=
    await updateHotelContract(
     updatePayload
    )
 
-  /*
-   * 3. contractId
-   */
   const contractId=
    extractHotelContractId(
     updateResponse
    )
 
   /*
-   * 4. محاسبه نوع و مبلغ پرداخت
+   * منطق قبلی نوع پرداخت دست‌نخورده است:
+   * agency
+   * travelcard
+   * travelcard-gateway
+   * gateway
    */
   const paymentData=
    createHotelPaymentData()
 
   /*
-   * 5. ذخیره Session
+   * اطلاعات در همان flight_payment_session ذخیره می‌شود
+   * تا صفحه /verify مثل قبل ادامه کار را انجام دهد.
    */
   const paymentSession=
    saveHotelPaymentSession({
+
     contractId,
-    paymentData
+
+    paymentData,
+
+    providerResult,
+
+    reservationCode
+
    })
 
   console.log(
@@ -3268,7 +4238,9 @@ async function handleFinalPayment(){
   )
 
   /*
-   * 6. ادامه پرداخت
+   * ادامه Flow قبلی:
+   * agency/travelcard -> /verify
+   * gateway/travelcard-gateway -> Bank -> /verify
    */
   await continueHotelPayment(
    paymentSession
@@ -3283,9 +4255,14 @@ async function handleFinalPayment(){
   )
 
   paymentError.value=
-   error?.data?.message||
-   error?.message||
-   'خطا در پرداخت هتل'
+   getErrorMessage(
+    error,
+    'خطا در رزرو و پرداخت هتل'
+   )
+
+  toast.error(
+   paymentError.value
+  )
 
  }
  finally{
@@ -3323,7 +4300,10 @@ async function addHotelContract(payload){
     )
 
     throw new Error(
-      'اطلاعات به دیتابیس اضافه نشد.'
+      getErrorMessage(
+        error,
+        'اطلاعات به دیتابیس اضافه نشد.'
+      )
     )
   }
 }
