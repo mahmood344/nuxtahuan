@@ -400,22 +400,41 @@ const snappTripCities=computed(()=>{
 })
 
 
-async function ensureSnappTripCities(){
+let snappTripCitiesRequest = null
 
-  const items=
+async function ensureSnappTripCities() {
+
+  const items =
     Array.isArray(hotelStore.snappTripCities)
-      ?hotelStore.snappTripCities
-      :[]
+      ? hotelStore.snappTripCities
+      : []
 
-  if(items.length)
+  /*
+   * اگر Store پر است، Request نزن.
+   */
+  if(items.length > 0) {
     return
+  }
 
-  try{
 
-    await hotelStore.loadSnappTripCities()
+  /*
+   * اگر همین الان Request در حال اجراست،
+   * همان Request را منتظر بمان.
+   */
+  if(snappTripCitiesRequest) {
+    return await snappTripCitiesRequest
+  }
+
+
+  try {
+
+    snappTripCitiesRequest =
+      hotelStore.loadSnappTripCities()
+
+    await snappTripCitiesRequest
 
   }
-  catch(error){
+  catch(error) {
 
     console.error(
       'LOAD SNAPPTRIP CITIES ERROR:',
@@ -423,6 +442,12 @@ async function ensureSnappTripCities(){
     )
 
   }
+  finally {
+
+    snappTripCitiesRequest = null
+
+  }
+
 }
 
 async function applySnappTripCity(){
@@ -473,9 +498,20 @@ const services = [
 const activeService = ref("flight")
 const currentSlide = ref(0)
 
-const selectService = (serviceKey, index) => {
+async function selectService(serviceKey, index) {
+
   activeService.value = serviceKey
   currentSlide.value = index
+
+  /*
+   * اگر کاربر وارد بخش هتل شد
+   * و Store شهرها خالی بود،
+   * دوباره از API دریافت کن.
+   */
+  if(serviceKey === 'hotel') {
+    await ensureSnappTripCities()
+  }
+
 }
 async function searchAhuanHotel(){
 

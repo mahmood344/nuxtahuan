@@ -265,10 +265,10 @@ async function loadTours(){
 
 function getTourImage(tour){
  const image=
+  tour?.collImageM||
   tour?.backImage||
   tour?.col1Image||
-  tour?.backImageM||
-  tour?.col1ImageM
+  tour?.backImageM
 
  if(!image)
   return''

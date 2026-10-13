@@ -150,11 +150,13 @@ mode="aside"
 <!-- ========================= -->
 
 <section
- v-if="
-  galleryImages.length &&
-  currentStep===0
- "
- class="relative w-full"
+  v-if="
+    galleryImages.length &&
+    currentStep===0
+  "
+  class="relative w-full"
+  @mouseenter="stopHotelGalleryAutoplay"
+  @mouseleave="startHotelGalleryAutoplay"
 >
 
  <div
@@ -162,27 +164,41 @@ mode="aside"
  >
 
   <!-- تصویر اصلی -->
-  <img
-   :src="
-    getHotelImageUrl(
+  <Transition name="hotel-gallery-image">
+   <img
+    :key="
+     galleryImages[hotelGalleryIndex]?.id ||
+     galleryImages[hotelGalleryIndex]?.image ||
+     hotelGalleryIndex
+    "
+    :src="
+     getHotelImageUrl(
+      galleryImages[
+       hotelGalleryIndex
+      ]?.image
+     )
+    "
+    :alt="
      galleryImages[
       hotelGalleryIndex
-     ]?.image
-    )
-   "
-   :alt="
-    galleryImages[
-     hotelGalleryIndex
-    ]?.description ||
-    hotelDisplay.name
-   "
-   class="h-full w-full cursor-pointer object-cover transition-all duration-300"
-   @click="
-    openHotelGallery(
-     hotelGalleryIndex
-    )
-   "
-  >
+     ]?.description ||
+     hotelDisplay.name
+    "
+    class="
+     absolute
+     inset-0
+     h-full
+     w-full
+     cursor-pointer
+     object-cover
+    "
+    @click="
+     openHotelGallery(
+      hotelGalleryIndex
+     )
+    "
+   >
+  </Transition>
 
 
   <!-- سایه پایین -->
@@ -199,7 +215,7 @@ mode="aside"
    v-if="galleryImages.length>1"
    type="button"
    class="absolute right-4 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm transition hover:bg-black/65"
-   @click.stop="prevHotelGallery"
+   @click.stop="handlePrevHotelGallery"
   >
    <i
     class="bi bi-chevron-right text-lg"
@@ -215,7 +231,7 @@ mode="aside"
    v-if="galleryImages.length>1"
    type="button"
    class="absolute left-4 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm transition hover:bg-black/65"
-   @click.stop="nextHotelGallery"
+   @click.stop="handleNextHotelGallery"
   >
    <i
     class="bi bi-chevron-left text-lg"
@@ -273,9 +289,7 @@ mode="aside"
      ?'w-7 bg-[var(--color-primary)]'
      :'w-2 bg-[var(--color-gray-300)] hover:bg-[var(--color-gray-400)]'
    "
-   @click="
-    hotelGalleryIndex=index
-   "
+  @click="selectHotelGallery(index)"
   ></button>
 
  </div>
@@ -403,7 +417,7 @@ mode="aside"
               <div
                 class="mt-5 flex flex-wrap gap-5 text-[11px] text-[var(--color-gray-500)]"
               >
-                <!-- <span
+                <span
                   v-if="hotelDisplay.checkInTime"
                   class="flex items-center gap-2"
                 >
@@ -411,7 +425,7 @@ mode="aside"
 
                   ساعت ورود:
                   {{hotelDisplay.checkInTime}}
-                </span> -->
+                </span>
 
                 <span
                   v-if="hotelDisplay.checkOutTime"
@@ -1498,6 +1512,16 @@ onUnmounted(() => {
     handleWindowScroll
   )
 })
+onMounted(() => {
+
+  startHotelGalleryAutoplay()
+
+})
+onUnmounted(() => {
+
+  stopHotelGalleryAutoplay()
+
+})
 const enabledHotelSortOptions=[
  'ارزان‌ترین',
  'گران‌ترین'
@@ -1806,6 +1830,125 @@ const roomSlideIndexes=ref({})
 const selectedRoomCounts=ref({})
 const hotelGalleryModalOpen=ref(false)
 const hotelGalleryIndex=ref(0)
+
+/*
+|--------------------------------------------------------------------------
+| Hotel Gallery Autoplay
+|--------------------------------------------------------------------------
+*/
+
+const HOTEL_GALLERY_AUTOPLAY_DELAY = 4000
+
+let hotelGalleryAutoplayTimer = null
+
+
+function stopHotelGalleryAutoplay(){
+
+  if(
+    hotelGalleryAutoplayTimer
+  ){
+
+    clearInterval(
+      hotelGalleryAutoplayTimer
+    )
+
+    hotelGalleryAutoplayTimer = null
+
+  }
+
+}
+
+
+function startHotelGalleryAutoplay(){
+
+  stopHotelGalleryAutoplay()
+
+
+  /*
+   * اگر فقط یک عکس داریم
+   * اسلایدر خودکار نیاز نیست
+   */
+  if(
+    galleryImages.value.length <= 1
+  ){
+    return
+  }
+
+
+  /*
+   * فقط در مرحله نمایش هتل
+   */
+  if(
+    currentStep.value !== 0
+  ){
+    return
+  }
+
+
+  /*
+   * وقتی Modal باز است
+   * اسلایدر اصلی حرکت نکند
+   */
+  if(
+    hotelGalleryModalOpen.value
+  ){
+    return
+  }
+
+
+  hotelGalleryAutoplayTimer =
+    setInterval(
+      () => {
+
+        nextHotelGallery()
+
+      },
+      HOTEL_GALLERY_AUTOPLAY_DELAY
+    )
+
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Manual Navigation
+|--------------------------------------------------------------------------
+*/
+
+function restartHotelGalleryAutoplay(){
+
+  stopHotelGalleryAutoplay()
+
+  startHotelGalleryAutoplay()
+
+}
+
+
+function handleNextHotelGallery(){
+
+  nextHotelGallery()
+
+  restartHotelGalleryAutoplay()
+
+}
+
+
+function handlePrevHotelGallery(){
+
+  prevHotelGallery()
+
+  restartHotelGalleryAutoplay()
+
+}
+
+
+function selectHotelGallery(index){
+
+  hotelGalleryIndex.value = index
+
+  restartHotelGalleryAutoplay()
+
+}
 // =========================
 // Route
 // =========================
@@ -4581,15 +4724,20 @@ function getFacilityTitle(facility){
 }
 function openHotelGallery(index=0){
 
-  hotelGalleryIndex.value=index
-  hotelGalleryModalOpen.value=true
+  hotelGalleryIndex.value = index
+
+  hotelGalleryModalOpen.value = true
+
+  stopHotelGalleryAutoplay()
 
 }
 
 
 function closeHotelGallery(){
 
-  hotelGalleryModalOpen.value=false
+  hotelGalleryModalOpen.value = false
+
+  startHotelGalleryAutoplay()
 
 }
 
@@ -5403,68 +5551,59 @@ function normalizeArrayResponse(
 }
 async function loadAhuanHotel(){
 
- /*
-  * همان اطلاعات جانبی فعلی آهوان
-  */
- await loadHotelExtras()
+  const rooms =
+    await searchAllHotelProviders({
+
+      hotelId:
+        hotelId.value,
+
+      checkIn:
+        checkIn.value,
+
+      checkOut:
+        checkOut.value
+
+    })
 
 
- /*
-  * Flow فعلی آهوان
-  */
- const rooms=
-  await searchAllHotelProviders({
-
-   hotelId:
-    hotelId.value,
-
-   checkIn:
-    checkIn.value,
-
-   checkOut:
-    checkOut.value
-
-  })
+  hotelRooms.value =
+    Array.isArray(rooms)
+      ? rooms
+      : []
 
 
- hotelRooms.value=
-  Array.isArray(rooms)
-   ?rooms
-   :[]
-
-
- hotelStore.setSearchRooms(
-  hotelRooms.value
- )
-
-
- const ahuanRoom=
-  hotelRooms.value.find(
-   room=>
-    String(
-     room?.provider||
-     ''
-    )
-     .toUpperCase()===
-    'AHUAN'
+  hotelStore.setSearchRooms(
+    hotelRooms.value
   )
 
 
- const providerHotel=
-  ahuanRoom
-   ?.meta
-   ?.hotel
+  const ahuanRoom =
+    hotelRooms.value.find(
+      room =>
+        String(
+          room?.provider ||
+          ''
+        )
+          .toUpperCase() ===
+        'AHUAN'
+    )
 
 
- if(providerHotel){
+  const providerHotel =
+    ahuanRoom
+      ?.meta
+      ?.hotel
 
-  hotelAvailability.value=
-   providerHotel
 
-  hotel.value=
-   providerHotel
+  if(providerHotel){
 
- }
+    hotelAvailability.value =
+      providerHotel
+
+    hotel.value =
+      providerHotel
+
+  }
 
 }
 function normalizeSnappFacilities(
@@ -6756,92 +6895,116 @@ watch(
  }
 )
 watch(
- [hotelId,checkIn,checkOut],
+  [hotelId, checkIn, checkOut],
 
- (
-  [
-   newHotelId,
-   newCheckIn,
-   newCheckOut
-  ],
+  async (
+    [
+      newHotelId,
+      newCheckIn,
+      newCheckOut
+    ],
 
-  oldValues
- )=>{
+    oldValues
+  ) => {
 
-  const[
-   oldHotelId,
-   oldCheckIn,
-   oldCheckOut
-  ]=
-   oldValues||[]
-
-
-  // =========================
-  // آیا جستجو تغییر کرده؟
-  // =========================
-
-  const hasPreviousSearch=
-   oldHotelId!==undefined
+    const [
+      oldHotelId,
+      oldCheckIn,
+      oldCheckOut
+    ] = oldValues || []
 
 
-  const searchChanged=
-   hasPreviousSearch &&
-   (
-    Number(newHotelId)!==
-     Number(oldHotelId) ||
-
-    String(newCheckIn||'')!==
-     String(oldCheckIn||'') ||
-
-    String(newCheckOut||'')!==
-     String(oldCheckOut||'')
-   )
+    const hasPreviousSearch =
+      oldHotelId !== undefined
 
 
-  // =========================
-  // جستجوی جدید =
-  // اتاق قبلی دیگر معتبر نیست
-  // =========================
+    const searchChanged =
+      hasPreviousSearch &&
+      (
+        Number(newHotelId) !==
+          Number(oldHotelId) ||
 
-  if(searchChanged){
+        String(newCheckIn || '') !==
+          String(oldCheckIn || '') ||
 
-   hotelStore.clearRooms()
+        String(newCheckOut || '') !==
+          String(oldCheckOut || '')
+      )
 
-   flightStore.setCurrentStep(0)
 
+    if(searchChanged){
+
+      hotelStore.clearRooms()
+
+      flightStore.setCurrentStep(0)
+
+    }
+
+
+    // =========================
+    // اول خود هتل باید معتبر باشد
+    // =========================
+
+    if(!newHotelId){
+
+      hotelAvailability.value = null
+      hotelRooms.value = []
+      roomsFallbackMode.value = false
+      roomsError.value = ''
+      roomsLoading.value = false
+
+      return
+    }
+
+
+    // =========================
+    // اطلاعات عمومی هتل آهوان
+    // مستقل از تاریخ
+    // =========================
+
+    if(
+      Number(newHotelId) === 3
+    ){
+      await loadHotelExtras()
+    }
+
+
+    // =========================
+    // اگر تاریخ نداریم فقط
+    // Availability را دریافت نکن
+    // =========================
+
+    if(
+      !newCheckIn ||
+      !newCheckOut
+    ){
+
+      hotelAvailability.value = null
+      hotelRooms.value = []
+
+      hotelStore.setSearchRooms(
+        []
+      )
+
+      roomsFallbackMode.value = false
+      roomsError.value = ''
+      roomsLoading.value = false
+
+      return
+    }
+
+
+    // =========================
+    // تاریخ کامل است:
+    // دریافت اتاق و Availability
+    // =========================
+
+    await loadHotelAvailability()
+
+  },
+  {
+    immediate: true
   }
-
-
-  // =========================
-  // اطلاعات ناقص
-  // =========================
-
-  if(
-   !newHotelId||
-   !newCheckIn||
-   !newCheckOut
-  ){
-
-   hotelAvailability.value=null
-   hotelRooms.value=[]
-   roomsFallbackMode.value=false
-   roomsError.value=''
-   roomsLoading.value=false
-
-   return
-  }
-
-
-  // =========================
-  // دریافت اتاق‌های جستجوی جدید
-  // =========================
-
-  loadHotelAvailability()
-
- },
- {
-  immediate:true
- }
 )
 function getRoomPriceDetails(room){
 
@@ -7281,9 +7444,120 @@ function decreaseRoom(room){
   }
 
 }
+watch(
+  [
+    () => galleryImages.value.length,
+    () => currentStep.value
+  ],
+  ([imagesLength]) => {
 
+    if(
+      imagesLength <= 0
+    ){
+      hotelGalleryIndex.value = 0
+      stopHotelGalleryAutoplay()
+      return
+    }
+
+    if(
+      hotelGalleryIndex.value >= imagesLength
+    ){
+      hotelGalleryIndex.value = 0
+    }
+
+    if(
+      imagesLength > 1 &&
+      currentStep.value === 0
+    ){
+
+      startHotelGalleryAutoplay()
+
+    }
+    else{
+
+      stopHotelGalleryAutoplay()
+
+    }
+
+  }
+)
 </script>
 
 
 <style>
+/*
+|--------------------------------------------------------------------------
+| Hotel Gallery Image Transition
+|--------------------------------------------------------------------------
+*/
+
+.hotel-gallery-image-enter-active,
+.hotel-gallery-image-leave-active{
+ transition:
+  opacity .65s ease,
+  transform .8s cubic-bezier(.22,1,.36,1),
+  filter .55s ease;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| New Image
+|--------------------------------------------------------------------------
+*/
+
+.hotel-gallery-image-enter-from{
+ opacity:0;
+ transform:scale(1.04);
+ filter:blur(3px);
+}
+
+.hotel-gallery-image-enter-to{
+ opacity:1;
+ transform:scale(1);
+ filter:blur(0);
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Old Image
+|--------------------------------------------------------------------------
+*/
+
+.hotel-gallery-image-leave-from{
+ opacity:1;
+ transform:scale(1);
+ filter:blur(0);
+}
+
+.hotel-gallery-image-leave-to{
+ opacity:0;
+ transform:scale(.985);
+ filter:blur(2px);
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Reduced Motion
+|--------------------------------------------------------------------------
+*/
+
+@media (prefers-reduced-motion:reduce){
+
+ .hotel-gallery-image-enter-active,
+ .hotel-gallery-image-leave-active{
+  transition:opacity .2s ease;
+ }
+
+ .hotel-gallery-image-enter-from,
+ .hotel-gallery-image-enter-to,
+ .hotel-gallery-image-leave-from,
+ .hotel-gallery-image-leave-to{
+  transform:none;
+  filter:none;
+ }
+
+}
 </style>
