@@ -6004,7 +6004,236 @@ function getAirportLabel(code){
 
 }
 
+function translateNiraCancellationRule(text) {
 
+  if (!text) {
+    return ''
+  }
+
+  let value = String(text)
+    .trim()
+    .replace(/\s+/g, ' ')
+
+  /*
+   * پاکسازی اولیه
+   */
+  value = value
+    .replace(/\s*\(\s*/g, '(')
+    .replace(/\s*\)\s*/g, ')')
+    .trim()
+
+
+  /*
+   * =========================================
+   * Domestic BUSINESS
+   * FROM 3 HOURS BEFORE DEPARTURE (NOSHOW)
+   * =========================================
+   *
+   * Domestic BUSINESS(FROM 3 HOURS BEFORE DEPARTURE(NOSHOW)
+   */
+
+  if (
+    /Domestic\s+BUSINESS.*FROM\s+3\s+HOURS?\s+BEFORE\s+DEPARTURE.*NO\s*SHOW|Domestic\s+BUSINESS.*FROM\s+3\s+HOURS?\s+BEFORE\s+DEPARTURE.*NOSHOW/i
+      .test(value)
+  ) {
+    return (
+      'پرواز داخلی - کلاس بیزینس: ' +
+      'از ۳ ساعت قبل از پرواز ' +
+      '(عدم حضور مسافر)'
+    )
+  }
+
+
+  /*
+   * =========================================
+   * Domestic BUSINESS
+   * Any time up to 12 P.M 1 day before departure
+   * =========================================
+   */
+
+  if (
+    /Domestic\s+BUSINESS.*Any\s+time\s+up\s+to\s+12\s*P\.?\s*M\.?\s+1\s+day\s+before\s+departure/i
+      .test(value)
+  ) {
+    return (
+      'پرواز داخلی - کلاس بیزینس: ' +
+      'تا ساعت ۱۲ ظهر یک روز قبل از پرواز'
+    )
+  }
+
+
+  /*
+   * =========================================
+   * From 12 P.M 1 day before departure
+   * up to 3 hours before departure (Dom)
+   * =========================================
+   */
+
+  if (
+    /From\s+12\s*P\.?\s*M\.?\s+1\s+day\s+before\s+departure\s+up\s+to\s+3\s+hours?\s+before\s+departure/i
+      .test(value)
+  ) {
+    return (
+      'از ساعت ۱۲ ظهر یک روز قبل از پرواز ' +
+      'تا ۳ ساعت قبل از پرواز'
+    )
+  }
+
+
+  /*
+   * =========================================
+   * From 3 hours before departure
+   * up to departure (Noshow Dom)
+   * =========================================
+   */
+
+  if (
+    /From\s+3\s+hours?\s+before\s+departure\s+up\s+to\s+departure/i
+      .test(value)
+  ) {
+    return (
+      'از ۳ ساعت قبل از پرواز ' +
+      'تا زمان پرواز ' +
+      '(عدم حضور مسافر)'
+    )
+  }
+
+
+  /*
+   * =========================================
+   * Any time up to 12 P.M
+   * 1 day before departure (Dom)
+   * =========================================
+   */
+
+  if (
+    /Any\s+time\s+up\s+to\s+12\s*P\.?\s*M\.?\s+1\s+day\s+before\s+departure/i
+      .test(value)
+  ) {
+    return (
+      'تا ساعت ۱۲ ظهر یک روز قبل از پرواز'
+    )
+  }
+
+
+  /*
+   * =========================================
+   * fallback
+   * برای حالت‌های احتمالی دیگر NIRA
+   * =========================================
+   */
+
+  value = value
+
+    // نوع پرواز / کلاس
+    .replace(
+      /Domestic\s+BUSINESS/gi,
+      'پرواز داخلی - کلاس بیزینس'
+    )
+
+    .replace(
+      /Domestic/gi,
+      'پرواز داخلی'
+    )
+
+    .replace(
+      /\bBUSINESS\b/gi,
+      'کلاس بیزینس'
+    )
+
+
+    // No Show
+    .replace(
+      /NO[\s-]?SHOW/gi,
+      'عدم حضور مسافر'
+    )
+
+    .replace(
+      /NOSHOW/gi,
+      'عدم حضور مسافر'
+    )
+
+
+    // محدوده زمانی
+    .replace(
+      /Any\s+time\s+up\s+to/gi,
+      'تا'
+    )
+
+    .replace(
+      /up\s+to/gi,
+      'تا'
+    )
+
+    .replace(
+      /\bFrom\b/gi,
+      'از'
+    )
+
+
+    // زمان
+    .replace(
+      /12\s*P\.?\s*M\.?/gi,
+      'ساعت ۱۲ ظهر'
+    )
+
+    .replace(
+      /12\s*A\.?\s*M\.?/gi,
+      'ساعت ۱۲ نیمه‌شب'
+    )
+
+    .replace(
+      /1\s+day/gi,
+      'یک روز'
+    )
+
+    .replace(
+      /(\d+)\s+hours?/gi,
+      '$1 ساعت'
+    )
+
+
+    // پرواز
+    .replace(
+      /before\s+departure/gi,
+      'قبل از پرواز'
+    )
+
+    .replace(
+      /\bdeparture\b/gi,
+      'زمان پرواز'
+    )
+
+
+    // Dom
+    .replace(
+      /\bDom\b/gi,
+      'پرواز داخلی'
+    )
+
+
+  /*
+   * اعداد انگلیسی → فارسی
+   */
+  value = value
+    .replace(/0/g, '۰')
+    .replace(/1/g, '۱')
+    .replace(/2/g, '۲')
+    .replace(/3/g, '۳')
+    .replace(/4/g, '۴')
+    .replace(/5/g, '۵')
+    .replace(/6/g, '۶')
+    .replace(/7/g, '۷')
+    .replace(/8/g, '۸')
+    .replace(/9/g, '۹')
+
+
+  return value
+    .replace(/\s+/g, ' ')
+    .replace(/\(\s+/g, '(')
+    .replace(/\s+\)/g, ')')
+    .trim()
+}
 
 
 
@@ -6014,14 +6243,20 @@ function getRuleDescription(rule) {
 
   if (isNira.value) {
 
-    return rule.title || 'شرایط جریمه'
+    return translateNiraCancellationRule(
+      rule.title ||
+      'شرایط جریمه'
+    )
 
   }
 
-
-
-  return rule.description || rule.title || rule.rule || rule.text || 'شرایط جریمه'
-
+  return (
+    rule.description ||
+    rule.title ||
+    rule.rule ||
+    rule.text ||
+    'شرایط جریمه'
+  )
 }
 
 
