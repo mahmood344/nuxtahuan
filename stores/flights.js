@@ -437,7 +437,7 @@ airportLoading:{},
         name: 'پارس‌ایر',
         credentials: { username: 'THR226.WS', password: 'Ahouvan@2026' },
         logo: '/imgs/flight/airlines/parsair1.png',
-        website:'https://parsair.ir/'
+        website:'https://nrs.parsair.ir/'
       }
     ],
 airlineIdMap : {

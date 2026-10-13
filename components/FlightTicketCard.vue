@@ -6010,17 +6010,147 @@ function translateNiraCancellationRule(text) {
     return ''
   }
 
-  let value = String(text)
-    .trim()
-    .replace(/\s+/g, ' ')
+  /*
+   * اعداد فارسی و عربی را برای Regex
+   * به عدد انگلیسی تبدیل می‌کنیم.
+   */
+  function toEnglishDigits(value) {
+
+    return String(value || '')
+      .replace(/[۰-۹]/g, digit =>
+        '۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)
+      )
+      .replace(/[٠-٩]/g, digit =>
+        '٠١٢٣٤٥٦٧٨٩'.indexOf(digit)
+      )
+  }
+
+
+  function toPersianDigits(value) {
+
+    return String(value || '')
+      .replace(/\d/g, digit =>
+        '۰۱۲۳۴۵۶۷۸۹'[Number(digit)]
+      )
+  }
+
+
+  let original =
+    String(text)
+      .trim()
+      .replace(/\s+/g, ' ')
+
 
   /*
-   * پاکسازی اولیه
+   * برای Match کردن یک نسخه Normalize شده می‌سازیم.
+   * متن اصلی تغییر نمی‌کند.
    */
-  value = value
-    .replace(/\s*\(\s*/g, '(')
-    .replace(/\s*\)\s*/g, ')')
-    .trim()
+  let value =
+    toEnglishDigits(original)
+      .replace(/یک\s*روزS?/gi, '1 DAYS')
+      .replace(/(\d+)\s*روزS?/gi, '$1 DAYS')
+      .replace(/(\d+)\s*ساعت/gi, '$1 HOURS')
+      .replace(
+        /عدم\s*حضور\s*مسافر/gi,
+        'NOSHOW'
+      )
+      .replace(
+        /\bB\.?\s*D\.?\b/gi,
+        'BEFORE DEPARTURE'
+      )
+      .replace(/\s+/g, ' ')
+      .trim()
+
+
+  /*
+   * =========================================
+   * REFUND BEFORE 10 DAYS
+   * =========================================
+   */
+
+  let match =
+    value.match(
+      /REFUND\s+BEFORE\s+(\d+)\s+DAYS?/i
+    )
+
+  if (match) {
+
+    return (
+      `استرداد قبل از ${toPersianDigits(match[1])} ` +
+      `روز مانده به پرواز`
+    )
+
+  }
+
+
+  /*
+   * =========================================
+   * REFUND 10 - 7 DAYS
+   * REFUND 7 - 3 DAYS
+   * REFUND 3 - 1 DAYS
+   * =========================================
+   */
+
+  match =
+    value.match(
+      /REFUND\s+(\d+)\s*-\s*(\d+)\s+DAYS?/i
+    )
+
+  if (match) {
+
+    return (
+      `استرداد از ${toPersianDigits(match[1])} ` +
+      `روز تا ${toPersianDigits(match[2])} ` +
+      `روز قبل از پرواز`
+    )
+
+  }
+
+
+  /*
+   * =========================================
+   * REFUND 1 DAYS - 6 HOURS
+   * =========================================
+   */
+
+  match =
+    value.match(
+      /REFUND\s+(\d+)\s+DAYS?\s*-\s*(\d+)\s+HOURS?/i
+    )
+
+  if (match) {
+
+    return (
+      `استرداد از ${toPersianDigits(match[1])} ` +
+      `روز تا ${toPersianDigits(match[2])} ` +
+      `ساعت قبل از پرواز`
+    )
+
+  }
+
+
+  /*
+   * =========================================
+   * NOSHOW 6 HOURS B.D
+   *
+   * بعد از Normalize:
+   * NOSHOW 6 HOURS BEFORE DEPARTURE
+   * =========================================
+   */
+
+  match =
+    value.match(
+      /NOSHOW\s+(\d+)\s+HOURS?\s+BEFORE\s+DEPARTURE/i
+    )
+
+  if (match) {
+
+    return (
+      `عدم حضور مسافر از ${toPersianDigits(match[1])} ` +
+      `ساعت قبل از پرواز`
+    )
+
+  }
 
 
   /*
@@ -6028,111 +6158,117 @@ function translateNiraCancellationRule(text) {
    * Domestic BUSINESS
    * FROM 3 HOURS BEFORE DEPARTURE (NOSHOW)
    * =========================================
-   *
-   * Domestic BUSINESS(FROM 3 HOURS BEFORE DEPARTURE(NOSHOW)
    */
 
   if (
-    /Domestic\s+BUSINESS.*FROM\s+3\s+HOURS?\s+BEFORE\s+DEPARTURE.*NO\s*SHOW|Domestic\s+BUSINESS.*FROM\s+3\s+HOURS?\s+BEFORE\s+DEPARTURE.*NOSHOW/i
+    /DOMESTIC\s+BUSINESS.*FROM\s+3\s+HOURS?\s+BEFORE\s+DEPARTURE.*NOSHOW/i
       .test(value)
   ) {
+
     return (
       'پرواز داخلی - کلاس بیزینس: ' +
       'از ۳ ساعت قبل از پرواز ' +
       '(عدم حضور مسافر)'
     )
+
   }
 
 
   /*
    * =========================================
    * Domestic BUSINESS
-   * Any time up to 12 P.M 1 day before departure
+   * Any time up to 12P.M 1 day before departure
    * =========================================
    */
 
   if (
-    /Domestic\s+BUSINESS.*Any\s+time\s+up\s+to\s+12\s*P\.?\s*M\.?\s+1\s+day\s+before\s+departure/i
+    /DOMESTIC\s+BUSINESS.*ANY\s+TIME\s+UP\s+TO\s+12\s*P\.?\s*M\.?\s+1\s+DAYS?\s+BEFORE\s+DEPARTURE/i
       .test(value)
   ) {
+
     return (
       'پرواز داخلی - کلاس بیزینس: ' +
       'تا ساعت ۱۲ ظهر یک روز قبل از پرواز'
     )
+
   }
 
 
   /*
    * =========================================
-   * From 12 P.M 1 day before departure
-   * up to 3 hours before departure (Dom)
+   * FROM 12P.M 1 DAY BEFORE DEPARTURE
+   * UP TO 3 HOURS BEFORE DEPARTURE
    * =========================================
    */
 
   if (
-    /From\s+12\s*P\.?\s*M\.?\s+1\s+day\s+before\s+departure\s+up\s+to\s+3\s+hours?\s+before\s+departure/i
+    /FROM\s+12\s*P\.?\s*M\.?\s+1\s+DAYS?\s+BEFORE\s+DEPARTURE\s+UP\s+TO\s+3\s+HOURS?\s+BEFORE\s+DEPARTURE/i
       .test(value)
   ) {
+
     return (
       'از ساعت ۱۲ ظهر یک روز قبل از پرواز ' +
       'تا ۳ ساعت قبل از پرواز'
     )
+
   }
 
 
   /*
    * =========================================
-   * From 3 hours before departure
-   * up to departure (Noshow Dom)
+   * FROM 3 HOURS BEFORE DEPARTURE
+   * UP TO DEPARTURE (NOSHOW DOM)
    * =========================================
    */
 
   if (
-    /From\s+3\s+hours?\s+before\s+departure\s+up\s+to\s+departure/i
+    /FROM\s+3\s+HOURS?\s+BEFORE\s+DEPARTURE\s+UP\s+TO\s+DEPARTURE/i
       .test(value)
   ) {
+
     return (
       'از ۳ ساعت قبل از پرواز ' +
       'تا زمان پرواز ' +
       '(عدم حضور مسافر)'
     )
+
   }
 
 
   /*
    * =========================================
-   * Any time up to 12 P.M
-   * 1 day before departure (Dom)
+   * ANY TIME UP TO 12P.M
+   * 1 DAY BEFORE DEPARTURE
    * =========================================
    */
 
   if (
-    /Any\s+time\s+up\s+to\s+12\s*P\.?\s*M\.?\s+1\s+day\s+before\s+departure/i
+    /ANY\s+TIME\s+UP\s+TO\s+12\s*P\.?\s*M\.?\s+1\s+DAYS?\s+BEFORE\s+DEPARTURE/i
       .test(value)
   ) {
+
     return (
       'تا ساعت ۱۲ ظهر یک روز قبل از پرواز'
     )
+
   }
 
 
   /*
    * =========================================
-   * fallback
-   * برای حالت‌های احتمالی دیگر NIRA
+   * Fallback فقط برای NIRA
    * =========================================
    */
 
-  value = value
+  let result = value
 
-    // نوع پرواز / کلاس
     .replace(
-      /Domestic\s+BUSINESS/gi,
+      /DOMESTIC\s+BUSINESS/gi,
       'پرواز داخلی - کلاس بیزینس'
     )
 
     .replace(
-      /Domestic/gi,
+      /\bDOMESTIC\b/gi,
       'پرواز داخلی'
     )
 
@@ -6141,37 +6277,41 @@ function translateNiraCancellationRule(text) {
       'کلاس بیزینس'
     )
 
-
-    // No Show
     .replace(
-      /NO[\s-]?SHOW/gi,
+      /\bREFUND\b/gi,
+      'استرداد'
+    )
+
+    .replace(
+      /NOSHOW|NO[\s-]?SHOW/gi,
       'عدم حضور مسافر'
     )
 
     .replace(
-      /NOSHOW/gi,
-      'عدم حضور مسافر'
-    )
-
-
-    // محدوده زمانی
-    .replace(
-      /Any\s+time\s+up\s+to/gi,
+      /ANY\s+TIME\s+UP\s+TO/gi,
       'تا'
     )
 
     .replace(
-      /up\s+to/gi,
+      /UP\s+TO/gi,
       'تا'
     )
 
     .replace(
-      /\bFrom\b/gi,
+      /\bFROM\b/gi,
       'از'
     )
 
+    .replace(
+      /BEFORE\s+DEPARTURE/gi,
+      'قبل از پرواز'
+    )
 
-    // زمان
+    .replace(
+      /\bDEPARTURE\b/gi,
+      'زمان پرواز'
+    )
+
     .replace(
       /12\s*P\.?\s*M\.?/gi,
       'ساعت ۱۲ ظهر'
@@ -6183,55 +6323,23 @@ function translateNiraCancellationRule(text) {
     )
 
     .replace(
-      /1\s+day/gi,
-      'یک روز'
+      /(\d+)\s+DAYS?/gi,
+      '$1 روز'
     )
 
     .replace(
-      /(\d+)\s+hours?/gi,
+      /(\d+)\s+HOURS?/gi,
       '$1 ساعت'
     )
 
-
-    // پرواز
     .replace(
-      /before\s+departure/gi,
-      'قبل از پرواز'
-    )
-
-    .replace(
-      /\bdeparture\b/gi,
-      'زمان پرواز'
+      /\bDOM\b/gi,
+      'داخلی'
     )
 
 
-    // Dom
-    .replace(
-      /\bDom\b/gi,
-      'پرواز داخلی'
-    )
-
-
-  /*
-   * اعداد انگلیسی → فارسی
-   */
-  value = value
-    .replace(/0/g, '۰')
-    .replace(/1/g, '۱')
-    .replace(/2/g, '۲')
-    .replace(/3/g, '۳')
-    .replace(/4/g, '۴')
-    .replace(/5/g, '۵')
-    .replace(/6/g, '۶')
-    .replace(/7/g, '۷')
-    .replace(/8/g, '۸')
-    .replace(/9/g, '۹')
-
-
-  return value
+  return toPersianDigits(result)
     .replace(/\s+/g, ' ')
-    .replace(/\(\s+/g, '(')
-    .replace(/\s+\)/g, ')')
     .trim()
 }
 
