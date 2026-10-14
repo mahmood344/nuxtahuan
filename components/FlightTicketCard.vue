@@ -5025,7 +5025,13 @@ const partoCabinCodeLabels={
 
 
 function getSegmentCabinLabel(segment){
-
+if (isNira.value) {
+  return (
+    segment?.cabinLabel ||
+    props.flight.cabinLabel ||
+    'نامشخص'
+  )
+}
   if(isParto.value){
 
     return(
@@ -5204,64 +5210,36 @@ function getCabinClassLabel({
 
 }
 
-const cabinLabel=computed(()=>{
-
-  if(isParto.value){
-
-    const firstSegment=
-
-      Array.isArray(
-
-        props.flight.segments
-
-      )
-
-        ?props.flight.segments[0]
-
-        :null
-
-
-
-    return getSegmentCabinLabel(
-
-      firstSegment||props.flight
-
-    )
-
+const cabinLabel = computed(() => {
+  if (isNira.value) {
+    return props.flight.cabinLabel || 'نامشخص'
   }
 
+  if (isParto.value) {
+    const firstSegment =
+      Array.isArray(props.flight.segments)
+        ? props.flight.segments[0]
+        : null
 
+    return getSegmentCabinLabel(
+      firstSegment || props.flight
+    )
+  }
 
   return getCabinClassLabel({
-
     airlineCode:
-
-      props.flight.airline||
-
-      props.flight.airlineCode||
-
+      props.flight.airline ||
+      props.flight.airlineCode ||
       props.flight.carrierCode,
 
-
-
     bookingClass:
-
-      props.flight.bookingClass||
-
-      props.flight.rbd||
-
-      props.flight.cabinClass||
-
+      props.flight.bookingClass ||
+      props.flight.rbd ||
+      props.flight.cabinClass ||
       props.flight.flightClass,
 
-
-
-    cabinType:
-
-      props.flight.cabinType
-
+    cabinType: props.flight.cabinType
   })
-
 })
 
 

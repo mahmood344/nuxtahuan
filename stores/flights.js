@@ -1,8 +1,51 @@
+function buildNiraFlightClassMap(items) {
+  const result = {}
+
+  for (const airline of items || []) {
+    const airlineCode = String(
+      airline?.airlineCode || ''
+    ).trim().toUpperCase()
+
+    if (!airlineCode) continue
+
+    result[airlineCode] = {}
+
+    const classes = Array.isArray(airline?.flightClasses)
+      ? airline.flightClasses
+      : []
+
+    for (const item of classes) {
+      const flightClassCode = String(
+        item?.flightClassCode || ''
+      ).trim().toUpperCase()
+
+      if (!flightClassCode) continue
+
+      result[airlineCode][flightClassCode] = {
+        airlineCode,
+        airlineName: airline.airlineName || '',
+        flightClassCode,
+        cabinClassCode: String(
+          item?.cabinClassCode || ''
+        ).trim().toUpperCase(),
+        cabinType: String(
+          item?.cabinType || ''
+        ).trim()
+      }
+    }
+  }
+
+  return result
+}
+const NIRA_FLIGHT_CLASS_MAP =
+  buildNiraFlightClassMap(NIRA_FLIGHT_CLASSES)        
 import { defineStore } from 'pinia'
 import { searchAllProviders } from '~/services/searchFlights.js'
-
+import { NIRA_FLIGHT_CLASSES } from './niraFlightClasses.js'
 export const useFlightStore = defineStore('flights', {
   state: () => ({
+     niraFlightClasses: NIRA_FLIGHT_CLASSES,
+    niraFlightClassMap: NIRA_FLIGHT_CLASS_MAP,
     popularCities: [
       {
         id: 1,
@@ -504,6 +547,39 @@ airportLoading:{},
   }),
 
   getters: {
+    getNiraFlightClass: (state) => (airlineCode, flightClassCode) => {
+  const airline = String(airlineCode || '')
+    .trim()
+    .toUpperCase()
+
+  const originalClass = String(flightClassCode || '')
+    .trim()
+    .toUpperCase()
+
+  if (!airline || !originalClass) {
+    return null
+  }
+
+  // استثنای ماهان در Availability نیرا
+  // W برای تشخیص کابین به رکورد P نگاشت می‌شود
+  const lookupClass =
+    airline === 'W5' && originalClass === 'W'
+      ? 'P'
+      : originalClass
+
+  const classInfo =
+    state.niraFlightClassMap?.[airline]?.[lookupClass]
+
+  if (!classInfo) {
+    return null
+  }
+
+  return {
+    ...classInfo,
+    flightClassCode: originalClass,
+    lookupClassCode: lookupClass
+  }
+},
     getAirportByCode:(state)=>(code)=>{
   return state.airportCache[
     String(code||'')

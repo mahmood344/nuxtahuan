@@ -147,7 +147,49 @@
 import{useFlightStore}from'../../stores/flights.js'
 
 const BASE_URL='https://api.ahuan.ir/api'
+const NIRA_CABIN_LABELS = {
+  Economy: 'اکونومی',
+  PremiumEconomy: 'پریمیوم اکونومی',
+  Business: 'بیزینس',
+  PremiumBusiness: 'پریمیوم بیزینس',
+  First: 'فرست کلاس',
+  PremiumFirst: 'پریمیوم فرست کلاس'
+}
+function resolveNiraFlightClass(flightStore, airlineCode, rbd) {
+  const normalizedRbd = String(rbd || '')
+    .trim()
+    .toUpperCase()
 
+  const classInfo = flightStore.getNiraFlightClass(
+    airlineCode,
+    normalizedRbd
+  )
+
+  if (!classInfo) {
+    return {
+      flightClassCode: normalizedRbd,
+      cabinClassCode: '',
+      cabinTypeName: '',
+      cabinLabel: 'نامشخص',
+      cabinKnown: false
+    }
+  }
+
+  const cabinTypeName = String(
+    classInfo.cabinType || ''
+  ).trim()
+
+  const cabinLabel =
+    NIRA_CABIN_LABELS[cabinTypeName] || 'نامشخص'
+
+  return {
+    flightClassCode: normalizedRbd,
+    cabinClassCode: classInfo.cabinClassCode || '',
+    cabinTypeName,
+    cabinLabel,
+    cabinKnown: cabinLabel !== 'نامشخص'
+  }
+}
 function normalizeNiraResponse(raw){
   if(!raw)return null
   if(typeof raw==='object')return raw
@@ -358,7 +400,8 @@ function mapNiraFlightToStandardFlights(
   flight,
   index,
   airlineCode,
-  params
+  params,
+  flightStore
 ){
   const flightAirline=
     flight?.Airline||
@@ -413,7 +456,11 @@ function mapNiraFlightToStandardFlights(
 
     const refundStatus=
       refundMap.get(rbd)||''
-
+const cabinInfo = resolveNiraFlightClass(
+  flightStore,
+  flightAirline,
+  rbd
+)
     const hasPrice=
       priceInfo.price>0
 
@@ -466,7 +513,10 @@ function mapNiraFlightToStandardFlights(
 
       bookingClass:rbd,
       rbd,
-
+cabinClassCode: cabinInfo.cabinClassCode,
+cabinTypeName: cabinInfo.cabinTypeName,
+cabinLabel: cabinInfo.cabinLabel,
+cabinKnown: cabinInfo.cabinKnown,
       priceFrom:
         priceInfo.price,
 
@@ -582,12 +632,13 @@ export async function searchNiraFlightForAirline(
     const allTickets=
       availableFlights.flatMap(
         (flight,index)=>
-          mapNiraFlightToStandardFlights(
-            flight,
-            index,
-            airlineCode,
-            params
-          )
+        mapNiraFlightToStandardFlights(
+  flight,
+  index,
+  airlineCode,
+  params,
+  flightStore
+)
       )
 
     return allTickets.sort((a,b)=>{
