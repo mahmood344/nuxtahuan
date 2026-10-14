@@ -48,56 +48,57 @@
 
     <!-- فیلتر نوع کابین -->
     <div>
-      <h3 class="mb-4 text-sm font-bold text-gray-800">
+      <h3 v-if="Object.values(availableCabins).some(Boolean)" class="mb-4 text-sm font-bold text-gray-800">
         نوع بلیت
       </h3>
 
-      <div class="space-y-3 text-[13px]">
+      
+<div class="space-y-3 text-[13px]">
   <UiBaseCheckbox
+    v-if="availableCabins.economy"
     v-model="economySelected"
     label="اکونومی"
-    :disabled="!availableCabins.economy"
   />
 
   <UiBaseCheckbox
+    v-if="availableCabins.premiumEconomy"
     v-model="premiumEconomySelected"
     label="پریمیوم اکونومی"
-    :disabled="!availableCabins.premiumEconomy"
   />
 
   <UiBaseCheckbox
+    v-if="availableCabins.business"
     v-model="businessSelected"
     label="بیزینس"
-    :disabled="!availableCabins.business"
   />
 
   <UiBaseCheckbox
+    v-if="availableCabins.premiumBusiness"
     v-model="premiumBusinessSelected"
     label="پریمیوم بیزینس"
-    :disabled="!availableCabins.premiumBusiness"
   />
 
   <UiBaseCheckbox
+    v-if="availableCabins.first"
     v-model="firstSelected"
     label="فرست کلاس"
-    :disabled="!availableCabins.first"
   />
 
   <UiBaseCheckbox
+    v-if="availableCabins.premiumFirst"
     v-model="premiumFirstSelected"
     label="پریمیوم فرست کلاس"
-    :disabled="!availableCabins.premiumFirst"
   />
 </div>
 
-      <p
+
+     <p
   v-if="
-    !economySelected&&
-    !premiumEconomySelected&&
-    !businessSelected&&
-    !premiumBusinessSelected&&
-    !firstSelected&&
-    !premiumFirstSelected
+    Object.entries(availableCabins).some(
+      ([key, exists]) =>
+        exists && filters[key] !== false
+    ) === false &&
+    Object.values(availableCabins).some(Boolean)
   "
   class="mt-3 text-xs font-bold text-red-500"
 >
@@ -534,7 +535,22 @@ function getFlightCabinType(flight){
   const provider=normalizeCode(
     flight?.provider
   )
+if (provider === 'NIRA') {
+    const cabinTypeName = normalizeCode(
+      flight?.cabinTypeName
+    )
 
+    const niraCabinTypes = {
+      ECONOMY: 'economy',
+      PREMIUMECONOMY: 'premiumEconomy',
+      BUSINESS: 'business',
+      PREMIUMBUSINESS: 'premiumBusiness',
+      FIRST: 'first',
+      PREMIUMFIRST: 'premiumFirst'
+    }
+
+    return niraCabinTypes[cabinTypeName] || null
+  }
   /*
    * PARTO
    */
