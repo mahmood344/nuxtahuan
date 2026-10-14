@@ -807,7 +807,27 @@ function getFlightCabinType(flight){
   const provider=normalizeCabinCode(
     flight?.provider
   )
+if (provider === 'NIRA') {
+    const cabinTypeName = normalizeCabinCode(
+      flight?.cabinTypeName
+    )
 
+    const cabinTypes = {
+      ECONOMY: 'economy',
+      PREMIUMECONOMY: 'premiumEconomy',
+      BUSINESS: 'business',
+      PREMIUMBUSINESS: 'premiumBusiness',
+      FIRST: 'first',
+      PREMIUMFIRST: 'premiumFirst'
+    }
+console.log('[NIRA CABIN FILTER]', {
+  airline: flight.airline,
+  rbd: flight.rbd,
+  cabinTypeName: flight.cabinTypeName,
+  filterKey: cabinTypes[cabinTypeName] || null
+})
+    return cabinTypes[cabinTypeName] || null
+  }
   /*
    * PARTO
    */
@@ -1167,8 +1187,26 @@ const buildSearchPayload = ({
   }
 }
 
+
 const performSearch = async (payload) => {
-  if (!payload?.from || !payload?.to || !payload?.departureDate) return
+  if (!payload?.from || !payload?.to || !payload?.departureDate) {
+    return
+  }
+
+  // ریست فیلترهای کلاس پروازی قبل از سرچ جدید
+  activeFilters.value = {
+    ...activeFilters.value,
+
+    economy: true,
+    premiumEconomy: true,
+    business: true,
+    premiumBusiness: true,
+    first: true,
+    premiumFirst: true,
+
+    airlines: [],
+    departureTimeRange: null
+  }
 
   searchStarted.value = false
 
@@ -1178,6 +1216,7 @@ const performSearch = async (payload) => {
     searchStarted.value = true
   }
 }
+
 
 // const handleDateChange = async (dateObj) => {
 //   const newDate = dateObj?.fullDate
