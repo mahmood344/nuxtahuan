@@ -20,7 +20,7 @@
   >
    <!-- Desktop -->
    <img
-    src="/imgs/hotel/هدر سایت.jpg"
+    src="/imgs/hotel/بنر اصلی.jpg"
     alt="هتل بزرگ آهوان"
     class="
      hidden
@@ -35,7 +35,7 @@
 
    <!-- Mobile -->
    <img
-    src="/imgs/hotel/هدر سایت موبایل.jpg"
+    src="/imgs/hotel/مبایل اصلی.jpg"
     alt="هتل بزرگ آهوان"
     class="
      block
