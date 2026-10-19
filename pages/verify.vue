@@ -42,7 +42,7 @@
             {{
               partoWaiting
                 ? 'صدور بلیت در حال انجام است...'
-                : 'در حال بررسی وضعیت پرداخت و صدور بلیت...'
+                : 'در حال بررسی پرداخت و نهایی‌سازی رزرو...'
             }}
           </p>
 
@@ -111,7 +111,7 @@
           </div>
 
           <h1 class="mb-2 text-xl font-bold text-orange-600">
-            خطا در صدور بلیت
+            {{ isHotelBooking ? 'خطا در تأیید رزرو هتل' : 'خطا در صدور بلیت' }}
           </h1>
 
           <p class="mb-4 text-gray-700">
@@ -161,6 +161,12 @@
       : 'بلیت شما صادر شده و آماده دریافت است.'
   }}
 </p>
+<!-- هشدار تسویه سفرکارت؛ رزرو هتل همچنان موفق است -->
+<div v-if="isHotelBooking && hotelSettlementWarning" role="alert" class="mb-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-right text-sm leading-7 text-amber-900">
+  <strong>رزرو هتل شما تأیید شده است.</strong>
+  <p>{{ hotelSettlementWarning }}</p>
+  <p>لطفاً رزرو یا پرداخت را تکرار نکنید و برای پیگیری تسویه با پشتیبانی آهوان تماس بگیرید.</p>
+</div>
 <!-- اطلاعات تراکنش بانکی -->
 <div
   v-if="successfulBankDetails"
@@ -433,6 +439,7 @@ const verifyActiveStep = computed(() => {
 const route = useRoute()
 const loading = ref(true)
 const errorMessage = ref('')
+const hotelSettlementWarning = ref('')
 const paymentInfo = ref<PaymentSession | null>(null)
 const contractData = ref<any>(null)
 const partoWaiting=ref(false)
@@ -3364,6 +3371,133 @@ const refundHotelBankPayment=async(
  )
 }
 
+// SnappTrip confirmation: keep provider result on the matching ContractHotel.
+type SnappTripConfirmState = 'confirmed' | 'failed' | 'pending_verification'
+
+const isSnappTripContract = (contract: any): boolean =>
+  Array.isArray(contract?.contractHotels) &&
+  contract.contractHotels.some((hotel: any) =>
+    String(hotel?.source || '').trim().toUpperCase() === 'SNAPPTRIP'
+  )
+
+const readSnappTripResult = (hotel: any): any | null => {
+  try {
+    const parsed = JSON.parse(String(hotel?.description || ''))
+    return parsed?.provider === 'SNAPPTRIP' ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+const getSnappTripErrorMessage = (error: any): string =>
+  String(
+    error?.data?.error?.message ||
+    error?.data?.message ||
+    error?.data?.title ||
+    error?.message ||
+    'تأیید رزرو اسنپ‌تریپ ناموفق بود.'
+  )
+
+const confirmSnappTripBooking = async (reservationCode: string): Promise<any> => {
+  return await $fetch<any>(
+    `https://api.ahuan.ir/api/SnappTrip/booking/${encodeURIComponent(reservationCode)}/confirm`,
+    { method: 'POST', retry: 0 }
+  )
+}
+
+const processSnappTripConfirm = async (contract: any): Promise<void> => {
+  const hotels: any[] = (contract?.contractHotels || []).filter(
+    (hotel: any) => String(hotel?.source || '').trim().toUpperCase() === 'SNAPPTRIP'
+  )
+  if (hotels.length !== 1) {
+    throw new Error('تأیید اسنپ‌تریپ برای قرارداد با دقیقاً یک رزرو اسنپ‌تریپ پشتیبانی می‌شود.')
+  }
+
+  const hotel = hotels[0]
+  const reservationCode = String(contract?.mainContractNo || '').trim()
+  const previous = readSnappTripResult(hotel)
+
+  // A confirmed booking must not be confirmed twice on page refresh.
+  if (previous?.status === 'confirmed' &&
+      String(previous?.reservationCode || '') === reservationCode &&
+      String(contract?.confirmStatus || '').toLowerCase() === 'confirm') {
+    statusStep.value = 'SUCCESS'
+    return
+  }
+
+  // After a timeout the provider state is unknown. Do not send a second POST automatically.
+  if (previous?.status === 'pending_verification') {
+    throw new Error('وضعیت تأیید قبلی اسنپ‌تریپ نامشخص است؛ پیش از تکرار درخواست، وضعیت رزرو را از پشتیبانی بررسی کنید.')
+  }
+
+  let providerResponse: any = null
+  let state: SnappTripConfirmState = 'failed'
+  let message = ''
+
+  if (!reservationCode) {
+    message = 'کد رزرو اسنپ‌تریپ در mainContractNo ثبت نشده است.'
+  } else {
+    try {
+      providerResponse = await confirmSnappTripBooking(reservationCode)
+      const result = providerResponse?.data ?? providerResponse
+      const responseCode = String(result?.reservation_code || '').trim()
+      const confirmed = String(result?.state || '').toLowerCase() === 'confirmed'
+      if (confirmed && responseCode === reservationCode) {
+        state = 'confirmed'
+        message = 'رزرو اسنپ‌تریپ با موفقیت تأیید شد.'
+      } else {
+        state = 'failed'
+        message = confirmed
+          ? 'کد رزرو در پاسخ اسنپ‌تریپ با کد قرارداد مطابقت ندارد.'
+          : String(result?.note || result?.message || 'اسنپ‌تریپ رزرو را تأیید نکرد.')
+      }
+    } catch (error: any) {
+      providerResponse = error?.data ?? null
+      message = getSnappTripErrorMessage(error)
+      // A network/timeout/5xx error cannot prove the booking was rejected.
+      const httpStatus = Number(error?.statusCode || error?.status || error?.response?.status || 0)
+      state = (!httpStatus || httpStatus >= 500 || httpStatus === 408 || httpStatus === 429)
+        ? 'pending_verification' : 'failed'
+    }
+  }
+
+  hotel.description = JSON.stringify({
+    provider: 'SNAPPTRIP',
+    version: 1,
+    originalDescription: previous?.originalDescription ??
+      (previous ? '' : String(hotel.description || '')),
+    reservationCode,
+    status: state,
+    message,
+    response: providerResponse,
+    attemptedAt: new Date().toISOString(),
+    ...(previous?.settlement ? { settlement: previous.settlement } : {})
+  })
+
+  contract.confirmStatus = state === 'confirmed' ? 'confirm' : 'incomplete'
+  contract.ticketStatus = state === 'confirmed' ? 'confirm' : 'incomplete'
+  contract.reduceFlightLoad = null
+  contract.reduceHotelLoad = null
+
+  const save = await trySaveContractStep(contract, `snapptrip-${state}`)
+  contractData.value = save.contract
+  if (!save.success) {
+    throw new Error(`نتیجه تأیید اسنپ‌تریپ دریافت شد، اما ذخیره قرارداد ناموفق بود: ${save.error}`)
+  }
+  if (state !== 'confirmed') {
+    // Only a definitive provider rejection produces a failure SMS.
+    // Timeout/network failures remain incomplete but are NOT confirmed rejections.
+    if (state === 'failed') {
+      await sendHotelSms(contractData.value, getPaymentSession()!, 'failed')
+    }
+    throw new Error(state === 'pending_verification'
+      ? `وضعیت رزرو اسنپ‌تریپ نامشخص است و نیاز به استعلام دارد. ${message}`
+      : message)
+  }
+  statusStep.value = 'SUCCESS'
+  toast.success('رزرو اسنپ‌تریپ با موفقیت قطعی شد.')
+}
+
 const processHotelVerify=async(
  session:PaymentSession
 )=>{
@@ -3436,6 +3570,73 @@ const processHotelVerify=async(
       :'پرداخت انجام شد اما ثبت اطلاعات پرداخت قرارداد ناموفق بود.'
     )
    }
+  }
+
+  /*
+   * SnappTrip ONLY: confirm booking before any SafarCard deduction.
+   * Leave the existing Ahuan hotel payment/booking flow unchanged.
+   */
+  if(isSnappTripContract(contractData.value)){
+   await processSnappTripConfirm(contractData.value)
+   // Booking confirmation is independent of SafarCard settlement.
+   // Never downgrade an already confirmed booking if the card service fails.
+   statusStep.value='SUCCESS'
+   const snappHotel=(contractData.value?.contractHotels||[]).find(
+    (hotel:any)=>String(hotel?.source||'').trim().toUpperCase()==='SNAPPTRIP'
+   )
+   const previousResult=readSnappTripResult(snappHotel)||{}
+   const previousSettlement=previousResult?.settlement?.travelCard
+   const needsTravelCard=session.type==='travelcard'||session.type==='travelcard-gateway'
+   if(needsTravelCard){
+    const travelCardAmount=Math.floor(Number(session.travelCardAmount||0))
+    let safarCardResult:SafarCardUpdateResult
+    // A prior attempt may have deducted the card even if its response was lost.
+    // Do not repeat an already recorded attempt on page refresh.
+    if(previousSettlement?.attempted===true){
+     safarCardResult={
+      attempted:true,
+      success:previousSettlement.status==='success',
+      response:null,
+      error:previousSettlement.error||'وضعیت کسر سفرکارت قبلاً ثبت شده است.'
+     }
+    }else if(!Number.isFinite(travelCardAmount)||travelCardAmount<=0){
+     safarCardResult={attempted:false,success:false,response:null,error:'مبلغ سفرکارت معتبر نیست.'}
+    }else{
+     safarCardResult=await updateSafarCardAfterIssue(session,contractData.value,travelCardAmount)
+    }
+    const settled=safarCardResult.success===true && safarCardResult.attempted===true
+    if(!settled){
+     hotelSettlementWarning.value='کسر اعتبار سفرکارت تأیید نشد و وضعیت تسویه نیازمند بررسی است. '+(safarCardResult.error||'')
+    }
+    if(snappHotel){
+     const current=readSnappTripResult(snappHotel)||previousResult
+     snappHotel.description=JSON.stringify({
+      ...current,
+      settlement:{
+       ...(current?.settlement||{}),
+       travelCard:{
+        status:settled?'success':'unknown',
+        attempted:previousSettlement?.attempted===true || safarCardResult.attempted,
+        amount:travelCardAmount,
+        error:settled?'':safarCardResult.error,
+        updatedAt:new Date().toISOString()
+       }
+      }
+     })
+     const settlementSave=await trySaveContractStep(contractData.value,'snapptrip-safarcard-settlement')
+     contractData.value=settlementSave.contract
+     if(!settlementSave.success){
+      hotelSettlementWarning.value=(hotelSettlementWarning.value+' ثبت وضعیت تسویه در قرارداد نیز ناموفق بود؛ لطفاً با پشتیبانی تماس بگیرید.').trim()
+      console.error('SnappTrip settlement save failed:',settlementSave.error)
+     }
+    }
+   }
+   // Always send booking confirmation even if the SafarCard settlement failed.
+   await sendHotelSms(contractData.value,session,'success')
+   failedSaveSteps.value=[]
+   statusStep.value='SUCCESS'
+   toast.success('رزرو اسنپ‌تریپ با موفقیت قطعی شد.')
+   return
   }
 
   /*
@@ -4008,116 +4209,101 @@ try{
     loading.value=false
   }
 }
-const sendHotelSms=async(
- contract:any,
- session:PaymentSession
-)=>{
- const adminMobile='09367974439'
+type HotelSmsStatus = 'success' | 'failed'
 
- const buyerMobile=String(
-  contract?.userName||
-  contract?.mobile||
-  session?.mobile||
-  ''
- ).trim()
+const sendHotelSms = async (
+  contract: any,
+  session: PaymentSession | null,
+  status: HotelSmsStatus = 'success'
+): Promise<void> => {
+  const AHUAN_ADMIN_MOBILE = '09367974439'
+  const SNAPPTRIP_ADMIN_MOBILE = '' // شماره مدیر اسنپ‌تریپ را وارد کنید
+  const adminMobile = isSnappTripContract(contract)
+    ? SNAPPTRIP_ADMIN_MOBILE
+    : AHUAN_ADMIN_MOBILE
+  const buyerMobile = String(
+    session?.mobile ||
+    contract?.mobile ||
+    contract?.contactMobile ||
+    contract?.userName ||
+    ''
+  ).trim()
 
- const contractId=Number(
-  contract?.id||
-  session?.contractId||
-  0
- )
+  const hotelItem = Array.isArray(contract?.contractHotels)
+    ? contract.contractHotels[0]
+    : null
+  const sessionHotel: any = session?.hotel
+  const hotelName = String(
+    hotelItem?.hotelName || hotelItem?.name || hotelItem?.hotel?.name ||
+    hotelItem?.hotel?.hotelName || contract?.hotelName ||
+    sessionHotel?.hotelName || sessionHotel?.name || ''
+  ).trim()
+  const hotelLine = hotelName ? `نام هتل: ${hotelName}\n` : ''
 
- if(!contractId){
-  console.error(
-   'Hotel SMS: ContractId not found',
-   {
-    contractId:contract?.id,
-    sessionContractId:session?.contractId,
-    contract
-   }
-  )
-  return
- }
+  const contractId = Number(contract?.id || session?.contractId || 0)
+  if (!contractId) {
+    console.error('Hotel SMS: ContractId not found')
+    return
+  }
 
- const encodedContractId=
-  encodeContractId(contractId)
+  const voucherUrl = `${window.location.origin}/downloadticket/${encodeContractId(contractId)}`
+  const passengers = Array.isArray(contract?.contractPassengers)
+    ? contract.contractPassengers
+    : []
+  const passengerText = passengers.map((passenger: any) =>
+    `${passenger?.codeMelli || ''} به‌نام ${(passenger?.lName || '').toUpperCase()}/${(passenger?.fName || '').toUpperCase()}`
+  ).join('\n')
 
- const voucherUrl=
-  `${window.location.origin}/downloadticket/${encodedContractId}`
-
- const adminSms=
-  `رزرو جدید
-
-شماره قرارداد: ${contractId}
-
-لینک دانلود واچر:
-${voucherUrl}`
-
- const passengers=
-  Array.isArray(contract?.contractPassengers)
-   ?contract.contractPassengers
-   :[]
-
- let passengerText=''
-
- for(const passenger of passengers){
-  passengerText+=
-   `${passenger?.codeMelli||''} به‌نام ${(passenger?.lName||'').toUpperCase()}/${(passenger?.fName||'').toUpperCase()}\n`
- }
-
- const buyerSms=
-  `مسافر گرامی،
+  const buyerSms = status === 'success'
+    ? `مسافر گرامی،
 احتراماً به اطلاع می‌رساند رزرو هتل شما با موفقیت انجام شد.
 
 شماره قرارداد: ${contractId}
-
-${passengerText}
-لینک دانلود واچر:
+${hotelLine}
+${passengerText ? passengerText + '\n' : ''}لینک دانلود واچر:
 ${voucherUrl}
 
 با آرزوی سفری خوش
 شرکت خدمات مسافرتی آهوان`
+    : `مسافر گرامی،
+متأسفانه رزرو هتل شما انجام نشد.
 
- try{
-  await $fetch(
-   'https://api.ahuan.ir/api/Auth/Send-Sms',
-   {
-    method:'POST',
-    body:{
-     mobile:adminMobile,
-     sms:adminSms
-    }
-   }
-  )
- }catch(error){
-  console.error(
-   'Hotel admin SMS failed:',
-   error
-  )
- }
+شماره قرارداد: ${contractId}
+${hotelLine}
+لطفاً جهت بررسی وضعیت رزرو و پرداخت با پشتیبانی آهوان تماس بگیرید.
 
- if(
-  buyerMobile&&
-  buyerMobile!==adminMobile
- ){
-  try{
-   await $fetch(
-    'https://api.ahuan.ir/api/Auth/Send-Sms',
-    {
-     method:'POST',
-     body:{
-      mobile:buyerMobile,
-      sms:buyerSms
-     }
+شرکت خدمات مسافرتی آهوان`
+
+  const sendSms = async (mobile: string, sms: string, recipient: string) => {
+    try {
+      const response = await $fetch<any>('https://api.ahuan.ir/api/Auth/Send-Sms', {
+        method: 'POST',
+        body: { mobile, sms }
+      })
+      if (response?.success === false || response?.error) {
+        throw new Error(response?.message || 'سرویس پیامک ارسال را ناموفق اعلام کرد.')
+      }
+    } catch (error) {
+      console.error(`Hotel ${recipient} SMS failed:`, error)
     }
-   )
-  }catch(error){
-   console.error(
-    'Hotel buyer SMS failed:',
-    error
-   )
   }
- }
+
+  // Preserve the existing admin notification only for successful bookings.
+  if (status === 'success' && adminMobile) {
+    const adminSms = `رزرو جدید
+
+شماره قرارداد: ${contractId}
+${hotelLine}
+لینک دانلود واچر:
+${voucherUrl}`
+    await sendSms(adminMobile, adminSms, 'admin')
+  }
+
+  if (buyerMobile && (!adminMobile || buyerMobile !== adminMobile)) {
+    await sendSms(buyerMobile, buyerSms, 'buyer')
+  } else if (!buyerMobile) {
+    console.error('Hotel SMS: Buyer mobile not found')
+  }
 }
 const isHotelBooking=computed(
  ()=>paymentInfo.value?.bookingType==='hotel'

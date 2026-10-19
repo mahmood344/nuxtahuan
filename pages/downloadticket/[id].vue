@@ -154,7 +154,7 @@
  id="ticket-print-area"
 >
  <HotelVoucherComponent
-  v-for="(route,index) in contractData?.contractRoutes||[]"
+  v-for="(route,index) in hotelVoucherRoutes"
   :key="route?.id||index"
   :contract="contractData"
   :route="route"
@@ -582,6 +582,34 @@ const contractData = ref<any>(null)
 const isHotelBooking=computed(
  ()=>contractData.value?.hotel===true
 )
+// برای هتل آهوان همان contractRoutes قبلی استفاده می‌شود.
+// برای اسنپ‌تریپ، اطلاعات contractHotels به مدل واچر تبدیل می‌شود.
+const hotelVoucherRoutes = computed<any[]>(() => {
+  const contract = contractData.value
+  if (!contract) return []
+  const routes = Array.isArray(contract.contractRoutes) ? contract.contractRoutes : []
+  const hotels = Array.isArray(contract.contractHotels) ? contract.contractHotels : []
+  const snappHotels = hotels.filter((hotel: any) =>
+    String(hotel?.source || '').trim().toUpperCase() === 'SNAPPTRIP'
+  )
+  if (!snappHotels.length) return routes
+  const existing = new Set(snappHotels.map((h: any) => String(h.id)))
+  // فقط مسیرهای عادی آهوان باقی بمانند؛ مسیرهای اسنپ‌تریپ دوباره نمایش داده نشوند.
+  const normalRoutes = routes.filter((r: any) =>
+    String(r?.source || '').toUpperCase() !== 'SNAPPTRIP' &&
+    !existing.has(String(r?.contractHotelId ?? ''))
+  )
+  const mapped = snappHotels.map((hotel: any) => ({
+    ...hotel,
+    stayNights: hotel.nights,
+    roomType: hotel.roomName,
+    cityNameFarsi: hotel.cityName,
+    // قیمت از پاسخ اسنپ‌تریپ قابل فرض نیست؛ قیمت قرارداد در صورت وجود نمایش داده می‌شود.
+    price: hotel.price ?? hotel.totalPrice ?? null
+  }))
+  return [...normalRoutes, ...mapped]
+})
+
 const tickets = ref<PrintableTicket[]>([])
 
 const cancelledTickets=computed(()=>

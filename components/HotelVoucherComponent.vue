@@ -9,6 +9,7 @@
     >
       <div
         class="hotel-voucher"
+        :style="{ backgroundImage: `url('${voucherBackground}')` }"
         dir="rtl"
       >
         <div class="voucher-content">
@@ -41,6 +42,10 @@
 
           </div>
 
+          <div v-if="isSnappTrip" class="snapptrip-reservation-row">
+            <span>کد رزرو اسنپ‌تریپ: <strong dir="ltr">{{ contract?.mainContractNo || '-' }}</strong></span>
+            <span>وضعیت رزرو: <strong>{{ snappTripStatus }}</strong></span>
+          </div>
 
           <!-- ================================= -->
           <!-- Buyer -->
@@ -249,15 +254,17 @@
             </table>
 
 
+            <p v-if="isSnappTrip && roomRoute?.roomServiceName" class="voucher-note">
+              خدمات اتاق: {{ roomRoute.roomServiceName }}
+            </p>
+
             <p
               v-if="
-                roomRoute
-                  ?.description
-                  ?.trim()
+                displayRoomDescription
               "
               class="voucher-note"
             >
-              {{ roomRoute.description }}
+              {{ displayRoomDescription }}
             </p>
 
 
@@ -686,6 +693,42 @@ const roomRoute =
       null
   )
 
+const isSnappTrip = computed(() =>
+  String(roomRoute.value?.source || '').trim().toUpperCase() === 'SNAPPTRIP'
+)
+
+const voucherBackground = computed(() =>
+  isSnappTrip.value
+    ? '/imgs/hotel/Vouchersnap.jpg'
+    : '/imgs/hotel/Voucher.jpg'
+)
+
+const snappTripRecord = computed(() => {
+  if (!isSnappTrip.value) return null
+  try {
+    const parsed = JSON.parse(String(roomRoute.value?.description || ''))
+    return parsed && typeof parsed === 'object' ? parsed : null
+  } catch {
+    return null
+  }
+})
+
+const snappTripStatus = computed(() => {
+  const record = snappTripRecord.value
+  const state = String(record?.response?.state || record?.response?.data?.state || record?.status || '').toLowerCase()
+  if (state === 'confirmed') return 'تأیید شده'
+  if (state === 'pending_verification') return 'در انتظار استعلام'
+  if (state === 'failed') return 'ناموفق'
+  return 'نامشخص'
+})
+
+const displayRoomDescription = computed(() => {
+  const raw = String(roomRoute.value?.description || '').trim()
+  if (!raw || (isSnappTrip.value && snappTripRecord.value)) return ''
+  return raw
+})
+
+
 
 /* ================================= */
 /* Passengers */
@@ -1061,6 +1104,18 @@ const formatDate =
     transparent;
 }
 
+
+.snapptrip-reservation-row{
+  display:flex;
+  justify-content:space-around;
+  gap:8px;
+  padding:7px;
+  border:1px solid rgba(23,63,140,.7);
+  border-radius:5px;
+  background:rgba(255,255,255,.75);
+  font-size:14px;
+  text-align:center;
+}
 
 .voucher-table-secondary{
   margin-top:
