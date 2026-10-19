@@ -46,7 +46,7 @@
 >
   <!-- Image --> 
   <img 
-    :src="tour.image" 
+    :src="tour.header" 
     :alt="tour.name" 
     class="
       h-full 
@@ -140,86 +140,16 @@
 </template>
 
 <script setup>
-import{
- useRouter
-}from'vue-router'
+import { useRouter } from 'vue-router'
+import { natureTours } from '~/data/natureTours'
 
+const router = useRouter()
 
+const tours = natureTours
 
-const router=useRouter()
+function openTour(tour) {
+  if (!tour?.id) return
 
-const tours=[
- {
-  id:1,
-  image:'/imgs/tours/NatureTours/1.jpg',
-  price:'2,100,000',
-  name:'تور روستای شهرستانک',
-  title:'بهشت کوچک جاده چالوس'
- },
- {
-  id:2,
-  image:'/imgs/tours/NatureTours/2.jpg',
-  price:'2,800,000',
-  name:'تور روستای برغان',
-  title:'سفر به دل طبیعت و اصالت ایرانی'
- },
- {
-  id:3,
-  image:'/imgs/tours/NatureTours/3.jpg',
-  price:'2,100,000',
-  name:'تور جنگل بلیران',
-  title:'سفر به قلب مه و آرامش شمال'
- },
- {
-  id:4,
-  image:'/imgs/tours/NatureTours/4.jpg',
-  price:'2,100,000',
-  name:'تور روستای هرانده',
-  title:'سفر به دل طبیعت کوهستانی و مسیرهای آرام‌بخش آبشار'
- },
- {
-  id:7,
-  image:'/imgs/tours/NatureTours/7.jpg',
-  price:'2,500,000',
-  name:'تور شهر تاریخی قزوین',
-  title:'سفری در دل تاریخ، معماری و طعم اصیل ایرانی'
- },
- {
-  id:8,
-  image:'/imgs/tours/NatureTours/8.jpg',
-  price:'2,500,000',
-  name:'تور شهر زنجان',
-  title:'سفر به دیار مردان نمکی، گنبد سلطانیه و مهمان‌نوازی اصیل ایرانی'
- },
- {
-  id:9,
-  image:'/imgs/tours/NatureTours/9.jpg',
-  price:'3,500,000',
-  name:'تور غار کتله‌خور',
-  title:'ماجراجویی در دل زمین؛ جایی که سنگ‌ها قصه می‌گویند!'
- },
- {
-  id:10,
-  image:'/imgs/tours/NatureTours/10.jpg',
-  price:'3,500,000',
-  name:'تور غار علیصدر',
-  title:'سفری روی آب، در دل زمین!'
- },
- {
-  id:11,
-  image:'/imgs/tours/NatureTours/11.jpg',
-  price:'2,800,000',
-  name:'تور کاشان و قمصر (گلاب گیری)',
-  title:'سفری در دل تاریخ، معماری و طعم اصیل ایرانی'
- }
-]
-
-function openTour(tour){
- if(!tour?.id)
-  return
-
- router.push(
-  `/naturetours/${tour.id}`
- )
+  router.push(`/naturetours/${tour.id}`)
 }
 </script>

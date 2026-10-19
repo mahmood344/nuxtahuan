@@ -157,30 +157,11 @@
 </template>
 
 <script setup>
-const tours = [
-  {
-    id: 1,
-    title: 'تور روستای شهرستانک',
-    image:
-      '/imgs/tours/NatureTours/sahrestanak.jpg'
-  },
-  {
-    id: 2,
-    title: 'تور روستای برغان',
-    image:
-      '/imgs/tours/NatureTours/baraghan.jpg'
-  },
-  {
-    id: 3,
-    title: 'تور جنگل بلیران',
-    image:
-      '/imgs/tours/NatureTours/beliran.jpg'
-  },
-  {
-    id: 4,
-    title: 'تور روستای هرانده',
-    image:
-      '/imgs/tours/NatureTours/harande.jpg'
-  }
-]
+import { natureTours } from '~/data/natureTours'
+
+const tours = natureTours.slice(0, 4).map(tour => ({
+  id: tour.id,
+  title: tour.name,
+  image: tour.image
+}))
 </script>
