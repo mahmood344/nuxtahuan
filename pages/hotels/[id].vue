@@ -6837,28 +6837,38 @@ async function loadHotelAvailability(){
   await loadSnappTripHotel()
 
  }
- catch(error){
+ 
+catch (error) {
+  console.error('HOTEL LOAD ERROR:', error)
 
-  console.error(
-   'HOTEL LOAD ERROR:',
-   error
+  const status = Number(
+    error?.response?.status ??
+    error?.statusCode ??
+    error?.status ??
+    0
   )
 
+  hotelRooms.value = []
+  hotelStore.setSearchRooms([])
 
-  hotelRooms.value=
-   []
+  hotelAvailability.value = null
+  roomsFallbackMode.value = false
+  roomsError.value = ''
 
-  hotelStore.setSearchRooms(
-   []
-  )
+  if (status === 404) {
+    errorMessage.value = 'هتل مورد نظر یافت نشد.'
+  } else if (status === 500 || status >= 500) {
+    errorMessage.value =
+      'در حال حاضر دریافت اطلاعات هتل یا اتاق‌های مورد نظر امکان‌پذیر نیست. لطفاً دوباره تلاش کنید.'
+  } else if (status === 400 || status === 422) {
+    errorMessage.value =
+      'اطلاعات جستجوی هتل معتبر نیست. لطفاً تاریخ ورود و خروج را بررسی کنید.'
+  } else {
+    errorMessage.value =
+      'دریافت اطلاعات هتل با مشکل مواجه شد. لطفاً دوباره تلاش کنید.'
+  }
+}
 
-
-  roomsError.value=
-   error?.data?.message||
-   error?.message||
-   'دریافت اطلاعات اتاق‌ها با خطا مواجه شد.'
-
- }
  finally{
 
   loading.value=
