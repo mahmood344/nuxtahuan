@@ -2,7 +2,9 @@
 import {
   computed,
   ref,
-  watch
+  watch,
+  onMounted,
+  onBeforeUnmount
 } from 'vue'
 
 import { useRoute } from 'vue-router'
@@ -18,7 +20,76 @@ const isHomePage = computed(() =>
   route.path === '/home'
 )
 
+/*
+ * تشخیص موبایل برای Modal شدن DatePicker
+ */
+const isMobileCalendar = ref(false)
+
+let mobileMediaQuery = null
+
+function syncCalendarMode(event) {
+
+  if (typeof window === 'undefined')
+    return
+
+  isMobileCalendar.value =
+    event?.matches ??
+    window.innerWidth < 768
+}
+
+onMounted(() => {
+
+  mobileMediaQuery =
+    window.matchMedia(
+      '(max-width: 767px)'
+    )
+
+  isMobileCalendar.value =
+    mobileMediaQuery.matches
+
+  if (
+    mobileMediaQuery.addEventListener
+  ) {
+
+    mobileMediaQuery.addEventListener(
+      'change',
+      syncCalendarMode
+    )
+
+  }
+  else {
+
+    mobileMediaQuery.addListener?.(
+      syncCalendarMode
+    )
+  }
+})
+
+onBeforeUnmount(() => {
+
+  if (!mobileMediaQuery)
+    return
+
+  if (
+    mobileMediaQuery.removeEventListener
+  ) {
+
+    mobileMediaQuery.removeEventListener(
+      'change',
+      syncCalendarMode
+    )
+
+  }
+  else {
+
+    mobileMediaQuery.removeListener?.(
+      syncCalendarMode
+    )
+  }
+})
+
 const props = defineProps({
+
   modelValue: {
     type: [String, Array],
     default: ''
@@ -375,6 +446,7 @@ watch(
         class="hidden"
         :styles="styles"
         :show="showPicker"
+        :modal="isMobileCalendar"
         :auto-submit="false"
         format="YYYY/MM/DD"
         locale="fa,en"
@@ -420,7 +492,11 @@ watch(
 
   min-height: 44px !important;
 }
+
+
 :deep(.compact-date-input label) {
+
   font-size: 10px !important;
 }
+
 </style>

@@ -154,7 +154,7 @@
  id="ticket-print-area"
 >
  <HotelVoucherComponent
-  v-for="(route,index) in contractData?.contractRoutes||[]"
+  v-for="(route,index) in hotelVoucherRoutes"
   :key="route?.id||index"
   :contract="contractData"
   :route="route"
@@ -582,6 +582,97 @@ const contractData = ref<any>(null)
 const isHotelBooking=computed(
  ()=>contractData.value?.hotel===true
 )
+// برای هتل آهوان همان contractRoutes قبلی استفاده می‌شود.
+// برای اسنپ‌تریپ، اطلاعات contractHotels به مدل واچر تبدیل می‌شود.
+
+const hotelVoucherRoutes = computed<any[]>(() => {
+  const contract = contractData.value
+
+  if (!contract) return []
+
+  const routes = Array.isArray(contract.contractRoutes)
+    ? contract.contractRoutes
+    : []
+
+  const hotels = Array.isArray(contract.contractHotels)
+    ? contract.contractHotels
+    : []
+
+  const snappHotels = hotels.filter(
+    (hotel: any) =>
+      String(hotel?.source || '')
+        .trim()
+        .toUpperCase() === 'SNAPPTRIP'
+  )
+
+  if (!snappHotels.length) return routes
+
+  const existing = new Set(
+    snappHotels.map((hotel: any) => String(hotel.id))
+  )
+
+  const normalRoutes = routes.filter(
+    (route: any) =>
+      String(route?.source || '').toUpperCase() !== 'SNAPPTRIP' &&
+      !existing.has(String(route?.contractHotelId ?? ''))
+  )
+
+  const mapped = snappHotels.map((hotel: any) => {
+    let description: any = null
+
+    try {
+      description =
+        typeof hotel.description === 'string'
+          ? JSON.parse(hotel.description)
+          : hotel.description
+    } catch {
+      description = null
+    }
+
+    // مبلغ فروش ذخیره‌شده در Description
+    const savedTotalPrice = Number(
+      description?.totalPrice
+    )
+
+    // قیمت قدیمی قرارداد، در صورت نبود قیمت ذخیره‌شده
+    const oldPrice = Number(
+      hotel.price ?? hotel.totalPrice
+    )
+
+    const price =
+      Number.isFinite(savedTotalPrice) &&
+      savedTotalPrice > 0
+        ? savedTotalPrice
+        : Number.isFinite(oldPrice) &&
+          oldPrice > 0
+          ? oldPrice
+          : null
+
+    return {
+      ...hotel,
+
+      stayNights: hotel.nights,
+      roomType: hotel.roomName,
+      cityNameFarsi: hotel.cityName,
+
+      // قیمت نهایی واچر
+      price,
+      totalPrice: price,
+
+      // اطلاعات رزرو
+      reservationCode:
+        description?.reservationCode ??
+        hotel.reservationCode,
+
+      confirmStatus:
+        description?.status ?? null
+    }
+  })
+
+  return [...normalRoutes, ...mapped]
+})
+
+
 const tickets = ref<PrintableTicket[]>([])
 
 const cancelledTickets=computed(()=>

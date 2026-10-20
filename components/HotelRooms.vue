@@ -20,6 +20,12 @@
       class="mb-5 text-[18px] font-black text-[var(--color-gray-800)]"
     >
       اتاق انتخاب شده
+      <template v-if="selectedHotelName">
+        از هتل {{ selectedHotelName }}
+      </template>
+      <template v-if="selectedHotelCityName">
+        شهر {{ selectedHotelCityName }}
+      </template>
     </h2>
 
   </div>
@@ -1035,6 +1041,25 @@ selectedView:{
  }
 
 })
+
+const selectedHotelName=
+ computed(()=>
+  String(
+   props.hotel?.name||
+   props.hotel?.hotelName||
+   ''
+  ).trim()
+ )
+
+const selectedHotelCityName=
+ computed(()=>
+  String(
+   props.hotel?.cityName||
+   props.hotel?.city?.title||
+   props.hotel?.city?.name||
+   ''
+  ).trim()
+ )
 
 const hotelRooms = computed(()=>props.rooms)
 const emit=defineEmits([

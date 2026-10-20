@@ -279,41 +279,125 @@
 
           <!--
           |--------------------------------------------------------------------------
-          | Mobile Search Button
+          | Mobile Controls
           |--------------------------------------------------------------------------
           -->
 
           <div
-            v-if="flightStore.currentStep === 0"
-            class="
-              lg:hidden
-              mt-4
-              mb-4
-              px-2
+            v-if="
+              flightStore.currentStep === 0 &&
+              searchStarted
             "
+            class="lg:hidden mb-4 px-2"
             dir="rtl"
           >
-            <UiBaseButton
-              label="تغییر جستجو"
-              variant="soft"
-              color="primary"
-              icon="🔎"
-              class="
-                inline-flex
-                items-center
-                !rounded-full
-                bg-white
-                px-5
-                py-4
-                text-[12px]
-                font-bold
-                text-gray-600
-                border
-                border-gray-100
-                shadow-xl
-              "
-              @click="isSearchModalOpen = true"
-            />
+            <div class="flex items-center justify-start gap-2">
+
+              <!-- Sort -->
+              <div class="relative">
+
+                <UiBaseButton
+                  label="مرتب‌سازی"
+                  variant="soft"
+                  color="primary"
+                  icon="↕️"
+                  class="
+                    inline-flex
+                    items-center
+                    justify-end
+                    gap-1.5
+                    !rounded-full
+                    bg-white
+                    px-5
+                    py-4
+                    text-[12px]
+                    font-bold
+                    text-gray-600
+                    border
+                    border-gray-100
+                    shadow-xl
+                  "
+                  @click="
+                    isSortDropdownOpen =
+                      !isSortDropdownOpen
+                  "
+                />
+
+                <transition name="fade">
+                  <div
+                    v-if="isSortDropdownOpen"
+                    class="
+                      absolute
+                      right-0
+                      top-full
+                      mt-2
+                      z-50
+                      min-w-[170px]
+                      rounded-2xl
+                      bg-white
+                      p-2
+                      shadow-xl
+                    "
+                  >
+                    <button
+                      v-for="item in hotelSortOptions"
+                      :key="item"
+                      type="button"
+                      class="
+                        w-full
+                        rounded-xl
+                        px-3
+                        py-2
+                        text-right
+                        text-[11px]
+                        font-bold
+                        transition-all
+                      "
+                      :class="
+                        activeHotelSort === item
+                          ? 'bg-[var(--color-primary-dark)] text-white'
+                          : 'text-gray-600 hover:bg-gray-50'
+                      "
+                      @click="
+                        selectHotelSortOption(item)
+                      "
+                    >
+                      {{ item }}
+                    </button>
+                  </div>
+                </transition>
+
+              </div>
+
+
+              <!-- Filter -->
+              <UiBaseButton
+                label="فیلترها"
+                variant="soft"
+                color="primary"
+                icon="⚙️"
+                class="
+                  inline-flex
+                  items-center
+                  justify-end
+                  gap-1.5
+                  !rounded-full
+                  bg-white
+                  px-5
+                  py-4
+                  text-[12px]
+                  font-bold
+                  text-gray-600
+                  border
+                  border-gray-100
+                  shadow-xl
+                "
+                @click="
+                  isFilterModalOpen = true
+                "
+              />
+
+            </div>
           </div>
 
 
@@ -327,6 +411,27 @@
           <template
             v-if="flightStore.currentStep === 0"
           >
+
+            <!-- Desktop Sort Tabs -->
+            <div
+              v-if="searchStarted"
+              class="
+                hidden
+                lg:flex
+                mb-6
+                items-center
+                gap-1
+                rounded-xl
+                p-1
+                text-xs
+              "
+            >
+              <UiBaseTabs
+                :items="hotelSortOptions"
+                v-model="activeHotelSort"
+              />
+            </div>
+
 
             <!-- Result Count -->
 
@@ -1217,13 +1322,13 @@
 
     <!--
     |--------------------------------------------------------------------------
-    | Mobile Search Modal
+    | Mobile Filter Modal
     |--------------------------------------------------------------------------
     -->
 
     <transition name="fade">
       <div
-        v-if="isSearchModalOpen"
+        v-if="isFilterModalOpen"
         class="
           fixed
           inset-0
@@ -1236,7 +1341,7 @@
           lg:hidden
         "
         @click.self="
-          isSearchModalOpen = false
+          isFilterModalOpen = false
         "
       >
         <div
@@ -1253,10 +1358,10 @@
         >
 
           <!-- Header -->
-
           <div
             class="
               flex
+              shrink-0
               items-center
               justify-between
               border-b
@@ -1266,6 +1371,7 @@
             "
           >
             <div>
+
               <h3
                 class="
                   text-[16px]
@@ -1273,7 +1379,7 @@
                   text-gray-800
                 "
               >
-                تغییر جستجو
+                فیلترهای جستجو
               </h3>
 
               <p
@@ -1283,9 +1389,11 @@
                   text-gray-400
                 "
               >
-                شهر یا تاریخ اقامت را تغییر دهید
+                نتایج هتل را دقیق‌تر کنید
               </p>
+
             </div>
+
 
             <button
               type="button"
@@ -1301,39 +1409,78 @@
                 text-gray-500
               "
               @click="
-                isSearchModalOpen = false
+                isFilterModalOpen = false
               "
             >
               ×
             </button>
+
           </div>
 
 
-          <!-- Search + Filter -->
-
+          <!-- Scrollable Content -->
           <div
             class="
               flex-1
               overflow-y-auto
-              p-4
+              px-4
+              py-5
             "
           >
-            <div class="space-y-4">
+            <div class="space-y-5">
 
+              <!-- تغییر جستجو -->
               <FlightSearchPanel
-                @hotel-search="handleHotelSearch"
+                mode="aside"
+                :showServices="true"
+                @hotel-search="
+                  handleHotelSearch
+                "
               />
 
+
+              <!-- فیلتر واقعی هتل -->
               <FilterHotelSnap
                 v-if="
-                  flightStore.currentStep===0 &&
+                  flightStore.currentStep === 0 &&
                   hotels.length
                 "
-                v-model:filters="activeHotelFilters"
+                v-model:filters="
+                  activeHotelFilters
+                "
                 :hotels="hotels"
               />
 
             </div>
+          </div>
+
+
+          <!-- Footer -->
+          <div
+            class="
+              shrink-0
+              border-t
+              border-gray-100
+              bg-white
+              p-4
+            "
+          >
+            <UiBaseButton
+              label="اعمال فیلترها"
+              variant="filled"
+              color="primary"
+              class="
+                w-full
+                !rounded-2xl
+                !py-4
+                text-[13px]
+                font-bold
+                shadow-lg
+              "
+              @click="
+                isFilterModalOpen = false
+              "
+            />
           </div>
 
         </div>
@@ -1399,8 +1546,21 @@ const flightStore=
 const searchStarted=
   ref(false)
 
-const isSearchModalOpen=
+const isFilterModalOpen=
   ref(false)
+
+const isSortDropdownOpen=
+  ref(false)
+
+const activeHotelSort=
+  ref('گران‌ترین')
+
+const hotelSortOptions=[
+  'ارزان‌ترین',
+  'گران‌ترین',
+  'ستاره بیشتر',
+  'ستاره کمتر'
+]
 
 const selectedHotel=
   ref(null)
@@ -2506,28 +2666,119 @@ const filteredHotels=
    )
 
 
-   /*
-   |--------------------------------------------------------------------------
-   | Accommodation Ordering
-   |--------------------------------------------------------------------------
-   |
-   | هتل
-   | هتل آپارتمان
-   | مسافرخانه / مهمانپذیر
-   | اقامتگاه سنتی
-   | ...
-   |
-   |--------------------------------------------------------------------------
-   */
-
    .sort(
-    (a,b)=>
-     getHotelAccommodationPriority(
-      a
-     )-
-     getHotelAccommodationPriority(
-      b
-     )
+    (a,b)=>{
+
+     const sort=
+      activeHotelSort.value
+
+
+     if(
+      sort==='ارزان‌ترین'
+     ){
+
+      const aPrice=
+       getHotelOriginalPrice(a)
+
+      const bPrice=
+       getHotelOriginalPrice(b)
+
+      const safeA=
+       aPrice>0
+        ?aPrice
+        :Number.MAX_SAFE_INTEGER
+
+      const safeB=
+       bPrice>0
+        ?bPrice
+        :Number.MAX_SAFE_INTEGER
+
+      return safeA-safeB
+     }
+
+
+     if(
+      sort==='گران‌ترین'
+     ){
+
+      const aPrice=
+       getHotelOriginalPrice(a)
+
+      const bPrice=
+       getHotelOriginalPrice(b)
+
+      const safeA=
+       aPrice>0
+        ?aPrice
+        :-1
+
+      const safeB=
+       bPrice>0
+        ?bPrice
+        :-1
+
+      return safeB-safeA
+     }
+
+
+     if(
+      sort==='ستاره بیشتر'
+     ){
+
+      return(
+       Number(
+        b?.hotelStar||
+        0
+       )-
+       Number(
+        a?.hotelStar||
+        0
+       )
+      )
+     }
+
+
+     if(
+      sort==='ستاره کمتر'
+     ){
+
+      return(
+       Number(
+        a?.hotelStar||
+        0
+       )-
+       Number(
+        b?.hotelStar||
+        0
+       )
+      )
+     }
+
+
+     /*
+      * fallback:
+      * اگر مقدار مرتب‌سازی ناشناخته بود،
+      * ارزان‌ترین اول نمایش داده شود.
+      */
+     const aPrice=
+      getHotelOriginalPrice(a)
+
+     const bPrice=
+      getHotelOriginalPrice(b)
+
+     const safeA=
+      aPrice>0
+       ?aPrice
+       :Number.MAX_SAFE_INTEGER
+
+     const safeB=
+      bPrice>0
+       ?bPrice
+       :Number.MAX_SAFE_INTEGER
+
+     return safeA-safeB
+
+    }
    )
 
  })
@@ -2926,7 +3177,26 @@ async function performSearch(){
 
 function handleHotelSearch(){
 
-  isSearchModalOpen.value=
+  isFilterModalOpen.value=
+    false
+
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Hotel Sort
+|--------------------------------------------------------------------------
+*/
+
+function selectHotelSortOption(
+  option
+){
+
+  activeHotelSort.value=
+    option
+
+  isSortDropdownOpen.value=
     false
 
 }

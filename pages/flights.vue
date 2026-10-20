@@ -484,14 +484,14 @@ const sortOptions = ['نام ایرلاین', 'دیرترین', 'زودترین'
 const activeFilters=ref({
   departureTimeRange:null,
 
-  economy:true,
-  premiumEconomy:true,
+  economy:false,
+  premiumEconomy:false,
 
-  business:true,
-  premiumBusiness:true,
+  business:false,
+  premiumBusiness:false,
 
-  first:true,
-  premiumFirst:true,
+  first:false,
+  premiumFirst:false,
 
   airlines:[]
 })
@@ -803,127 +803,50 @@ function getFlightBookingClass(flight) {
     ''
   )
 }
-function getFlightCabinType(flight){
-  const provider=normalizeCabinCode(
-    flight?.provider
-  )
+function getFlightCabinTypesForFilter(flight) {
+  const provider = normalizeCabinCode(flight?.provider)
+  const names = {
+    ECONOMY: 'economy', PREMIUMECONOMY: 'premiumEconomy',
+    BUSINESS: 'business', PREMIUMBUSINESS: 'premiumBusiness',
+    FIRST: 'first', PREMIUMFIRST: 'premiumFirst',
+    'اکونومی': 'economy', 'بیزینس': 'business',
+    'فرست': 'first'
+  }
+  const codeMap = { Y: 'economy', S: 'premiumEconomy',
+    C: 'business', J: 'premiumBusiness', F: 'first', P: 'premiumFirst' }
+  const byName = value => names[normalizeCabinCode(value).replace(/[\s_-]/g, '')] ||
+    names[normalizeCabinCode(value)] || null
 
-  /*
-   * PARTO
-   */
-  if(provider==='PARTO'){
-    const firstSegment=
-      Array.isArray(flight?.segments)
-        ?flight.segments[0]
-        :null
+  if (provider === 'NIRA') {
+    const cabin = byName(flight?.cabinTypeName) || byName(flight?.cabinLabel)
+    if (cabin) return [cabin]
+    const cabinCode = normalizeCabinCode(flight?.cabinClassCode)
+    return codeMap[cabinCode] ? [codeMap[cabinCode]] : []
+  }
 
-    const cabinType=Number(
-      firstSegment?.cabinType??
-      flight?.cabinType
-    )
-
-    switch(cabinType){
-      case 1:
-        return'economy'
-
-      case 2:
-        return'premiumEconomy'
-
-      case 3:
-        return'business'
-
-      case 4:
-        return'premiumBusiness'
-
-      case 5:
-        return'first'
-
-      case 6:
-        return'premiumFirst'
+  if (provider === 'PARTO') {
+    const segments = [...(Array.isArray(flight?.segments) ? flight.segments : []),
+      ...(Array.isArray(flight?.returnSegments) ? flight.returnSegments : [])]
+    const candidates = segments.length ? segments : [flight]
+    const result = new Set()
+    for (const segment of candidates) {
+      const numeric = Number(segment?.cabinType)
+      const type = Number.isInteger(numeric) && numeric >= 1 && numeric <= 6
+        ? ['economy','premiumEconomy','business','premiumBusiness','first','premiumFirst'][numeric - 1]
+        : codeMap[normalizeCabinCode(segment?.bookingClass || segment?.rbd)]
+      if (type) result.add(type)
     }
-
-    const bookingClass=
-      normalizeCabinCode(
-        firstSegment?.bookingClass||
-        firstSegment?.rbd||
-        flight?.bookingClass||
-        flight?.rbd
-      )
-
-    switch(bookingClass){
-      case'Y':
-        return'economy'
-
-      case'S':
-        return'premiumEconomy'
-
-      case'C':
-        return'business'
-
-      case'J':
-        return'premiumBusiness'
-
-      case'F':
-        return'first'
-
-      case'P':
-        return'premiumFirst'
-    }
-
-    return null
+    return [...result]
   }
 
-  /*
-   * NIRA / MAHAN
-   * منطق قبلی
-   */
-  const airlineCode=
-    getFlightAirlineCode(flight)
-
-  const bookingClass=
-    getFlightBookingClass(flight)
-
-  if(
-    flightClasses[airlineCode]
-      ?.business
-      ?.includes(bookingClass)
-  ){
-    return'business'
-  }
-
-  const cabinName=
-    normalizeCabinCode(
-      flight?.cabinName||
-      flight?.cabin||
-      flight?.cabinTitle||
-      flight?.meta?.raw?.CabinName||
-      flight?.meta?.raw?.cabinName||
-      flight?.meta?.raw?.Cabin||
-      flight?.meta?.raw?.cabin||
-      ''
-    )
-
-  if(
-    cabinName.includes('BUSINESS')||
-    cabinName.includes('بیزینس')
-  ){
-    return'business'
-  }
-
-  const cabinType=Number(
-    flight?.cabinType??
-    flight?.meta?.raw?.CabinType??
-    flight?.meta?.raw?.cabinType
-  )
-
-  if(
-    cabinType===2||
-    cabinType===5
-  ){
-    return'business'
-  }
-
-  return'economy'
+  const airlineCode = getFlightAirlineCode(flight)
+  const bookingClass = getFlightBookingClass(flight)
+  if (flightClasses[airlineCode]?.business?.includes(bookingClass)) return ['business']
+  const cabinName = normalizeCabinCode(flight?.cabinName || flight?.cabin || flight?.cabinTitle)
+  if (cabinName.includes('BUSINESS') || cabinName.includes('بیزینس')) return ['business']
+  const cabinType = Number(flight?.cabinType ?? flight?.meta?.raw?.CabinType)
+  if (cabinType === 2 || cabinType === 5) return ['business']
+  return ['economy']
 }
 function getFlightAirlineFilterCode(flight) {
   return normalizeCabinCode(
@@ -947,12 +870,6 @@ const sortedFlights = computed(() => {
 
   const range =
     activeFilters.value?.departureTimeRange
-
-  const economySelected =
-    activeFilters.value?.economy !== false
-
-  const businessSelected =
-    activeFilters.value?.business !== false
 
   const selectedAirlines =
     Array.isArray(
@@ -999,18 +916,14 @@ const sortedFlights = computed(() => {
         }
       }
 
-      /*
-       * فیلتر اکونومی و بیزینس
-       */
-      const cabinType=
-  getFlightCabinType(flight)
-
-if(
-  cabinType&&
-  activeFilters.value?.[cabinType]===false
-){
-  return false
-}
+      // تا وقتی هیچ تیکی انتخاب نشده، کلاس پرواز محدود نمی‌شود.
+      const cabinKeys = ['economy', 'premiumEconomy', 'business',
+        'premiumBusiness', 'first', 'premiumFirst']
+      const selectedCabins = cabinKeys.filter(key => activeFilters.value?.[key] === true)
+      if (selectedCabins.length > 0) {
+        const flightCabins = getFlightCabinTypesForFilter(flight)
+        if (!flightCabins.some(key => selectedCabins.includes(key))) return false
+      }
 
       /*
        * فیلتر ایرلاین
@@ -1167,8 +1080,26 @@ const buildSearchPayload = ({
   }
 }
 
+
 const performSearch = async (payload) => {
-  if (!payload?.from || !payload?.to || !payload?.departureDate) return
+  if (!payload?.from || !payload?.to || !payload?.departureDate) {
+    return
+  }
+
+  // ریست فیلترهای کلاس پروازی قبل از سرچ جدید
+  activeFilters.value = {
+    ...activeFilters.value,
+
+    economy: false,
+    premiumEconomy: false,
+    business: false,
+    premiumBusiness: false,
+    first: false,
+    premiumFirst: false,
+
+    airlines: [],
+    departureTimeRange: null
+  }
 
   searchStarted.value = false
 
@@ -1178,6 +1109,7 @@ const performSearch = async (payload) => {
     searchStarted.value = true
   }
 }
+
 
 // const handleDateChange = async (dateObj) => {
 //   const newDate = dateObj?.fullDate

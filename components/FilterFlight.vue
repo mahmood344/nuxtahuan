@@ -48,61 +48,51 @@
 
     <!-- فیلتر نوع کابین -->
     <div>
-      <h3 class="mb-4 text-sm font-bold text-gray-800">
+      <h3 v-if="Object.values(availableCabins).some(Boolean)" class="mb-4 text-sm font-bold text-gray-800">
         نوع بلیت
       </h3>
 
-      <div class="space-y-3 text-[13px]">
+      
+<div class="space-y-3 text-[13px]">
   <UiBaseCheckbox
+    v-if="availableCabins.economy"
     v-model="economySelected"
     label="اکونومی"
-    :disabled="!availableCabins.economy"
   />
 
   <UiBaseCheckbox
+    v-if="availableCabins.premiumEconomy"
     v-model="premiumEconomySelected"
     label="پریمیوم اکونومی"
-    :disabled="!availableCabins.premiumEconomy"
   />
 
   <UiBaseCheckbox
+    v-if="availableCabins.business"
     v-model="businessSelected"
     label="بیزینس"
-    :disabled="!availableCabins.business"
   />
 
   <UiBaseCheckbox
+    v-if="availableCabins.premiumBusiness"
     v-model="premiumBusinessSelected"
     label="پریمیوم بیزینس"
-    :disabled="!availableCabins.premiumBusiness"
   />
 
   <UiBaseCheckbox
+    v-if="availableCabins.first"
     v-model="firstSelected"
     label="فرست کلاس"
-    :disabled="!availableCabins.first"
   />
 
   <UiBaseCheckbox
+    v-if="availableCabins.premiumFirst"
     v-model="premiumFirstSelected"
     label="پریمیوم فرست کلاس"
-    :disabled="!availableCabins.premiumFirst"
   />
 </div>
 
-      <p
-  v-if="
-    !economySelected&&
-    !premiumEconomySelected&&
-    !businessSelected&&
-    !premiumBusinessSelected&&
-    !firstSelected&&
-    !premiumFirstSelected
-  "
-  class="mt-3 text-xs font-bold text-red-500"
->
-  حداقل یک نوع بلیت را انتخاب کنید.
-</p>
+
+   
 
       <button
         v-if="isCabinFilterChanged"
@@ -534,7 +524,22 @@ function getFlightCabinType(flight){
   const provider=normalizeCode(
     flight?.provider
   )
+if (provider === 'NIRA') {
+    const cabinTypeName = normalizeCode(
+      flight?.cabinTypeName
+    )
 
+    const niraCabinTypes = {
+      ECONOMY: 'economy',
+      PREMIUMECONOMY: 'premiumEconomy',
+      BUSINESS: 'business',
+      PREMIUMBUSINESS: 'premiumBusiness',
+      FIRST: 'first',
+      PREMIUMFIRST: 'premiumFirst'
+    }
+
+    return niraCabinTypes[cabinTypeName] || null
+  }
   /*
    * PARTO
    */
@@ -709,7 +714,7 @@ const availableCabins=computed(()=>{
 })
 
 const economySelected=computed({
-  get:()=>props.filters?.economy!==false,
+  get:()=>props.filters?.economy===true,
   set:value=>{
     emit('update:filters',{
       ...props.filters,
@@ -719,7 +724,7 @@ const economySelected=computed({
 })
 
 const businessSelected=computed({
-  get:()=>props.filters?.business!==false,
+  get:()=>props.filters?.business===true,
   set:value=>{
     emit('update:filters',{
       ...props.filters,
@@ -728,7 +733,7 @@ const businessSelected=computed({
   }
 })
 const premiumEconomySelected=computed({
-  get:()=>props.filters?.premiumEconomy!==false,
+  get:()=>props.filters?.premiumEconomy===true,
 
   set:value=>{
     emit('update:filters',{
@@ -739,7 +744,7 @@ const premiumEconomySelected=computed({
 })
 
 const premiumBusinessSelected=computed({
-  get:()=>props.filters?.premiumBusiness!==false,
+  get:()=>props.filters?.premiumBusiness===true,
 
   set:value=>{
     emit('update:filters',{
@@ -750,7 +755,7 @@ const premiumBusinessSelected=computed({
 })
 
 const firstSelected=computed({
-  get:()=>props.filters?.first!==false,
+  get:()=>props.filters?.first===true,
 
   set:value=>{
     emit('update:filters',{
@@ -761,7 +766,7 @@ const firstSelected=computed({
 })
 
 const premiumFirstSelected=computed({
-  get:()=>props.filters?.premiumFirst!==false,
+  get:()=>props.filters?.premiumFirst===true,
 
   set:value=>{
     emit('update:filters',{
@@ -770,29 +775,16 @@ const premiumFirstSelected=computed({
     })
   }
 })
-const isCabinFilterChanged=computed(()=>{
-  return(
-    economySelected.value!==true||
-    premiumEconomySelected.value!==true||
-    businessSelected.value!==true||
-    premiumBusinessSelected.value!==true||
-    firstSelected.value!==true||
-    premiumFirstSelected.value!==true
-  )
-})
+const isCabinFilterChanged=computed(() =>
+  ['economy','premiumEconomy','business','premiumBusiness','first','premiumFirst']
+    .some(key => props.filters?.[key] === true)
+)
 
 function resetCabinFilters(){
-  emit('update:filters',{
+  emit('update:filters', {
     ...props.filters,
-
-    economy:true,
-    premiumEconomy:true,
-
-    business:true,
-    premiumBusiness:true,
-
-    first:true,
-    premiumFirst:true
+    economy:false, premiumEconomy:false, business:false,
+    premiumBusiness:false, first:false, premiumFirst:false
   })
 }
 

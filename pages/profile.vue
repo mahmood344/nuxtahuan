@@ -372,7 +372,18 @@
           {{ user.passport || '-' }}
         </span>
       </div>
+<div class="profile-detail-item">
+  <span class="profile-detail-label">
+    تاریخ صدور پاسپورت:
+  </span>
 
+  <span dir="ltr">
+    {{ user.passportIssueDate
+      ? String(user.passportIssueDate).slice(0, 10)
+      : '-'
+    }}
+  </span>
+</div>
       <div class="profile-detail-item profile-detail-email">
         <span class="profile-detail-label">
           ایمیل:
@@ -1378,10 +1389,10 @@
           >
             ثبت تغییرات
           </button>
-
+<!-- 
           <span class="text-xs text-gray-400">
             سرویس ویرایش اطلاعات هنوز پیاده‌سازی نشده است.
-          </span>
+          </span> -->
         </div>
       </div>
     </div>
@@ -6999,6 +7010,7 @@ const user = ref({
   email:'',
   nationalCode:'',
   passport:'',
+  passportIssueDate: null,
   birthDate:null,
   gender:null,
   credit:0,
@@ -7109,7 +7121,7 @@ async function fetchUserProfile() {
   email:String(data?.email || '').trim(),
   nationalCode:String(data?.codeMelli || '').trim(),
   passport:String(data?.passportNo || '').trim(),
-
+passportIssueDate: data?.passportIssueDate ?? null,
   birthDate:
     data?.birthDate || null,
 

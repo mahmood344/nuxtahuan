@@ -2,8 +2,10 @@
 import {
   ref,
   watch,
-  computed
-} from "vue";
+  computed,
+  onMounted,
+  onBeforeUnmount
+} from 'vue'
 
 import { useRoute } from "vue-router";
 const props = defineProps({
@@ -26,7 +28,39 @@ const props = defineProps({
     default: null
   }
 })
+const isMobileCalendar = ref(false)
 
+let mobileMediaQuery = null
+
+function syncCalendarMode(event) {
+  isMobileCalendar.value =
+    event?.matches ??
+    window.innerWidth < 768
+}
+
+onMounted(() => {
+
+  mobileMediaQuery =
+    window.matchMedia(
+      '(max-width: 767px)'
+    )
+
+  isMobileCalendar.value =
+    mobileMediaQuery.matches
+
+  mobileMediaQuery.addEventListener?.(
+    'change',
+    syncCalendarMode
+  )
+})
+
+onBeforeUnmount(() => {
+
+  mobileMediaQuery?.removeEventListener?.(
+    'change',
+    syncCalendarMode
+  )
+})
 const route = useRoute()
 
 
@@ -385,23 +419,24 @@ defineExpose({
 
 
           <PersianDatePicker
-            :styles="styles"
-            v-model="departDate"
-            class="hidden"
-            :auto-submit="false"
-            :show="showdepartDate"
-            format="YYYY/MM/DD"
-            mode="single"
-            locale="fa,en"
-            :disable="disablePastDates"
-            @close="showdepartDate = false"
-          >
-            <template #icon></template>
+  :styles="styles"
+  v-model="departDate"
+  class="hidden"
+  :auto-submit="false"
+  :show="showdepartDate"
+  :modal="isMobileCalendar"
+  format="YYYY/MM/DD"
+  mode="single"
+  locale="fa,en"
+  :disable="disablePastDates"
+  @close="showdepartDate = false"
+>
+  <template #icon></template>
 
-            <template #footer>
-              تاریخ رفت:
-            </template>
-          </PersianDatePicker>
+  <template #footer>
+    تاریخ رفت:
+  </template>
+</PersianDatePicker>
 
         </div>
 
@@ -514,25 +549,25 @@ defineExpose({
             </svg>
           </button>
 
+<PersianDatePicker
+  :styles="styles"
+  :auto-submit="false"
+  v-model="returnDate"
+  class="hidden"
+  format="YYYY/MM/DD"
+  mode="single"
+  locale="fa,en"
+  :show="showreturnDate"
+  :modal="isMobileCalendar"
+  :disable="disablePastDates"
+  @close="showreturnDate = false"
+>
+  <template #icon></template>
 
-          <PersianDatePicker
-            :styles="styles"
-            :auto-submit="false"
-            v-model="returnDate"
-            class="hidden"
-            format="YYYY/MM/DD"
-            mode="single"
-            locale="fa,en"
-            :show="showreturnDate"
-            :disable="disablePastDates"
-            @close="showreturnDate = false"
-          >
-            <template #icon></template>
-
-            <template #footer>
-              تاریخ برگشت:
-            </template>
-          </PersianDatePicker>
+  <template #footer>
+    تاریخ برگشت:
+  </template>
+</PersianDatePicker>
 
         </div>
 
