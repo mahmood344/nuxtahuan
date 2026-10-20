@@ -584,31 +584,94 @@ const isHotelBooking=computed(
 )
 // برای هتل آهوان همان contractRoutes قبلی استفاده می‌شود.
 // برای اسنپ‌تریپ، اطلاعات contractHotels به مدل واچر تبدیل می‌شود.
+
 const hotelVoucherRoutes = computed<any[]>(() => {
   const contract = contractData.value
+
   if (!contract) return []
-  const routes = Array.isArray(contract.contractRoutes) ? contract.contractRoutes : []
-  const hotels = Array.isArray(contract.contractHotels) ? contract.contractHotels : []
-  const snappHotels = hotels.filter((hotel: any) =>
-    String(hotel?.source || '').trim().toUpperCase() === 'SNAPPTRIP'
+
+  const routes = Array.isArray(contract.contractRoutes)
+    ? contract.contractRoutes
+    : []
+
+  const hotels = Array.isArray(contract.contractHotels)
+    ? contract.contractHotels
+    : []
+
+  const snappHotels = hotels.filter(
+    (hotel: any) =>
+      String(hotel?.source || '')
+        .trim()
+        .toUpperCase() === 'SNAPPTRIP'
   )
+
   if (!snappHotels.length) return routes
-  const existing = new Set(snappHotels.map((h: any) => String(h.id)))
-  // فقط مسیرهای عادی آهوان باقی بمانند؛ مسیرهای اسنپ‌تریپ دوباره نمایش داده نشوند.
-  const normalRoutes = routes.filter((r: any) =>
-    String(r?.source || '').toUpperCase() !== 'SNAPPTRIP' &&
-    !existing.has(String(r?.contractHotelId ?? ''))
+
+  const existing = new Set(
+    snappHotels.map((hotel: any) => String(hotel.id))
   )
-  const mapped = snappHotels.map((hotel: any) => ({
-    ...hotel,
-    stayNights: hotel.nights,
-    roomType: hotel.roomName,
-    cityNameFarsi: hotel.cityName,
-    // قیمت از پاسخ اسنپ‌تریپ قابل فرض نیست؛ قیمت قرارداد در صورت وجود نمایش داده می‌شود.
-    price: hotel.price ?? hotel.totalPrice ?? null
-  }))
+
+  const normalRoutes = routes.filter(
+    (route: any) =>
+      String(route?.source || '').toUpperCase() !== 'SNAPPTRIP' &&
+      !existing.has(String(route?.contractHotelId ?? ''))
+  )
+
+  const mapped = snappHotels.map((hotel: any) => {
+    let description: any = null
+
+    try {
+      description =
+        typeof hotel.description === 'string'
+          ? JSON.parse(hotel.description)
+          : hotel.description
+    } catch {
+      description = null
+    }
+
+    // مبلغ فروش ذخیره‌شده در Description
+    const savedTotalPrice = Number(
+      description?.totalPrice
+    )
+
+    // قیمت قدیمی قرارداد، در صورت نبود قیمت ذخیره‌شده
+    const oldPrice = Number(
+      hotel.price ?? hotel.totalPrice
+    )
+
+    const price =
+      Number.isFinite(savedTotalPrice) &&
+      savedTotalPrice > 0
+        ? savedTotalPrice
+        : Number.isFinite(oldPrice) &&
+          oldPrice > 0
+          ? oldPrice
+          : null
+
+    return {
+      ...hotel,
+
+      stayNights: hotel.nights,
+      roomType: hotel.roomName,
+      cityNameFarsi: hotel.cityName,
+
+      // قیمت نهایی واچر
+      price,
+      totalPrice: price,
+
+      // اطلاعات رزرو
+      reservationCode:
+        description?.reservationCode ??
+        hotel.reservationCode,
+
+      confirmStatus:
+        description?.status ?? null
+    }
+  })
+
   return [...normalRoutes, ...mapped]
 })
+
 
 const tickets = ref<PrintableTicket[]>([])
 

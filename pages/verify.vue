@@ -3461,18 +3461,50 @@ const processSnappTripConfirm = async (contract: any): Promise<void> => {
     }
   }
 
-  hotel.description = JSON.stringify({
-    provider: 'SNAPPTRIP',
-    version: 1,
-    originalDescription: previous?.originalDescription ??
-      (previous ? '' : String(hotel.description || '')),
-    reservationCode,
-    status: state,
-    message,
-    response: providerResponse,
-    attemptedAt: new Date().toISOString(),
-    ...(previous?.settlement ? { settlement: previous.settlement } : {})
-  })
+
+const sessionTotalPrice = Number(
+  paymentInfo.value?.totalPrice
+)
+
+const validSessionTotalPrice =
+  Number.isFinite(sessionTotalPrice) &&
+  sessionTotalPrice > 0
+
+const previousTotalPrice = Number(
+  previous?.totalPrice
+)
+
+const totalPrice = validSessionTotalPrice
+  ? sessionTotalPrice
+  : Number.isFinite(previousTotalPrice) && previousTotalPrice > 0
+    ? previousTotalPrice
+    : null
+
+hotel.description = JSON.stringify({
+  provider: 'SNAPPTRIP',
+  version: 1,
+
+  originalDescription:
+    previous?.originalDescription ??
+    (previous ? '' : String(hotel.description || '')),
+
+  reservationCode,
+  status: state,
+  message,
+
+  // قیمت نهایی قرارداد از سشن پرداخت
+  totalPrice,
+
+  // پاسخ اصلی اسنپ‌تریپ بدون تغییر
+  response: providerResponse,
+
+  attemptedAt: new Date().toISOString(),
+
+  ...(previous?.settlement
+    ? { settlement: previous.settlement }
+    : {})
+})
+
 
   contract.confirmStatus = state === 'confirmed' ? 'confirm' : 'incomplete'
   contract.ticketStatus = state === 'confirmed' ? 'confirm' : 'incomplete'

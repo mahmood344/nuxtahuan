@@ -3857,6 +3857,7 @@ function isSnappInfantPassenger(
  )
 }
 
+
 function buildSnappTripBookingRooms(
  passengers
 ){
@@ -3864,8 +3865,8 @@ function buildSnappTripBookingRooms(
  const roomInstances=[]
 
  /*
-  * اگر کاربر از یک Room چند اتاق انتخاب کرده باشد،
-  * برای API رزرو هر اتاق را به یک آیتم مستقل تبدیل می‌کنیم.
+  * تبدیل اتاق‌های انتخاب‌شده به آیتم‌های مستقل
+  * برای API رزرو SnappTrip
   */
  for(
   const selectedRoom
@@ -3932,14 +3933,23 @@ function buildSnappTripBookingRooms(
     guests:[]
 
    })
+
   }
+
  }
 
- if(!roomInstances.length)
+ /*
+  * بررسی انتخاب اتاق
+  */
+ if(!roomInstances.length){
   throw new Error(
    'اتاقی برای رزرو SnappTrip انتخاب نشده است.'
   )
+ }
 
+ /*
+  * بررسی شناسه اتاق‌ها
+  */
  if(
   roomInstances.some(
    item=>
@@ -3958,8 +3968,16 @@ function buildSnappTripBookingRooms(
    :[]
 
  /*
-  * مسافرها را به ترتیب و با توجه به ظرفیت پایه اتاق‌ها
-  * بین Roomهای رزرو تقسیم می‌کنیم.
+  * بررسی وجود مسافر
+  */
+ if(!normalizedPassengers.length){
+  throw new Error(
+   'مشخصات سرپرست رزرو وارد نشده است.'
+  )
+ }
+
+ /*
+  * توزیع مسافرها بر اساس ظرفیت اتاق‌ها
   */
  let passengerIndex=0
 
@@ -3995,12 +4013,13 @@ function buildSnappTripBookingRooms(
    )
 
    passengerIndex++
+
   }
+
  }
 
  /*
-  * اگر تعداد مسافر از ظرفیت پایه بیشتر بود
-  * (مثلاً به دلیل تخت اضافه)، باقی‌مانده روی اتاق آخر قرار می‌گیرد.
+  * انتقال مسافرهای باقی‌مانده به اتاق آخر
   */
  while(
   passengerIndex<
@@ -4016,8 +4035,50 @@ function buildSnappTripBookingRooms(
   )
 
   passengerIndex++
+
  }
 
+ /*
+  * دریافت مشخصات سرپرست اصلی رزرو
+  */
+ const leader=
+  roomInstances[0]?.guests?.[0]||
+  normalizedPassengers[0]
+
+ if(
+  !leader?.firstName||
+  !leader?.lastName
+ ){
+  throw new Error(
+   'نام و نام خانوادگی سرپرست رزرو کامل نیست.'
+  )
+ }
+
+ /*
+  * قرار دادن مشخصات سرپرست
+  * در تمام اتاق‌هایی که guests خالی دارند
+  */
+ for(
+  const instance
+  of roomInstances
+ ){
+
+  if(
+   !Array.isArray(instance.guests)||
+   instance.guests.length===0
+  ){
+
+   instance.guests=[
+    {...leader}
+   ]
+
+  }
+
+ }
+
+ /*
+  * ساخت خروجی نهایی مطابق ساختار API
+  */
  return roomInstances.map(
   item=>{
 
@@ -4074,7 +4135,9 @@ function buildSnappTripBookingRooms(
 
   }
  )
+
 }
+
 
 function buildSnappTripBookingPayload(){
 

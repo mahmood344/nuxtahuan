@@ -43,7 +43,7 @@
           </div>
 
           <div v-if="isSnappTrip" class="snapptrip-reservation-row">
-            <span>کد رزرو اسنپ‌تریپ: <strong dir="ltr">{{ contract?.mainContractNo || '-' }}</strong></span>
+            <span>کد رزرو : <strong dir="ltr">{{ contract?.mainContractNo || '-' }}</strong></span>
             <span>وضعیت رزرو: <strong>{{ snappTripStatus }}</strong></span>
           </div>
 
