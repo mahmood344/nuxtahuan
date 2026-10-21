@@ -408,6 +408,8 @@ export type PrintableTicket = {
 
   nationalCode: string
 
+  passportNumber?: string
+
   nationality: string
 
   gender:boolean|null
@@ -3815,7 +3817,12 @@ const mapPartoToPrintableTicket=(
         '-'
 
       ).trim(),
-
+passportNumber: String(
+  customer?.passportNumber ||
+  passenger?.passportNo ||
+  passenger?.passportNumber ||
+  ''
+).trim(),
     nationality:
 
       String(
