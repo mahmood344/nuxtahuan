@@ -335,20 +335,23 @@
               </dd>
             </div>
 
-            <div>
-              <dt
-                class="text-xs text-blue-950/70"
-              >
-                کد ملی یا پاسپورت
-              </dt>
+           <div v-if="ticket.nationalCode && ticket.nationalCode !== '-'">
+  <dt class="text-xs text-blue-950/70">
+    کد ملی
+  </dt>
+  <dd dir="ltr" class="mt-1 text-left font-bold text-blue-950">
+    {{ ticket.nationalCode }}
+  </dd>
+</div>
 
-              <dd
-                dir="ltr"
-                class="mt-1 text-left font-bold text-blue-950"
-              >
-                {{ ticket.nationalCode }}
-              </dd>
-            </div>
+<div v-if="ticket.passportNumber && ticket.passportNumber !== '-'">
+  <dt class="text-xs text-blue-950/70">
+    شماره پاسپورت
+  </dt>
+  <dd dir="ltr" class="mt-1 text-left font-bold text-blue-950">
+    {{ ticket.passportNumber }}
+  </dd>
+</div>
 <div>
   <dt class="text-xs text-blue-950/70">
     ملیت

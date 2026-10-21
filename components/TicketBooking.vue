@@ -577,11 +577,11 @@ function searchSnappTripHotel(){
 }
 const images = [
   '/imgs/ticketbooking/flightbackground.png',
-  '/imgs/ticketbooking/flightbackground2.png',
   '/imgs/ticketbooking/flightbackground3.png',
+  '/imgs/ticketbooking/flightbackground6.png',
+  '/imgs/ticketbooking/flightbackground2.png',
   '/imgs/ticketbooking/flightbackground4.png',
   '/imgs/ticketbooking/flightbackground5.png',
-  '/imgs/ticketbooking/flightbackground6.png',
   '/imgs/ticketbooking/flightbackground7.png'
 ]
 

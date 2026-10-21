@@ -231,8 +231,9 @@
         </span>
 
         <span>
-          {{ order.type }}
-        </span>
+  {{ isHotelContract(order.contract) ? 'هتل ' : '' }}
+  {{ order.type }}
+</span>
       </div>
 
       <div class="order-column">
@@ -1827,8 +1828,13 @@
          sm:inline
         "
        >
-        {{getContractServiceType(selectedContract)}}
-       </span>
+        {{ isHotelContract(selectedContract) ? 'هتل ' : '' }}
+  {{
+    isHotelContract(selectedContract)
+      ? getHotelDisplayInfo(selectedContract).title
+      : getContractServiceType(selectedContract)
+  }}
+</span>
       </div>
      </section>
 
@@ -2437,7 +2443,15 @@
          </p>
         </div>
 
+<div>
+  <p class="text-[10px] text-gray-400 sm:text-xs">
+    شهر
+  </p>
 
+  <p class="mt-1 text-[11px] font-bold sm:mt-2 sm:text-sm">
+    {{ route.cityNameFarsi || route.cityName || '-' }}
+  </p>
+</div>
         <div>
          <p
           class="
@@ -3120,7 +3134,7 @@
                 نوع سفارش:
               </span>
 
-              <span>
+              <span> 
                 {{
                   selectedTransaction?.orderType || '-'
                 }}
@@ -4440,13 +4454,71 @@ const selectedContractPassengers = computed(() => {
     : []
 })
 
+
 const selectedContractRoutes = computed(() => {
-  return Array.isArray(
-    selectedContract.value?.contractRoutes
-  )
-    ? selectedContract.value.contractRoutes
+  const contract = selectedContract.value
+
+  if (!contract) return []
+
+  const routes = Array.isArray(contract.contractRoutes)
+    ? contract.contractRoutes
     : []
+
+  const hotels = Array.isArray(contract.contractHotels)
+    ? contract.contractHotels
+    : []
+
+  const snappHotels = hotels.filter(hotel =>
+    String(hotel?.source || '')
+      .trim()
+      .toUpperCase() === 'SNAPPTRIP'
+  )
+
+  const normalRoutes = routes.filter(route =>
+    String(route?.source || '')
+      .trim()
+      .toUpperCase() !== 'SNAPPTRIP'
+  )
+
+  const mappedSnappHotels = snappHotels.map(hotel => {
+    let description = null
+
+    try {
+      description =
+        typeof hotel.description === 'string'
+          ? JSON.parse(hotel.description)
+          : hotel.description
+    } catch {
+      description = null
+    }
+
+    const savedPrice = Number(description?.totalPrice)
+
+    return {
+      ...hotel,
+      roomType: hotel.roomName,
+      stayNights: hotel.nights,
+      cityNameFarsi: hotel.cityName,
+      price:
+        Number.isFinite(savedPrice) && savedPrice > 0
+          ? savedPrice
+          : Number(hotel.price ?? hotel.totalPrice ?? 0),
+      reservationCode:
+        description?.reservationCode ??
+        description?.response?.reservation_code ??
+        contract.mainContractNo ??
+        null,
+      reservationStatus:
+        description?.status ??
+        description?.response?.state ??
+        null,
+      bookingDescription: description
+    }
+  })
+
+  return [...normalRoutes, ...mappedSnappHotels]
 })
+
 
 function getPassengerCount(contract) {
   const passengers = Array.isArray(
@@ -4464,31 +4536,37 @@ function getPassengerCount(contract) {
   )
 }
 
+
 function getRouteCountTitle(contract) {
-  const flights = Array.isArray(
-    contract?.contractFlights
-  )
+  const flights = Array.isArray(contract?.contractFlights)
     ? contract.contractFlights
     : []
 
-  const routes = Array.isArray(
-    contract?.contractRoutes
-  )
+  const routes = Array.isArray(contract?.contractRoutes)
     ? contract.contractRoutes
     : []
 
+  const hotels = Array.isArray(contract?.contractHotels)
+    ? contract.contractHotels.filter(hotel =>
+        String(hotel?.source || '')
+          .trim()
+          .toUpperCase() === 'SNAPPTRIP'
+      )
+    : []
+
+  if (contract?.hotel === true || isHotelContract(contract)) {
+    const count = routes.length + hotels.length
+    return `${toPersianDigits(count)} مورد اقامت`
+  }
+
   const count = flights.length || routes.length
 
-  if (count <= 1) {
-    return 'تک مسیر'
-  }
-
-  if (count === 2) {
-    return 'رفت و برگشت'
-  }
+  if (count <= 1) return 'تک مسیر'
+  if (count === 2) return 'رفت و برگشت'
 
   return `${toPersianDigits(count)} مسیر`
 }
+
 
 function getContractStatusTitle(contract) {
   const status = String(
@@ -4558,10 +4636,8 @@ function getContractServiceType(contract) {
   return '-'
 }
 
-function getFlightOrderType(contract) {
-  const flights = Array.isArray(
-    contract?.contractFlights
-  )
+const getFlightOrderType = (contract) => {
+  const flights = Array.isArray(contract?.contractFlights)
     ? contract.contractFlights
     : []
 
@@ -4569,27 +4645,21 @@ function getFlightOrderType(contract) {
     return 'پرواز'
   }
 
-  const hasInternationalFlight =
-    flights.some((flight) => {
-      const origin = String(
-        flight?.origin || ''
-      ).toUpperCase()
+  const suppliers = flights.map(flight =>
+    String(flight?.flightSupplier || '')
+      .trim()
+      .toUpperCase()
+  )
 
-      const destination = String(
-        flight?.destination || ''
-      ).toUpperCase()
+  if (suppliers.includes('PARTO')) {
+    return 'پرواز خارجی'
+  }
 
-      return (
-        origin === 'IKA' ||
-        destination === 'IKA' ||
-        origin === 'IST' ||
-        destination === 'IST'
-      )
-    })
+  if (suppliers.includes('NIRA')) {
+    return 'پرواز داخلی'
+  }
 
-  return hasInternationalFlight
-    ? 'پرواز خارجی'
-    : 'پرواز داخلی'
+  return 'پرواز'
 }
 function formatContractDate(value) {
   if (!value) return '-'
@@ -7232,19 +7302,27 @@ function isTicketContract(contract) {
   )
 }
 
+
 function isHotelContract(contract) {
   return Boolean(
     contract?.hotel === true ||
     (
       Array.isArray(contract?.contractRoutes) &&
-      contract.contractRoutes.some(
-        route =>
-          route?.hotelId ||
-          route?.hotelName
+      contract.contractRoutes.some(route =>
+        route?.hotelId || route?.hotelName
+      )
+    ) ||
+    (
+      Array.isArray(contract?.contractHotels) &&
+      contract.contractHotels.some(hotel =>
+        String(hotel?.source || '')
+          .trim()
+          .toUpperCase() === 'SNAPPTRIP'
       )
     )
   )
 }
+
 
 function isTourContract(contract) {
   return contract?.tour === true
@@ -7410,11 +7488,49 @@ function formatContractDateTime(contract) {
     : persianDate
 }
 
+function getHotelDisplayInfo(contract) {
+  const snappHotel = (
+    Array.isArray(contract?.contractHotels)
+      ? contract.contractHotels
+      : []
+  ).find(hotel =>
+    String(hotel?.source || '').trim().toUpperCase() === 'SNAPPTRIP'
+  )
+
+  const ahuanHotel = (
+    Array.isArray(contract?.contractRoutes)
+      ? contract.contractRoutes
+      : []
+  ).find(route => route?.hotelName || route?.hotelId)
+
+  const hotel = snappHotel || ahuanHotel
+
+  if (!hotel) {
+    return {
+      hotelName: '',
+      cityName: '',
+      title: 'هتل'
+    }
+  }
+
+  const hotelName = String(hotel.hotelName || '').trim()
+  const cityName = String(
+    hotel.cityNameFarsi || hotel.cityName || ''
+  ).trim()
+
+  return {
+    hotelName,
+    cityName,
+    title: [hotelName, cityName].filter(Boolean).join(' - ') || 'هتل'
+  }
+}
+
 function mapContractToOrder(contract) {
   return {
     id:Number(contract?.id || 0),
-    type:getContractType(contract),
-    amount:getContractAmount(contract),
+type: isHotelContract(contract)
+  ? getHotelDisplayInfo(contract).title
+  : getContractType(contract),    amount:getContractAmount(contract),
     dateTime:formatContractDateTime(contract),
     confirmStatus:String(
       contract?.confirmStatus || ''
