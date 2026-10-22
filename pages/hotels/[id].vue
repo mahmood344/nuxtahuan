@@ -190,7 +190,7 @@ mode="aside"
      h-full
      w-full
      cursor-pointer
-     object-cover
+     
     "
     @click="
      openHotelGallery(

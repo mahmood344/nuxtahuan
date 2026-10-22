@@ -3728,11 +3728,11 @@ const mapPartoToPrintableTicket=(
 
     customer?.gender===0
 
-      ?false
+      ?true
 
       :customer?.gender===1
 
-        ?true
+        ?false
 
         :typeof passenger?.gender==='boolean'
 

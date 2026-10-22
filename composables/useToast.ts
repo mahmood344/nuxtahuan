@@ -1,28 +1,42 @@
-export type ToastType='success'|'error'|'warning'|'info'
 
-export type ToastItem={
-  id:string
-  type:ToastType
-  message:string
+export type ToastType = 'success' | 'error' | 'warning' | 'info'
+
+export type ToastItem = {
+  id: string
+  type: ToastType
+  message: string
 }
 
-export const useToast=()=>{
-  const toasts=useState<ToastItem[]>(
+// شناسه موقت برای Toast، بدون وابستگی به crypto
+let toastCounter = 0
+
+const generateToastId = (): string => {
+  toastCounter += 1
+
+  return `toast-${Date.now()}-${toastCounter}`
+}
+
+export const useToast = () => {
+  const toasts = useState<ToastItem[]>(
     'app-toasts',
-    ()=>[]
+    () => []
   )
 
-  const remove=(id:string)=>{
-    toasts.value=
-      toasts.value.filter(x=>x.id!==id)
+  const remove = (id: string) => {
+    toasts.value = toasts.value.filter(
+      x => x.id !== id
+    )
   }
 
-  const show=(
-    message:string,
-    type:ToastType='info',
-    duration=4000
-  )=>{
-    const id=crypto.randomUUID()
+  const show = (
+    message: string,
+    type: ToastType = 'info',
+    duration = 4000
+  ) => {
+    // نمایش Toast فقط در مرورگر
+    if (!import.meta.client) return
+
+    const id = generateToastId()
 
     toasts.value.push({
       id,
@@ -30,28 +44,25 @@ export const useToast=()=>{
       message
     })
 
-    if(import.meta.client){
-      setTimeout(
-        ()=>remove(id),
-        duration
-      )
-    }
+    setTimeout(() => {
+      remove(id)
+    }, duration)
   }
 
-  return{
+  return {
     toasts,
     remove,
 
-    success:(message:string)=>
-      show(message,'success'),
+    success: (message: string) =>
+      show(message, 'success'),
 
-    error:(message:string)=>
-      show(message,'error',6000),
+    error: (message: string) =>
+      show(message, 'error', 6000),
 
-    warning:(message:string)=>
-      show(message,'warning',5000),
+    warning: (message: string) =>
+      show(message, 'warning', 5000),
 
-    info:(message:string)=>
-      show(message,'info')
+    info: (message: string) =>
+      show(message, 'info')
   }
 }
