@@ -576,59 +576,6 @@
 
 
 
-          <!-- تایمر ارسال مجدد -->
-          <div
-            class="
-              flex
-              items-center
-              justify-center
-              gap-2
-              rounded-xl
-              border
-              px-3
-              py-2.5
-              text-[11px]
-              font-bold
-              transition-colors
-            "
-            :class="
-              resendCooldown > 0
-                ? 'border-gray-200 bg-gray-50 text-gray-500'
-                : 'border-green-200 bg-green-50 text-green-700'
-            "
-          >
-            <i
-              class="bi"
-              :class="
-                resendCooldown > 0
-                  ? 'bi-clock-history'
-                  : 'bi-check-circle-fill'
-              "
-            ></i>
-
-            <span v-if="resendCooldown > 0">
-              امکان ارسال مجدد کد تا
-              <span
-                class="
-                  mx-1
-                  inline-block
-                  min-w-[42px]
-                  font-black
-                  text-[var(--color-primary-dark)]
-                "
-                dir="ltr"
-              >
-                {{ resendCountdownLabel }}
-              </span>
-              دیگر فعال می‌شود.
-            </span>
-
-            <span v-else>
-              کد را دریافت نکردید؟ اکنون می‌توانید دوباره ارسال کنید.
-            </span>
-          </div>
-
-
           <div class="flex gap-2">
 
             <UiBaseButton
@@ -659,9 +606,9 @@
 
               :label="resendButtonLabel"
 
-              class="w-full !rounded-full !py-4 border border-primary text-primary hover:bg-primary-light font-bold"
+              class="w-full !rounded-full !py-4 !border-2 !border-primary font-bold transition-all duration-200 hover:!bg-white hover:!text-primary hover:!border-primary"
 
-              variant="outlined"
+              :variant="resendCooldown > 0 ? 'outlined' : 'filled'"
 
             />
 

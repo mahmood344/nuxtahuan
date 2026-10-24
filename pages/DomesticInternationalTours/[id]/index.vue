@@ -2,7 +2,7 @@
 
  <div
 
-  class="min-h-screen bg-[#f8f8f8] pb-[95px] md:pb-0"
+  class="page min-h-screen bg-[#f8f8f8] pb-[95px] md:pb-0"
 
   dir="rtl"
 
@@ -1878,5 +1878,9 @@ watch(
  line-height:2;
 
 }
-
+.page,
+.page * {
+  font-size: 14px !important;
+  font-family: pelak, sans-serif !important;
+}
 </style>

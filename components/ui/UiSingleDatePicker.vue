@@ -127,7 +127,15 @@ const styles = {
   'secondary-color': 'var(--color-primary)',
   'in-range-background': 'var(--color-primary-light)'
 }
+const disablePastDates = (date) => {
+  const selected = new Date(date)
+  const today = new Date()
 
+  today.setHours(0, 0, 0, 0)
+  selected.setHours(0, 0, 0, 0)
+
+  return selected < today
+}
 
 /* -----------------------
 باز کردن تقویم
@@ -447,8 +455,9 @@ watch(
         :styles="styles"
         :show="showPicker"
         :modal="isMobileCalendar"
-        :auto-submit="false"
+        :auto-submit="true"
         format="YYYY/MM/DD"
+        :disable="disablePastDates"
         locale="fa,en"
         :min="minDate || undefined"
         @close="showPicker = false"
@@ -480,7 +489,8 @@ watch(
 
   min-height: 44px !important;
 
-  font-size: 10px !important;
+  font-size: 11px !important;
+  font-weight: bold;
 }
 
 

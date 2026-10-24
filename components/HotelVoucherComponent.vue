@@ -981,10 +981,7 @@ const formatDate =
   overflow:
     hidden;
 
-  font-family:
-    Tahoma,
-    Arial,
-    sans-serif;
+  font-family: pelak, Tahoma, Arial, sans-serif;
 
   color:
     #1f2937;
@@ -1059,33 +1056,30 @@ const formatDate =
   padding:
     5px 8px;
 
-  border:
-    1px solid
-    rgba(
-      23,
-      63,
-      140,
-      .7
-    );
+ 
 
   border-radius:
     5px;
 
-  background:
-    rgba(
-      255,
-      255,
-      255,
-      .72
-    );
+  background: transparent;
 
-  font-size:
-    14px;
+  font-size: 11.5px;
 
   text-align:
     center;
 }
 
+
+/* Section titles rendered inside VoucherSection */
+.hotel-voucher :deep(.voucher-section-title),
+.hotel-voucher :deep(.section-title),
+.hotel-voucher :deep(.voucher-section-header) {
+  padding: 6px 12px !important;
+  line-height: 1.5 !important;
+  font-size: 11px !important;
+  box-sizing: border-box;
+  font-family: pelak, Tahoma, Arial, sans-serif;
+}
 
 /* ================================= */
 /* Tables */
@@ -1112,8 +1106,8 @@ const formatDate =
   padding:7px;
   border:1px solid rgba(23,63,140,.7);
   border-radius:5px;
-  background:rgba(255,255,255,.75);
-  font-size:14px;
+  background:transparent;
+  font-size: 11.5px;
   text-align:center;
 }
 
@@ -1135,7 +1129,7 @@ const formatDate =
     );
 
   padding:
-    5px 4px;
+    8px 8px;
 
   text-align:
     center;
@@ -1143,22 +1137,15 @@ const formatDate =
   vertical-align:
     middle;
 
-  font-size:
-    14px;
+  font-size: 11.5px;
 
   font-weight:
     bold;
 
   line-height:
-    0.9;
+    1.5;
 
-  background:
-    rgba(
-      255,
-      255,
-      255,
-      .68
-    );
+  background: transparent;
 
   overflow-wrap:
     anywhere;
@@ -1205,8 +1192,7 @@ const formatDate =
   text-align:
     center;
 
-  font-size:
-    12px;
+  font-size: 10px;
 
   line-height:
     1.5;
@@ -1231,8 +1217,7 @@ const formatDate =
   padding:
     4px;
 
-  font-size:
-    12px;
+  font-size: 10px;
 
   line-height:
     1.3;
@@ -1243,6 +1228,12 @@ const formatDate =
 /* PDF Export */
 /* ================================= */
 
+.hotel-voucher.pdf-exporting,
+.hotel-voucher.pdf-exporting * {
+  font-family: pelak, Tahoma, Arial, sans-serif !important;
+}
+
+
 /*
  * این کلاس فقط هنگام html2canvas
  * فعال می‌شود.
@@ -1251,7 +1242,7 @@ const formatDate =
 .hotel-voucher.pdf-exporting
 .meta-row{
   font-size:
-    11px !important;
+    9.8px !important;
 
   padding-top:
     7px !important;
@@ -1266,10 +1257,10 @@ const formatDate =
 .hotel-voucher.pdf-exporting
 .voucher-table td{
   font-size:
-    11px !important;
+    9.8px !important;
 
   line-height:
-    1.4 !important;
+    1.6 !important;
 
   /*
    * جدول در PDF بلندتر و بازتر
@@ -1281,17 +1272,17 @@ const formatDate =
     9px !important;
 
   padding-left:
-    4px !important;
+    7px !important;
 
   padding-right:
-    4px !important;
+    7px !important;
 }
 
 
 .hotel-voucher.pdf-exporting
 .voucher-note{
   font-size:
-    9.5px !important;
+    8.3px !important;
 
   line-height:
     1.5 !important;
@@ -1309,13 +1300,13 @@ const formatDate =
 .hotel-voucher.pdf-exporting
 .cancellation-table td{
   font-size:
-    9px !important;
+    8px !important;
 
   line-height:
-    1.3 !important;
+    1.5 !important;
 
   padding:
-    6px 4px !important;
+    8px 6px !important;
 }
 
 
@@ -1373,13 +1364,13 @@ const formatDate =
   .hotel-voucher:not(.pdf-exporting)
   .voucher-table td{
     padding:
-      5px 3px;
+      7px 5px;
 
     font-size:
       11px;
 
     line-height:
-      2.9;
+      1.6;
 
     white-space:
       normal;
@@ -1423,7 +1414,7 @@ const formatDate =
   .hotel-voucher:not(.pdf-exporting)
   .cancellation-table td{
     padding:
-      2px;
+      5px 4px;
 
     font-size:
       8.5px;
@@ -1445,6 +1436,11 @@ const formatDate =
 /* ================================= */
 
 @media print{
+  .hotel-voucher,
+  .hotel-voucher * {
+    font-family: pelak, Tahoma, Arial, sans-serif !important;
+  }
+
 
   .voucher-responsive-shell{
     width:

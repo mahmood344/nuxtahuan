@@ -36,7 +36,7 @@
     <div>
 
       <h2
-        class="text-[18px] font-black text-[var(--color-gray-800)]"
+        class="text-[18px]! font-black text-[var(--color-gray-800)]"
       >
         اتاق‌های هتل {{hotel.name}}
       </h2>
@@ -135,7 +135,7 @@
         class="
           min-w-0
           flex-1
-          text-[15px]
+          text-[15px]!
           font-black
           leading-6
           text-[var(--color-gray-800)]
@@ -236,7 +236,7 @@
         v-if="room.doubleBedCount"
         :text="`${room.doubleBedCount} تخت دبل`"
         color="var(--color-gray-600)"
-        icon='<i class="bi bi-bed"></i>'
+        icon='<i class="bi bi-person"></i>'
         style="zoom:0.78"
       />
 
@@ -246,7 +246,7 @@
         v-if="room.singleBedCount"
         :text="`${room.singleBedCount} تخت سینگل`"
         color="var(--color-gray-600)"
-        icon='<i class="bi bi-bed"></i>'
+        icon='<i class="bi bi-person"></i>'
         style="zoom:0.78"
       />
 
@@ -272,41 +272,27 @@
     <!-- ========================= -->
     <!-- نام / نمای اتاق -->
     <!-- ========================= -->
-    <div
-      v-if="room.name || room.roomView"
-      class="mt-3 flex flex-wrap items-center gap-2"
-    >
+    <!-- نام / نمای اتاق -->
+<div
+  v-if="room.name || room.roomView"
+  class="mt-3 flex flex-wrap items-center gap-2"
+>
+  <UiBaseLabel
+    v-if="room.name"
+    :text="room.name"
+    color="var(--color-gray-700)"
+    icon='<i class="bi bi-door-open"></i>'
+    style="zoom:0.78"
+  />
 
-      <span
-        v-if="room.name"
-        class="
-          rounded
-          bg-[var(--color-gray-100)]
-          px-2
-          py-1
-          text-[10px]
-          text-[var(--color-gray-700)]
-        "
-      >
-        {{ room.name }}
-      </span>
-
-
-      <span
-        v-if="room.roomView"
-        class="
-          rounded
-          bg-[var(--color-gray-100)]
-          px-2
-          py-1
-          text-[10px]
-          text-[var(--color-gray-700)]
-        "
-      >
-        نمای {{ room.roomView }}
-      </span>
-
-    </div>
+  <UiBaseLabel
+    v-if="room.roomView"
+    :text="`نمای ${room.roomView}`"
+    color="var(--color-gray-700)"
+    icon='<i class="bi bi-eye"></i>'
+    style="zoom:0.78"
+  />
+</div>
 
 <!-- ====================== -->
 <!-- امکانات اتاق SnappTrip -->
@@ -318,7 +304,7 @@
       v-if="room.description"
       class="
         mt-4
-        text-[11px]
+        text-[11px]!
         leading-6
         text-[var(--color-gray-500)]
       "
@@ -679,13 +665,13 @@
   >
 
    <span
-    class="text-[22px] font-black text-[var(--color-primary-dark)]"
+    class="text-[22px]! font-black text-[var(--color-primary-dark)]"
    >
     {{formatPrice(room.price)}}
    </span>
 
    <span
-    class="pb-1 text-[10px] font-bold text-[var(--color-gray-500)]"
+    class="pb-1 text-[10px]! font-bold text-[var(--color-gray-500)]"
    >
     ریال
    </span>

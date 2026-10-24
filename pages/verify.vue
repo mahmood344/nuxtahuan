@@ -883,11 +883,7 @@ const buildFlightSmsText = (
     supplier==='PARTO'&&
     issueSucceeded
   ){
-    return `مسافر گرامی،
-احتراماً به اطلاع می‌رساند که بلیت شما در مسیر ${origin} به ${destination} با موفقیت صادر گردید.
-
-کد رزرو: ${pnr}
-
+    return `
 لینک دریافت بلیت:
 ${ticketUrl}
 
@@ -896,13 +892,9 @@ ${ticketUrl}
   }
 
   if (issueSucceeded) {
-    return `مسافر گرامی،
-احتراماً به اطلاع می‌رساند که ${ticketWord} شما در پرواز هواپیمایی ${airlineName} به شماره ${flightNumber} مورخ ${flightDate} ساعت ${flightTime} از ${origin} به ${destination} صادر گردید.
-
+    return `
 لینک دریافت بلیت:
 ${ticketUrl}
-
-کد رزرو: ${pnr}
 با آرزوی سفری خوش
 شرکت خدمات مسافرتی آهوان`
   }
@@ -4287,14 +4279,9 @@ const sendHotelSms = async (
   ).join('\n')
 
   const buyerSms = status === 'success'
-    ? `مسافر گرامی،
-احتراماً به اطلاع می‌رساند رزرو هتل شما با موفقیت انجام شد.
-
-شماره قرارداد: ${contractId}
-${hotelLine}
-${passengerText ? passengerText + '\n' : ''}لینک دانلود واچر:
+    ? `
+لینک دانلود واچر:
 ${voucherUrl}
-
 با آرزوی سفری خوش
 شرکت خدمات مسافرتی آهوان`
     : `مسافر گرامی،

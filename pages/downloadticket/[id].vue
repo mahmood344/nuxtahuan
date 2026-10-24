@@ -46,7 +46,7 @@
 
     <main
 
-      class="mx-auto mt-6 w-full max-w-7xl px-4 md:mt-[100px]"
+      class="mx-auto mt-[100px] w-full max-w-7xl px-4 md:mt-[100px]"
 
     >
 
@@ -55,14 +55,17 @@
         <!-- ابزارهای صفحه -->
 
         <section
-
-          class="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm print:hidden"
-
-        >
+  v-if="
+    !loading &&
+    !errorMessage &&
+    (isHotelBooking ? hotelVoucherRoutes.length > 0 : tickets.length > 0)
+  "
+  class="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm print:hidden"
+>
 
           <div
 
-            class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
+            class="flex flex-col items-center justify-center gap-5 text-center"
 
           >
 
@@ -84,22 +87,24 @@
 
             </div>
 
-           <button
+          <button
   v-if="isHotelBooking"
   type="button"
-  class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-700 px-6 py-3 font-semibold text-white transition hover:bg-blue-800"
+  :disabled="isDownloadingPdf"
+  class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-700 px-6 py-3 font-semibold text-white transition hover:bg-blue-800 disabled:opacity-60"
   @click="downloadHotelVoucherPdf"
 >
-  دانلود PDF واچر
+  {{ isDownloadingPdf ? 'در حال آماده‌سازی PDF...' : 'دانلود PDF واچر' }}
 </button>
 
 <button
   v-else-if="tickets.length"
   type="button"
-  class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-700 px-6 py-3 font-semibold text-white transition hover:bg-blue-800"
+  :disabled="isDownloadingPdf"
+  class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-700 px-6 py-3 font-semibold text-white transition hover:bg-blue-800 disabled:opacity-60"
   @click="downloadFlightTicketsPdf"
 >
-  دانلود PDF بلیت
+  {{ isDownloadingPdf ? 'در حال آماده‌سازی PDF...' : 'دانلود PDF بلیت' }}
 </button>
 
           </div>
@@ -123,10 +128,9 @@
           ></div>
 
           <p class="text-gray-700">
-
-            در حال دریافت اطلاعات بلیت...
-
-          </p>
+  در حال دریافت اطلاعات
+  {{ isHotelBooking ? 'واچر هتل' : 'بلیت' }}...
+</p>
 
         </section>
 
@@ -150,8 +154,9 @@
 
        <!-- Hotel Voucher -->
 <div
- v-else-if="isHotelBooking"
- id="ticket-print-area"
+  v-else-if="isHotelBooking && hotelVoucherRoutes.length"
+  id="ticket-print-area"
+  class="pdf-only-area"
 >
  <HotelVoucherComponent
   v-for="(route,index) in hotelVoucherRoutes"
@@ -164,8 +169,9 @@
 
 <!-- Flight Tickets -->
 <div
- v-else-if="tickets.length"
- id="ticket-print-area"
+  v-else-if="tickets.length"
+  id="ticket-print-area"
+  class="pdf-only-area"
 >
  <div
   v-if="cancelledTickets.length"
@@ -379,6 +385,7 @@ type EtrResponse = {
 }
 
 export type PrintableTicket = {
+baggageAllowance?: string
 
   key: string
 
@@ -577,7 +584,7 @@ const flightStore = useFlightStore()
 const toast=useToast()
 
 const loading = ref(true)
-
+const isDownloadingPdf = ref(false)
 const errorMessage = ref('')
 
 const contractData = ref<any>(null)
@@ -3749,7 +3756,8 @@ const mapPartoToPrintableTicket=(
       ?.itineraryPricing||{}
 
   return{
-
+baggageAllowance:
+  String(reservation?.baggage ?? '').trim() || '-',
     key:
 
       `PARTO-${booking?.uniqueId}-${ticketNo}-${reservation?.flightNumber}`,
@@ -4405,7 +4413,9 @@ const downloadHotelVoucherPdf = async () => {
 
     return
   }
+if (isDownloadingPdf.value) return
 
+isDownloadingPdf.value = true
   try{
 
     const [
@@ -4446,7 +4456,23 @@ const downloadHotelVoucherPdf = async () => {
           windowHeight:1400,
 
           onclone:(clonedDocument:Document)=>{
+            const clonedPrintArea =
+  clonedDocument.getElementById('ticket-print-area')
 
+if (clonedPrintArea) {
+  clonedPrintArea.style.setProperty(
+    'position', 'absolute', 'important'
+  )
+  clonedPrintArea.style.setProperty(
+    'left', '0px', 'important'
+  )
+  clonedPrintArea.style.setProperty(
+    'top', '0px', 'important'
+  )
+  clonedPrintArea.style.setProperty(
+    'z-index', 'auto', 'important'
+  )
+}
             const clonedVoucher =
               clonedDocument.querySelector(
                 '#ticket-print-area .hotel-voucher'
@@ -4588,12 +4614,11 @@ const downloadHotelVoucherPdf = async () => {
     )
 
   }
-  finally{
+ finally {
+  element.classList.remove('pdf-exporting')
 
-    element.classList.remove(
-      'pdf-exporting'
-    )
-  }
+  isDownloadingPdf.value = false
+}
 }
 const processContractTickets=async(
 
@@ -5120,16 +5145,14 @@ const downloadFlightTicketsPdf =
       ) as HTMLElement[]
 
 
-    if(
-      !ticketSheets.length
-    ){
+    if (!ticketSheets.length) {
+  toast.error('بلیت برای دانلود پیدا نشد.')
+  return
+}
 
-      toast.error(
-        'بلیت برای دانلود پیدا نشد.'
-      )
+if (isDownloadingPdf.value) return
 
-      return
-    }
+isDownloadingPdf.value = true
 
 
     try{
@@ -5242,22 +5265,34 @@ const downloadFlightTicketsPdf =
 
               windowHeight:1000,
 
-              onclone:(
-                clonedDocument:Document
-              )=>{
+             onclone: (clonedDocument: Document) => {
 
-                const clonedPrintArea =
-                  clonedDocument
-                    .getElementById(
-                      'ticket-print-area'
-                    )
+  const clonedPrintArea =
+    clonedDocument.getElementById('ticket-print-area')
 
-                clonedPrintArea
-                  ?.classList
-                  .add(
-                    'flight-pdf-exporting'
-                  )
-              }
+  if (clonedPrintArea) {
+
+    clonedPrintArea.classList.add(
+      'flight-pdf-exporting'
+    )
+
+    clonedPrintArea.style.setProperty(
+      'position', 'absolute', 'important'
+    )
+
+    clonedPrintArea.style.setProperty(
+      'left', '0px', 'important'
+    )
+
+    clonedPrintArea.style.setProperty(
+      'top', '0px', 'important'
+    )
+
+    clonedPrintArea.style.setProperty(
+      'z-index', 'auto', 'important'
+    )
+  }
+}
             }
           )
 
@@ -5377,15 +5412,11 @@ const downloadFlightTicketsPdf =
       )
 
     }
-    finally{
+  finally {
+  printArea.classList.remove('flight-pdf-exporting')
 
-      /*
-       * Preview دوباره به حالت عادی برگردد.
-       */
-      printArea.classList.remove(
-        'flight-pdf-exporting'
-      )
-    }
+  isDownloadingPdf.value = false
+}
   }
 const initializePage = async () => {
 
@@ -5976,5 +6007,17 @@ onMounted(() => {
 
   background:
     transparent !important;
+}
+.pdf-only-area {
+  position: fixed !important;
+  left: -20000px !important;
+  top: 0 !important;
+  width: 1200px !important;
+  height: auto !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: none !important;
+  z-index: -1 !important;
 }
 </style>
