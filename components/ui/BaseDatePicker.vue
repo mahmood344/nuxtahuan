@@ -377,7 +377,7 @@ defineExpose({
               pl-3
               pr-10
               pt-1.5
-              text-[10px]
+              text-[11px]!
               font-bold
               text-[var(--color-gray-800)]
               outline-none
@@ -422,7 +422,7 @@ defineExpose({
   :styles="styles"
   v-model="departDate"
   class="hidden"
-  :auto-submit="false"
+  :auto-submit="true"
   :show="showdepartDate"
   :modal="isMobileCalendar"
   format="YYYY/MM/DD"
@@ -505,7 +505,7 @@ defineExpose({
               pl-3
               pr-10
               pt-1.5
-              text-[10px]
+              text-[11px]!
               font-bold
               text-[var(--color-gray-800)]
               outline-none
@@ -551,7 +551,7 @@ defineExpose({
 
 <PersianDatePicker
   :styles="styles"
-  :auto-submit="false"
+  :auto-submit="true"
   v-model="returnDate"
   class="hidden"
   format="YYYY/MM/DD"

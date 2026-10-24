@@ -296,7 +296,7 @@
             </div>
           </div>
 
-          <div
+          <!-- <div
             class="mt-5 flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
           >
             <span>
@@ -306,7 +306,7 @@
             <strong>
               ۲۰ کیلوگرم
             </strong>
-          </div>
+          </div> -->
         </section>
 
         <!-- Passenger -->
@@ -445,22 +445,15 @@
             </p>
           </div>
 
-          <div
-            class="rounded-xl bg-slate-50 p-3"
-          >
-            <p class="text-xs text-slate-500">
-              کمیسیون
-            </p>
+          <div class="rounded-xl bg-slate-50 p-3">
+  <p class="text-xs text-slate-500">
+    بار مجاز
+  </p>
 
-            <p class="mt-1 font-bold">
-              {{
-                formatPrice(
-                  ticket.commission
-                )
-              }}
-              ریال
-            </p>
-          </div>
+  <p class="mt-1 font-bold">
+    {{ ticket.baggageAllowance || '-' }}
+  </p>
+</div>
 
           <div
             class="rounded-xl bg-blue-900 p-3 text-white"
@@ -535,6 +528,7 @@ type EtrTax = {
 }
 
 type PrintableTicket = {
+  baggageAllowance?: string
   key: string
   contractId: number
   airlineCode: string
@@ -611,7 +605,7 @@ const getStatusTitle = (
     value === 'OPEN FOR USE' ||
     value === 'O'
   ) {
-    return 'قابل استفاده'
+    return 'صادر شده'
   }
 
   if (

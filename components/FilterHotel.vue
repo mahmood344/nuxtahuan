@@ -8,9 +8,9 @@
         <h3 class="text-[14px] font-black text-[var(--color-gray-800)]">
           فیلتر اتاق‌ها
         </h3>
-        <p class="mt-1 text-[10px] text-[var(--color-gray-400)]">
+        <!-- <p class="mt-1 text-[10px] text-[var(--color-gray-400)]">
           نتایج اتاق‌ها را دقیق‌تر کنید
-        </p>
+        </p> -->
       </div>
 
       <UiBaseButton

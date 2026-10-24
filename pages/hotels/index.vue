@@ -135,6 +135,7 @@
           <transition name="fade">
             <div
               v-if="hotelStore.loading"
+               dir="rtl"
               class="
                 fixed
                 inset-0
@@ -187,7 +188,7 @@
                   در حال جستجوی هتل‌ها...
                 </h4>
 
-                <p
+                <!-- <p
                   class="
                     text-xs
                     text-gray-500
@@ -196,7 +197,7 @@
                   "
                 >
                   نتایج در حال دریافت هستند.
-                </p>
+                </p> -->
 
                 <div
                   v-if="hotels.length"

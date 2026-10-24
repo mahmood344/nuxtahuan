@@ -4,7 +4,7 @@
   dir="rtl"
  >
   <main
-   class="mx-auto w-full max-w-[920px] px-4 py-10"
+   class="mx-auto w-full max-w-[1000px] px-4 py-10"
   >
    <!-- Loading -->
    <div
@@ -42,7 +42,7 @@
      ></span>
 
      <h1
-      class="whitespace-nowrap text-[15px] font-black text-blue-800 md:text-[16px]"
+      class="whitespace-nowrap text-[15px] font-black text-blue-800 md:text-[25px]"
      >
       تورهای ویژه آهوان
      </h1>
@@ -263,25 +263,26 @@ async function loadTours(){
  }
 }
 
-function getTourImage(tour){
- const image=
-  tour?.collImageM||
-  tour?.backImage||
-  tour?.col1Image||
-  tour?.backImageM
 
- if(!image)
-  return''
+function getTourImage(tour) {
+  const image =
+    tour?.col1Image ||
+    tour?.backImage ||
+    tour?.collImageM ||
+    tour?.backImageM
 
- if(
-  image.startsWith('http://')||
-  image.startsWith('https://')
- ){
-  return image
- }
+  if (!image) return ''
 
- return`${IMAGE_BASE_URL}/${image}`
+  if (
+    image.startsWith('http://') ||
+    image.startsWith('https://')
+  ) {
+    return image
+  }
+
+  return `${IMAGE_BASE_URL}/${image}`
 }
+
 
 function openTour(tour){
  if(!tour?.id)

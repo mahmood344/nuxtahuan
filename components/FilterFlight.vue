@@ -133,12 +133,12 @@
     />
   </div>
 
-  <p
+  <!-- <p
     v-if="!selectedAirlines.length"
     class="mt-3 text-[11px] text-gray-400"
   >
     همه شرکت‌های هواپیمایی نمایش داده می‌شوند.
-  </p>
+  </p> -->
 </div>
   </div>
 </template>

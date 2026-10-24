@@ -133,11 +133,11 @@
     <div
       class="mb-1 flex items-center gap-1 text-right text-2xl font-black text-primary"
     >
-      <span>
+      <span class="text-[25px]!">
         {{ formatPrice(finalPrice) }}
       </span>
 
-      <span class="text-sm font-medium">
+      <span class="text-[20px]! font-medium">
         ریال
       </span>
     </div>

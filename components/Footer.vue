@@ -293,79 +293,87 @@
       hover:text-[#e8bd83]
      "
     >
-     ۰۲۱-۸۸۷۹
+     021-41889
     </a>
 
 
     <!-- Social -->
-    <div
-     class="
-      mt-8
-      flex
-      items-center
-      gap-9
-     "
-     dir="ltr"
-    >
-     <!-- Telegram -->
-     <a
-      href="#"
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label="Telegram"
-      class="social-link"
-     >
-      <i class="bi bi-telegram"></i>
-     </a>
+   <!-- Social -->
+<div
+  class="mt-8 flex items-center gap-9"
+  dir="ltr"
+>
+  <!-- Telegram -->
+  <a
+    href="https://t.me/+989106859004"
+    target="_blank"
+    rel="noopener noreferrer"
+    aria-label="Telegram"
+    class="social-link"
+  >
+    <i class="bi bi-telegram"></i>
+  </a>
 
-     <!-- Instagram -->
-     <a
-      href="#"
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label="Instagram"
-      class="social-link"
-     >
-      <i class="bi bi-instagram"></i>
-     </a>
+  <!-- Instagram -->
+ <a
+  href="https://www.instagram.com/ahuan.ir/"
+  target="_blank"
+  rel="noopener noreferrer"
+  aria-label="Instagram Ahuan"
+  class="social-link"
+>
+  <i class="bi bi-instagram"></i>
+</a>
 
-     <!-- Email -->
-     <a
-      href="mailto:info@ahuan.ir"
-      aria-label="Email"
-      class="social-link"
-     >
-      <i class="bi bi-envelope"></i>
-     </a>
+  <!-- Email -->
+  <a
+    href="mailto:info@ahuan.ir"
+    aria-label="Email"
+    class="social-link"
+  >
+    <i class="bi bi-envelope"></i>
+  </a>
 
-     <!-- WhatsApp -->
-     <a
-      href="#"
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label="WhatsApp"
-      class="social-link"
-     >
-      <i class="bi bi-whatsapp"></i>
-     </a>
-    </div>
+  <!-- WhatsApp -->
+  <a
+    href="https://wa.me/+989106859004"
+    target="_blank"
+    rel="noopener noreferrer"
+    aria-label="WhatsApp"
+    class="social-link"
+  >
+    <i class="bi bi-whatsapp"></i>
+  </a>
+</div>
 
 
     <!-- Decorative Logo -->
-    <img
-     src="/imgs/header/logo.png"
-     alt=""
-     class="
-      pointer-events-none
-      mt-10
-      hidden
-      w-[230px]
-      opacity-[0.13]
-      brightness-0
-      invert
-      lg:block
-     "
-    >
+    <div
+  aria-hidden="true"
+  class="
+    pointer-events-none
+    absolute
+    bottom-[42px]
+    left-[-350px]
+    z-0
+    hidden
+    w-[370px]
+    h-[300px]
+    bg-[#e5b981]
+    opacity-[0.5]
+    lg:block
+  "
+  style="
+    -webkit-mask-image: url('/imgs/flight/header logo.png');
+    mask-image: url('/imgs/flight/header logo.png');
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+  "
+></div>
    </div>
 
   </div>

@@ -62,7 +62,7 @@ onMounted(() => {
   </span>
       <nav class="flex items-center gap-5 text-[13px] font-medium text-gray-800">
         <NuxtLink to="/flights" class="text-[12px] hover:text-[var(--color-primary-dark)]">بلیط</NuxtLink>
-        <div class="relative h-20 flex items-center cursor-pointer" @mouseenter="openMenu" @mouseleave="closeMenu">
+        <div class="relative h-24 flex items-center cursor-pointer" @mouseenter="openMenu" @mouseleave="closeMenu">
           <NuxtLink to="/domesticinternationaltours" class="text-[12px] font-semibold hover:text-[var(--color-primary-dark)]">تور</NuxtLink>
           <div v-if="showTourMenu" class="absolute top-[80px] right-0 pt-2 flex gap-1 z-[9999]">
             <div class="w-[180px] bg-white border border-gray-100 rounded-[12px] shadow-lg p-2">
@@ -126,7 +126,7 @@ onMounted(() => {
             </div>
           </div>
         </div>
-        <NuxtLink to="http://localhost:3000/hotels/3" class="text-[12px] hover:text-[var(--color-primary-dark)]">هتل آهوان</NuxtLink>
+        <NuxtLink to="/hotels/3" class="text-[12px] hover:text-[var(--color-primary-dark)]">هتل آهوان</NuxtLink>
         <NuxtLink to="/AboutUs" class="text-[12px] hover:text-[var(--color-primary-dark)]">درباره ما</NuxtLink>
         <NuxtLink href="#" class="text-[12px] hover:text-[var(--color-primary-dark)]">مجله گردشگری آهوان</NuxtLink>
         <NuxtLink href="#" class="text-[12px] hover:text-[var(--color-primary-dark)]">پشتیبانی آنلاین</NuxtLink>

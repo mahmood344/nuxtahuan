@@ -1,16 +1,41 @@
+
 <script setup>
-const props = defineProps({
+defineProps({
   modelValue: { type: Boolean, default: false },
   label: { type: String, default: '' },
 
-  // رنگ‌ها از theme
-  color: { type: String, default: 'var(--color-primary)' },
-  tickColor: { type: String, default: 'var(--color-white)' },
+  color: {
+    type: String,
+    default: 'var(--color-primary)'
+  },
+
+  tickColor: {
+    type: String,
+    default: 'var(--color-white)'
+  },
 
   icon: { type: String, default: '' },
   customImage: { type: String, default: '' },
 
-  disabled: { type: Boolean, default: false }
+  imageSize: {
+    type: Number,
+    default: 48
+  },
+
+  imageFit: {
+    type: String,
+    default: 'contain'
+  },
+
+  imageRounded: {
+    type: Boolean,
+    default: false
+  },
+
+  disabled: {
+    type: Boolean,
+    default: false
+  }
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -19,41 +44,56 @@ const emit = defineEmits(['update:modelValue']);
 <template>
   <label
     class="flex items-center gap-3 select-none"
-    :class="[disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer']"
+    :class="
+      disabled
+        ? 'opacity-50 cursor-not-allowed'
+        : 'cursor-pointer'
+    "
   >
-    <!-- icon / image -->
+    <!-- Image / Icon -->
     <div
       v-if="customImage || icon"
-      class="w-6 h-6 flex items-center justify-center"
+      class="shrink-0 flex items-center justify-center"
+      :style="{
+        width: `${imageSize}px`,
+        height: `${imageSize}px`
+      }"
     >
       <img
         v-if="customImage"
         :src="customImage"
-        class="w-full h-full object-cover rounded-full"
+        :alt="label || 'تصویر گزینه'"
+        class="w-full h-full"
+        :class="imageRounded ? 'rounded-full' : 'rounded-md'"
+        :style="{ objectFit: imageFit }"
       />
 
       <span
         v-else-if="icon"
-        class="text-xl"
+        class="text-2xl"
         v-html="icon"
       />
     </div>
 
-    <!-- hidden checkbox -->
+    <!-- Native Checkbox -->
     <input
       type="checkbox"
-      class="hidden"
+      class="sr-only peer"
       :checked="modelValue"
       :disabled="disabled"
-      @change="$emit('update:modelValue', $event.target.checked)"
+      @change="emit('update:modelValue', $event.target.checked)"
     />
 
-    <!-- circle -->
+    <!-- Custom Checkbox -->
     <div
-      class="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300"
+      class="w-6 h-6 shrink-0 rounded-full border-2 flex items-center justify-center transition-all duration-300 peer-focus-visible:ring-2 peer-focus-visible:ring-offset-2"
       :style="{
-        backgroundColor: modelValue ? color : 'var(--color-white)',
-        borderColor: modelValue ? color : 'var(--color-gray-300)'
+        backgroundColor: modelValue
+          ? color
+          : 'var(--color-white)',
+        borderColor: modelValue
+          ? color
+          : 'var(--color-gray-300)'
       }"
     >
       <svg
@@ -71,10 +111,15 @@ const emit = defineEmits(['update:modelValue']);
       </svg>
     </div>
 
-    <!-- label -->
+    <!-- Label -->
     <span
       v-if="label"
-      :class="disabled ? 'text-[var(--color-gray-400)]' : 'text-[var(--color-gray-700)]'"
+      class="text-sm"
+      :class="
+        disabled
+          ? 'text-[var(--color-gray-400)]'
+          : 'text-[var(--color-gray-700)]'
+      "
     >
       {{ label }}
     </span>

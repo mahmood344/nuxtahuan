@@ -1704,7 +1704,12 @@
          sm:text-gray-800
         "
        >
-        تعداد مسیر:
+       {{
+    selectedContract?.hotel === true ||
+    isHotelContract(selectedContract)
+      ? 'مدت اقامت:'
+      : 'تعداد مسیر:'
+  }}
        </span>
 
        <span
@@ -3766,68 +3771,6 @@
 </Teleport>
 <Teleport to="body">
   <Transition name="contract-modal">
-    <div
-      v-if="ticketDownloadModalOpen"
-      dir="rtl"
-      class="fixed inset-0 z-[5000] flex items-center justify-center bg-black/40 p-4 backdrop-blur-[1px]"
-      @click.self="closeTicketDownloadModal"
-    >
-      <div
-        class="w-full max-w-[420px] rounded-2xl bg-white p-6 shadow-2xl"
-      >
-        <div
-          class="flex items-center justify-between border-b border-gray-200 pb-4"
-        >
-          <h2
-            class="text-base font-black text-gray-800"
-          >
-            دریافت بلیط
-          </h2>
-
-          <button
-            type="button"
-            class="flex h-8 w-8 items-center justify-center rounded-full text-2xl text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
-            @click="closeTicketDownloadModal"
-          >
-            ×
-          </button>
-        </div>
-
-        <p
-          class="mt-5 text-center text-sm text-gray-500"
-        >
-          نحوه دریافت بلیط را انتخاب کنید.
-        </p>
-
-       <div class="mt-6 flex flex-col gap-3">
-
-  <!-- PARTO -->
-  <button
-    v-if="normalizeFlightProvider(selectedDownloadRow?.provider)==='PARTO'"
-    type="button"
-    class="w-full rounded-xl bg-[#14179e] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#0d107e]"
-    @click="downloadAhuanTicket"
-  >
-    دانلود بلیط آهوان
-  </button>
-
-  <!-- پرواز داخلی -->
-  <button
-    v-else
-    type="button"
-    class="w-full rounded-xl bg-[#14179e] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#0d107e]"
-    @click="downloadAirlineTicket"
-  >
-    دانلود بلیط ایرلاین
-  </button>
-
-</div>
-      </div>
-    </div>
-  </Transition>
-</Teleport>
-<Teleport to="body">
-  <Transition name="contract-modal">
 
     <div
       v-if="internationalCancelModalOpen"
@@ -4044,8 +3987,6 @@ const detailsModalOpen = ref(false)
 const selectedContract = ref(null)
 const toast=useToast()
 const flightStore=useFlightStore()
-const ticketDownloadModalOpen=ref(false)
-const selectedDownloadRow=ref(null)
 const cancelModalOpen=ref(false)
 const cancelModalStep=ref('confirm')
 const selectedCancelRow=ref(null)
@@ -4538,33 +4479,63 @@ function getPassengerCount(contract) {
 
 
 function getRouteCountTitle(contract) {
-  const flights = Array.isArray(contract?.contractFlights)
+  if (!contract) return '-'
+
+  const flights = Array.isArray(contract.contractFlights)
     ? contract.contractFlights
     : []
 
-  const routes = Array.isArray(contract?.contractRoutes)
+  const routes = Array.isArray(contract.contractRoutes)
     ? contract.contractRoutes
     : []
 
-  const hotels = Array.isArray(contract?.contractHotels)
-    ? contract.contractHotels.filter(hotel =>
-        String(hotel?.source || '')
-          .trim()
-          .toUpperCase() === 'SNAPPTRIP'
-      )
+  const hotels = Array.isArray(contract.contractHotels)
+    ? contract.contractHotels
     : []
 
-  if (contract?.hotel === true || isHotelContract(contract)) {
-    const count = routes.length + hotels.length
-    return `${toPersianDigits(count)} مورد اقامت`
+  // قرارداد هتل
+  if (contract.hotel === true || isHotelContract(contract)) {
+    const stays = [
+      ...routes,
+      ...hotels
+    ]
+
+    const totalNights = stays.reduce((total, stay) => {
+      const nights = Number(
+        stay.stayNights ?? stay.nights
+      )
+
+      if (Number.isFinite(nights) && nights >= 0) {
+        return total + nights
+      }
+
+      // محاسبه از تاریخ ورود و خروج در صورت نبود تعداد شب
+      if (stay.checkIn && stay.checkOut) {
+        const start = Date.parse(stay.checkIn)
+        const end = Date.parse(stay.checkOut)
+
+        if (Number.isFinite(start) && Number.isFinite(end)) {
+          return total + Math.max(
+            0,
+            Math.round((end - start) / 86400000)
+          )
+        }
+      }
+
+      return total
+    }, 0)
+
+    return `${toPersianDigits(totalNights)} شب`
   }
 
+  // قرارداد پرواز
   const count = flights.length || routes.length
 
-  if (count <= 1) return 'تک مسیر'
+  if (count === 1) return 'تک مسیر'
   if (count === 2) return 'رفت و برگشت'
+  if (count > 2) return `${toPersianDigits(count)} مسیر`
 
-  return `${toPersianDigits(count)} مسیر`
+  return 'مسیر ثبت نشده'
 }
 
 
@@ -5537,49 +5508,29 @@ function isDomesticTicket(row){
   )
 }
 
-function downloadContractTicket(row){
-  if(!selectedContract.value?.id){
+function downloadContractTicket(row) {
+  const contractId = selectedContract.value?.id
+
+  if (!contractId) {
     toast.error('شناسه قرارداد یافت نشد.')
     return
   }
 
-  selectedDownloadRow.value=row
-  ticketDownloadModalOpen.value=true
-}
-
-function closeTicketDownloadModal(){
-  ticketDownloadModalOpen.value=false
-  selectedDownloadRow.value=null
-}
-
-function downloadAhuanTicket(){
-
-  const contractId=
-    selectedContract.value?.id
-
-  if(!contractId){
-    toast.error(
-      'شناسه قرارداد یافت نشد.'
-    )
+  // پرواز داخلی: نمایش مستقیم بلیت ایرلاین
+  if (isDomesticTicket(row)) {
+    downloadAirlineTicket(row)
     return
   }
 
-  const encodedContractId=
-    window.btoa(
-      String(contractId)
-    )
+  // پرواز خارجی: صفحه دانلود بلیت آهوان
+  const encodedContractId = window.btoa(String(contractId))
 
-  closeTicketDownloadModal()
-
-  navigateTo(
-    `/downloadticket/${encodedContractId}`
-  )
+  navigateTo(`/downloadticket/${encodedContractId}`)
 }
 
-function downloadAirlineTicket(){
+function downloadAirlineTicket(row){
 
-  const row=
-    selectedDownloadRow.value
+  
 
   if(!row){
     toast.error(
@@ -5679,8 +5630,6 @@ function downloadAirlineTicket(){
     `&TicketNo=${encodeURIComponent(ticketNo)}`+
     `&OC=${encodeURIComponent(oc)}`+
     `&lang=FA`
-
-  closeTicketDownloadModal()
 
   window.open(
     url,

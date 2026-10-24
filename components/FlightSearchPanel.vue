@@ -17,9 +17,10 @@
     :active="activeService === s.key"
     @click="selectService(s.key, index)"
     class="text-[13px] font-black w-full"
-    :class="{
-      'col-span-2 justify-self-center max-w-[220px]': index === services.length - 1
-    }"
+  :class="{
+  'col-span-2 !w-[calc(100%-6px)] justify-self-center px-4':
+    s.key === 'insurance'
+}"
   />
 </div>
 
@@ -968,7 +969,8 @@ async function syncHotelFormFromRoute() {
 :deep(.hotel-city-compact input) {
   height: 44px !important;
   min-height: 44px !important;
-  font-size: 10px !important;
+  font-size: 13px !important;
+  font-weight: bold;
 }
 
 :deep(.hotel-city-compact > div) {

@@ -1,6 +1,6 @@
 <template>
   <div
-    class="min-h-screen bg-[var(--color-gray-100)] pb-24 md:bg-white md:pb-10 mt-[60px]"
+    class="page min-h-screen bg-[var(--color-gray-100)] pb-24 md:bg-white md:pb-10 mt-[60px]"
     dir="ltr"
   >
     <!-- ========================= -->
@@ -95,25 +95,33 @@ mode="aside"
           <!-- Loading Hotel -->
           <!-- ========================= -->
           <div
-            v-if="loading"
-            class="fixed inset-0 z-[999] flex items-center justify-center bg-[color:var(--color-gray-800)]/10 backdrop-blur-[3px] transition-all duration-300"
-          >
-            <div
-              class="bg-white/95 p-8 rounded-3xl shadow-2xl border border-[var(--color-gray-100)] flex flex-col items-center text-center max-w-sm mx-4"
-            >
-              <div
-                class="animate-spin rounded-full h-14 w-14 border-4 border-[var(--color-primary-light)] bg-[var(--color-primary)] mb-4"
-              ></div>
+  v-if="loading"
+  dir="rtl"
+  class="fixed inset-0 z-[999] flex items-center justify-center bg-[color:var(--color-gray-800)]/10 backdrop-blur-[3px] transition-all duration-300"
+>
+  <div
+    dir="rtl"
+    class="bg-white/95 p-8 rounded-3xl shadow-2xl border border-[var(--color-gray-100)] flex flex-col items-center text-center max-w-sm mx-4"
+  >
+    <div
+      class="animate-spin rounded-full h-14 w-14 border-4 border-[var(--color-primary-light)] border-t-[var(--color-primary)] mb-4"
+    ></div>
 
-              <h4 class="font-bold text-[var(--color-gray-800)] text-base">
-                در حال دریافت اطلاعات هتل...
-              </h4>
+    <h4
+      dir="rtl"
+      class="font-bold text-[var(--color-gray-800)] text-base"
+    >
+      در حال دریافت اطلاعات هتل...
+    </h4>
 
-              <p class="text-xs text-[var(--color-gray-500)] mt-2 leading-relaxed">
-                اطلاعات هتل و اتاق‌ها در حال بارگذاری است.
-              </p>
-            </div>
-          </div>
+    <!-- <p
+      dir="rtl"
+      class="text-xs text-[var(--color-gray-500)] mt-2 leading-relaxed"
+    >
+      اطلاعات هتل و اتاق‌ها در حال بارگذاری است.
+    </p> -->
+  </div>
+</div>
 
 
           <!-- ========================= -->
@@ -124,7 +132,7 @@ mode="aside"
             class="min-h-[300px] flex items-center justify-center"
           >
             <p
-              class="text-[13px] font-bold text-[var(--color-red-500)]"
+              class="text-[13px]! font-bold text-[var(--color-red-500)]"
             >
               {{errorMessage}}
             </p>
@@ -245,7 +253,7 @@ mode="aside"
 
   <div
    v-if="galleryImages.length>1"
-   class="absolute bottom-4 left-4 z-10 rounded-full bg-black/60 px-3 py-1.5 text-[11px] font-bold text-white backdrop-blur-sm"
+   class="absolute bottom-4 left-4 z-10 rounded-full bg-black/60 px-3 py-1.5 text-[11px]! font-bold text-white backdrop-blur-sm"
    dir="ltr"
   >
    {{hotelGalleryIndex+1}}
@@ -263,7 +271,7 @@ mode="aside"
    variant="filled"
    color="primary"
    icon='<i class="bi bi-grid-3x3-gap-fill"></i>'
-   class="absolute bottom-4 right-4 z-10 !rounded-xl !bg-black/60 !px-4 !py-2 text-[11px] font-bold !text-white backdrop-blur-sm transition hover:!bg-black/75"
+   class="absolute bottom-4 right-4 z-10 !rounded-xl !bg-black/60 !px-4 !py-2 text-[11px]! font-bold !text-white backdrop-blur-sm transition hover:!bg-black/75"
    @click="openHotelGallery(hotelGalleryIndex)"
   />
 
@@ -366,7 +374,7 @@ mode="aside"
  class="bg-white rounded-2xl p-4 md:p-6"
 >
               <h1
-                class="text-[20px] md:text-[22px] font-black text-[var(--color-gray-800)]"
+                class="text-[20px]! md:text-[25px]! font-black text-[var(--color-gray-800)]"
               >
                 هتل {{hotelDisplay.name}}
               </h1>
@@ -388,7 +396,7 @@ mode="aside"
                 </div>
 
                 <span
-                  class="text-[12px] text-[var(--color-gray-500)]"
+                  class="text-[12px]! text-[var(--color-gray-500)]"
                 >
                   {{hotelDisplay.star||4}}
                   ستاره
@@ -396,7 +404,7 @@ mode="aside"
 
                 <span
                   v-if="hotelDisplay.score"
-                  class="text-[12px] text-[var(--color-gray-500)]"
+                  class="text-[12px]! text-[var(--color-gray-500)]"
                 >
                   امتیاز
                   {{hotelDisplay.score}}
@@ -404,18 +412,28 @@ mode="aside"
               </div>
 
 
-              <!-- Description -->
-              <p
- v-if="hotelDescription"
- class="mt-5 text-[12px] leading-8 text-[var(--color-gray-600)] text-justify"
->
- {{hotelDescription}}
-</p>
+              <!-- Hotel description: collapsed to three lines -->
+              <div v-if="hotelDescription" class="mt-5">
+                <p
+                  ref="hotelDescriptionRef"
+                  class="text-[14px]! leading-8 text-[var(--color-gray-600)] text-justify whitespace-pre-line"
+                  :class="{ 'hotel-description-clamped': !showFullHotelDescription }"
+                >{{ hotelDescription }}</p>
+                <button
+                  v-if="isHotelDescriptionLong"
+                  type="button"
+                  class="mt-2 inline-flex items-center gap-2 text-[12px]! font-bold text-[var(--color-primary)] hover:opacity-75"
+                  @click="showFullHotelDescription = !showFullHotelDescription"
+                >
+                  {{ showFullHotelDescription ? 'نمایش کمتر' : 'نمایش بیشتر' }}
+                  <i :class="showFullHotelDescription ? 'bi bi-chevron-up' : 'bi bi-chevron-down'"></i>
+                </button>
+              </div>
 
 
               <!-- Extra info -->
               <div
-                class="mt-5 flex flex-wrap gap-5 text-[11px] text-[var(--color-gray-500)]"
+                class="mt-5 flex flex-wrap gap-5 text-[11px]! text-[var(--color-gray-500)]"
               >
                 <span
                   v-if="hotelDisplay.checkInTime"
@@ -451,43 +469,6 @@ mode="aside"
             </section>
 
 
-            <!-- ========================= -->
-            <!-- Facilities -->
-            <!-- ========================= -->
-            <section
-              v-if="hotelFacilities.length && currentStep===0"
-              class="bg-white rounded-2xl p-4 md:p-6"
-            >
-              <h2
-                class="text-[15px] font-black text-[var(--color-gray-800)]"
-              >
-                امکانات هتل
-              </h2>
-
-              <div
-                class="mt-6 grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-5"
-              >
-                <div
-                  v-for="facility in hotelFacilities"
-                  :key="getFacilityKey(facility)"
-                  class="flex items-center gap-2 text-[12px] text-[var(--color-gray-600)]"
-                >
-                  <span
-                    class="w-7 h-7 flex items-center justify-center rounded-lg bg-[var(--color-gray-100)] text-[var(--color-primary)]"
-                  >
-                    <i class="bi bi-check2"></i>
-                  </span>
-
-                  <span>
-                    {{getFacilityTitle(facility)}}
-                  </span>
-                </div>
-              </div>
-            </section>
-
-
-     
-
 <!-- ========================= -->
 <!-- Room Filter / Sort -->
 <!-- ========================= -->
@@ -508,7 +489,7 @@ mode="aside"
     variant="soft"
     color="primary"
     icon="↕️"
-    class="inline-flex items-center gap-1.5 !rounded-full bg-white !px-5 !py-3 text-[11px] font-bold shadow-sm"
+    class="inline-flex items-center gap-1.5 !rounded-full bg-white !px-5 !py-3 text-[11px]! font-bold shadow-sm"
     @click="isHotelSortDropdownOpen=!isHotelSortDropdownOpen"
    />
 
@@ -521,7 +502,7 @@ mode="aside"
       v-for="item in hotelSortOptions"
       :key="item"
       type="button"
-      class="w-full rounded-xl px-3 py-2 text-right text-[11px] font-bold transition-all"
+      class="w-full rounded-xl px-3 py-2 text-right text-[11px]! font-bold transition-all"
       :disabled="!isHotelSortEnabled(item)"
       :class="
        !isHotelSortEnabled(item)
@@ -544,7 +525,7 @@ mode="aside"
    variant="soft"
    color="primary"
    icon="⚙️"
-   class="inline-flex items-center gap-1.5 !rounded-full bg-white !px-5 !py-3 text-[11px] font-bold shadow-sm"
+   class="inline-flex items-center gap-1.5 !rounded-full bg-white !px-5 !py-3 text-[11px]! font-bold shadow-sm"
    @click="isHotelFilterModalOpen=true"
   />
  </div>
@@ -588,6 +569,37 @@ mode="aside"
  @reserve="reserveRoom"
 />
 <!-- ========================= -->
+<!-- Hotel facilities (after rooms) -->
+<!-- ========================= -->
+<section
+  v-if="hotelFacilities.length && currentStep === 0"
+  class="bg-white rounded-2xl p-4 md:p-6"
+>
+  <h2 class="text-[15px]! font-black text-[var(--color-gray-800)]">امکانات هتل</h2>
+  <div class="mt-6 grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-5">
+    <div
+      v-for="facility in visibleHotelFacilities"
+      :key="getFacilityKey(facility)"
+      class="flex items-center gap-2 text-[12px]! text-[var(--color-gray-600)]"
+    >
+      <span class="w-7 h-7 shrink-0 flex items-center justify-center rounded-lg bg-[var(--color-gray-100)] text-[var(--color-primary)]">
+        <i class="bi bi-check2"></i>
+      </span>
+      <span>{{ getFacilityTitle(facility) }}</span>
+    </div>
+  </div>
+  <button
+    v-if="hasMoreHotelFacilities"
+    type="button"
+    class="mt-5 inline-flex items-center gap-2 text-[12px]! font-bold text-[var(--color-primary)] hover:opacity-75"
+    @click="showAllHotelFacilities = !showAllHotelFacilities"
+  >
+    {{ showAllHotelFacilities ? 'نمایش کمتر' : 'نمایش بیشتر' }}
+    <i :class="showAllHotelFacilities ? 'bi bi-chevron-up' : 'bi bi-chevron-down'"></i>
+  </button>
+</section>
+
+<!-- ========================= -->
 <!-- Hotel Location -->
 <!-- ========================= -->
 <!-- ========================= -->
@@ -609,11 +621,11 @@ mode="aside"
    </div> -->
 
    <div>
-    <h2 class="text-[14px] font-black text-[var(--color-gray-800)]">
+    <h2 class="text-[14px]! font-black text-[var(--color-gray-800)]">
      موقعیت هتل
     </h2>
 
-    <p class="mt-1 text-[11px] text-[var(--color-gray-400)]">
+    <p class="mt-1 text-[11px]! text-[var(--color-gray-400)]">
      هتل {{hotelDisplay.name}}
     </p>
    </div>
@@ -623,7 +635,7 @@ mode="aside"
    :href="hotelMapLink"
    target="_blank"
    rel="noopener noreferrer"
-   class="hidden items-center gap-2 rounded-xl border border-[var(--color-gray-200)] px-3 py-2 text-[11px] font-bold text-[var(--color-gray-600)] transition hover:bg-[var(--color-gray-100)] md:flex"
+   class="hidden items-center gap-2 rounded-xl border border-[var(--color-gray-200)] px-3 py-2 text-[11px]! font-bold text-[var(--color-gray-600)] transition hover:bg-[var(--color-gray-100)] md:flex"
   >
    <i class="bi bi-box-arrow-up-left"></i>
    نمایش در نقشه
@@ -647,7 +659,7 @@ mode="aside"
  <div
   class="mt-4 flex items-center justify-between gap-3"
  >
-  <div class="flex items-center gap-2 text-[11px] text-[var(--color-gray-500)]">
+  <div class="flex items-center gap-2 text-[11px]! text-[var(--color-gray-500)]">
    <i class="bi bi-geo-alt text-[var(--color-primary)]"></i>
 
    <span v-if="hotelDisplay.address">
@@ -663,7 +675,7 @@ mode="aside"
    :href="hotelMapLink"
    target="_blank"
    rel="noopener noreferrer"
-   class="flex shrink-0 items-center gap-2 text-[11px] font-bold text-[var(--color-primary)] md:hidden"
+   class="flex shrink-0 items-center gap-2 text-[11px]! font-bold text-[var(--color-primary)] md:hidden"
   >
    مشاهده نقشه
    <i class="bi bi-chevron-left"></i>
@@ -826,13 +838,13 @@ mode="aside"
       class="flex shrink-0 items-center justify-between border-b border-[var(--color-gray-100)] px-5 py-4"
      >
       <div>
-       <h3 class="text-[16px] font-black text-[var(--color-gray-800)]">
+       <h3 class="text-[16px]! font-black text-[var(--color-gray-800)]">
         فیلتر اتاق‌ها
        </h3>
 
-       <p class="mt-1 text-[11px] text-[var(--color-gray-400)]">
+       <!-- <p class="mt-1 text-[11px] text-[var(--color-gray-400)]">
         نتایج اتاق‌ها را دقیق‌تر کنید
-       </p>
+       </p> -->
       </div>
 
       <button
@@ -869,7 +881,7 @@ mode="aside"
        label="اعمال فیلترها"
        variant="filled"
        color="primary"
-       class="w-full !rounded-2xl !py-4 text-[13px] font-bold"
+       class="w-full !rounded-2xl !py-4 text-[13px]! font-bold"
        @click="isHotelFilterModalOpen=false"
       />
      </div>
@@ -896,7 +908,7 @@ mode="aside"
       >
         <div>
           <h3
-            class="text-[17px] font-black text-[var(--color-gray-800)]"
+            class="text-[17px]! font-black text-[var(--color-gray-800)]"
           >
             {{
               selectedRoom.type||
@@ -907,7 +919,7 @@ mode="aside"
 
           <p
             v-if="selectedRoom.name"
-            class="mt-1 text-[11px] text-[var(--color-gray-400)]"
+            class="mt-1 text-[11px]! text-[var(--color-gray-400)]"
           >
             {{selectedRoom.name}}
           </p>
@@ -978,11 +990,11 @@ mode="aside"
           <div
             class="rounded-xl bg-[var(--color-gray-100)] p-3"
           >
-            <p class="text-[10px] text-[var(--color-gray-400)]">
+            <p class="text-[10px]! text-[var(--color-gray-400)]">
               ظرفیت پایه
             </p>
 
-            <p class="mt-1 text-[12px] font-bold">
+            <p class="mt-1 text-[12px]! font-bold">
               {{selectedRoom.capacity||0}}
               نفر
             </p>
@@ -991,11 +1003,11 @@ mode="aside"
           <div
             class="rounded-xl bg-[var(--color-gray-100)] p-3"
           >
-            <p class="text-[10px] text-[var(--color-gray-400)]">
+            <p class="text-[10px]! text-[var(--color-gray-400)]">
               حداکثر ظرفیت
             </p>
 
-            <p class="mt-1 text-[12px] font-bold">
+            <p class="mt-1 text-[12px]! font-bold">
               {{selectedRoom.maxCapacity||0}}
               نفر
             </p>
@@ -1004,11 +1016,11 @@ mode="aside"
           <div
             class="rounded-xl bg-[var(--color-gray-100)] p-3"
           >
-            <p class="text-[10px] text-[var(--color-gray-400)]">
+            <p class="text-[10px]! text-[var(--color-gray-400)]">
               نمای اتاق
             </p>
 
-            <p class="mt-1 text-[12px] font-bold">
+            <p class="mt-1 text-[12px]! font-bold">
               {{selectedRoom.roomView||'-'}}
             </p>
           </div>
@@ -1020,12 +1032,12 @@ mode="aside"
  "
  class="rounded-xl bg-[var(--color-gray-100)] p-3"
 >
- <p class="text-[10px] text-[var(--color-gray-400)]">
+ <p class="text-[10px]! text-[var(--color-gray-400)]">
   نوع اقامت
  </p>
 
  <p
-  class="mt-1 flex items-center gap-2 text-[12px] font-bold"
+  class="mt-1 flex items-center gap-2 text-[12px]! font-bold"
   :class="
    selectedRoom.breakfastIncluded
     ?'text-[var(--color-gray-600)]'
@@ -1050,11 +1062,11 @@ mode="aside"
           <div
             class="rounded-xl bg-[var(--color-gray-100)] p-3"
           >
-            <p class="text-[10px] text-[var(--color-gray-400)]">
+            <p class="text-[10px]! text-[var(--color-gray-400)]">
               تخت دو نفره
             </p>
 
-            <p class="mt-1 text-[12px] font-bold">
+            <p class="mt-1 text-[12px]! font-bold">
               {{selectedRoom.doubleBedCount||0}}
             </p>
           </div>
@@ -1062,11 +1074,11 @@ mode="aside"
           <div
             class="rounded-xl bg-[var(--color-gray-100)] p-3"
           >
-            <p class="text-[10px] text-[var(--color-gray-400)]">
+            <p class="text-[10px]! text-[var(--color-gray-400)]">
               تخت یک نفره
             </p>
 
-            <p class="mt-1 text-[12px] font-bold">
+            <p class="mt-1 text-[12px]! font-bold">
               {{selectedRoom.singleBedCount||0}}
             </p>
           </div>
@@ -1074,11 +1086,11 @@ mode="aside"
           <div
             class="rounded-xl bg-[var(--color-gray-100)] p-3"
           >
-            <p class="text-[10px] text-[var(--color-gray-400)]">
+            <p class="text-[10px]! text-[var(--color-gray-400)]">
               کاناپه
             </p>
 
-            <p class="mt-1 text-[12px] font-bold">
+            <p class="mt-1 text-[12px]! font-bold">
               {{selectedRoom.sofaBedCount||0}}
             </p>
           </div>
@@ -1087,11 +1099,11 @@ mode="aside"
             v-if="Number(selectedRoom.extraBed||0)>0"
             class="rounded-xl bg-[var(--color-gray-100)] p-3"
           >
-            <p class="text-[10px] text-[var(--color-gray-400)]">
+            <p class="text-[10px]! text-[var(--color-gray-400)]">
               تخت اضافه
             </p>
 
-            <p class="mt-1 text-[12px] font-bold">
+            <p class="mt-1 text-[12px]! font-bold">
               {{selectedRoom.extraBed}}
             </p>
           </div>
@@ -1100,11 +1112,11 @@ mode="aside"
             v-if="selectedRoom.extraBedService"
             class="rounded-xl bg-[var(--color-gray-100)] p-3"
           >
-            <p class="text-[10px] text-[var(--color-gray-400)]">
+            <p class="text-[10px]! text-[var(--color-gray-400)]">
               نوع تخت اضافه
             </p>
 
-            <p class="mt-1 text-[12px] font-bold">
+            <p class="mt-1 text-[12px]! font-bold">
               {{selectedRoom.extraBedService}}
             </p>
           </div>
@@ -1113,11 +1125,11 @@ mode="aside"
             v-if="Number(selectedRoom.noBed||0)>0"
             class="rounded-xl bg-[var(--color-gray-100)] p-3"
           >
-            <p class="text-[10px] text-[var(--color-gray-400)]">
+            <p class="text-[10px]! text-[var(--color-gray-400)]">
               بدون تخت
             </p>
 
-            <p class="mt-1 text-[12px] font-bold">
+            <p class="mt-1 text-[12px]! font-bold">
               {{selectedRoom.noBed}}
               نفر
             </p>
@@ -1127,11 +1139,11 @@ mode="aside"
             v-if="selectedRoom.doubleBedType"
             class="rounded-xl bg-[var(--color-gray-100)] p-3"
           >
-            <p class="text-[10px] text-[var(--color-gray-400)]">
+            <p class="text-[10px]! text-[var(--color-gray-400)]">
               نوع تخت دبل
             </p>
 
-            <p class="mt-1 text-[12px] font-bold">
+            <p class="mt-1 text-[12px]! font-bold">
               {{selectedRoom.doubleBedType}}
             </p>
           </div>
@@ -1139,7 +1151,7 @@ mode="aside"
 
 
         <!-- سرویس تخت اضافه -->
-        <div
+        <!-- <div
           v-if="
             selectedRoom.extraBedFrom||
             selectedRoom.extraBedTo
@@ -1168,11 +1180,11 @@ mode="aside"
               {{selectedRoom.extraBedService}}
             </template>
           </p>
-        </div>
+        </div> -->
 
 
         <!-- بدون تخت -->
-        <div
+        <!-- <div
           v-if="
             selectedRoom.noBedFrom||
             selectedRoom.noBedTo
@@ -1201,7 +1213,7 @@ mode="aside"
               {{selectedRoom.noBedService}}
             </template>
           </p>
-        </div>
+        </div> -->
 
 <!-- ====================== -->
 <!-- امکانات اتاق SnappTrip -->
@@ -1224,7 +1236,7 @@ mode="aside"
 
  <h4
   class="
-   text-[13px]
+   text-[13px]!
    font-black
    text-[var(--color-gray-800)]
   "
@@ -1285,7 +1297,7 @@ mode="aside"
 
    <span
     class="
-     text-[11px]
+     text-[11px]!
      font-medium
      text-[var(--color-gray-600)]
     "
@@ -1325,7 +1337,7 @@ mode="aside"
     !rounded-xl
     !px-5
     !py-2
-    text-[11px]
+    text-[11px]!
     font-bold
    "
    @click="
@@ -1343,13 +1355,13 @@ mode="aside"
           class="mt-4 rounded-2xl border border-[var(--color-gray-100)] p-4"
         >
           <h4
-            class="text-[13px] font-black"
+            class="text-[13px]! font-black"
           >
             توضیحات اتاق
           </h4>
 
           <p
-            class="mt-3 text-[11px] leading-7 text-[var(--color-gray-500)]"
+            class="mt-3 text-[11px]! leading-7 text-[var(--color-gray-500)]"
           >
             {{selectedRoom.description}}
           </p>
@@ -1609,6 +1621,8 @@ const continueShoppingLoading=ref(false)
 const hotel=ref(null)
 const hotelImages=ref([])
 const hotelFacilities=ref([])
+
+
 const hotelAvailability=ref(null)
 const currentContractData=ref(null)
 const paymentLoading=ref(false)
@@ -1811,6 +1825,88 @@ const formshaparak=reactive({
 })
 const loading=ref(false)
 const errorMessage=ref('')
+
+// Expandable hotel description and responsive facilities
+const hotelDescriptionRef = ref(null)
+const showFullHotelDescription = ref(false)
+const isHotelDescriptionLong = ref(false)
+const showAllHotelFacilities = ref(false)
+const isDesktopHotelFacilities = ref(false)
+
+const hotelFacilitiesInitialCount = computed(() => isDesktopHotelFacilities.value ? 9 : 6)
+const hasMoreHotelFacilities = computed(() => hotelFacilities.value.length > hotelFacilitiesInitialCount.value)
+const visibleHotelFacilities = computed(() =>
+  showAllHotelFacilities.value
+    ? hotelFacilities.value
+    : hotelFacilities.value.slice(0, hotelFacilitiesInitialCount.value)
+)
+
+let hotelDescriptionObserver = null
+
+function measureHotelDescription() {
+  const element = hotelDescriptionRef.value
+  if (!element || typeof window === 'undefined') {
+    isHotelDescriptionLong.value = false
+    return
+  }
+
+  // The original text's full height is measured in a hidden clone, independent
+  // of whether the visible paragraph is currently clamped or expanded.
+  const clone = element.cloneNode(true)
+  clone.classList.remove('hotel-description-clamped')
+  const width = element.getBoundingClientRect().width
+  if (!width) return
+  Object.assign(clone.style, {
+    position: 'absolute', visibility: 'hidden', pointerEvents: 'none',
+    display: 'block', overflow: 'visible', maxHeight: 'none', height: 'auto',
+    width: `${width}px`, left: '0', top: '0'
+  })
+  element.parentElement.appendChild(clone)
+  const lineHeight = parseFloat(window.getComputedStyle(clone).lineHeight) || 32
+  isHotelDescriptionLong.value = clone.getBoundingClientRect().height > lineHeight * 3 + 2
+  clone.remove()
+}
+
+async function refreshHotelDescription() {
+  await nextTick()
+  measureHotelDescription()
+}
+
+function updateHotelFacilitiesBreakpoint() {
+  if (typeof window !== 'undefined') {
+    isDesktopHotelFacilities.value = window.matchMedia('(min-width: 768px)').matches
+  }
+}
+
+watch([hotelDescription, loading, currentStep], () => {
+  showFullHotelDescription.value = false
+  refreshHotelDescription()
+}, { flush: 'post' })
+
+watch(() => hotelFacilities.value.length, () => {
+  showAllHotelFacilities.value = false
+})
+
+onMounted(async () => {
+  updateHotelFacilitiesBreakpoint()
+  window.addEventListener('resize', updateHotelFacilitiesBreakpoint)
+  await refreshHotelDescription()
+  if (typeof ResizeObserver !== 'undefined') {
+    hotelDescriptionObserver = new ResizeObserver(() => measureHotelDescription())
+    // Parent remains stable while the paragraph is expanded/collapsed.
+    const element = hotelDescriptionRef.value
+    if (element?.parentElement) hotelDescriptionObserver.observe(element.parentElement)
+  }
+  window.addEventListener('resize', refreshHotelDescription)
+})
+
+onUnmounted(() => {
+  hotelDescriptionObserver?.disconnect()
+  window.removeEventListener('resize', updateHotelFacilitiesBreakpoint)
+  window.removeEventListener('resize', refreshHotelDescription)
+})
+
+
 
 // =========================
 // Rooms
@@ -7558,6 +7654,14 @@ watch(
 
 
 <style>
+.hotel-description-clamped {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+
 /*
 |--------------------------------------------------------------------------
 | Hotel Gallery Image Transition
@@ -7632,5 +7736,10 @@ watch(
   filter:none;
  }
 
+}
+.page,
+.page * {
+  font-size: 13px !important;
+  font-family: pelak, sans-serif !important;
 }
 </style>

@@ -3,6 +3,7 @@ import {computed,ref,watch,nextTick} from 'vue'
 import { useRoute } from '#app'
 import moment from 'moment-jalaali'
 import { useFlightStore } from '~/stores/flights'
+const route = useRoute()
 const isHotelBooking = computed(() =>
   route.path.startsWith('/hotels')
 )
@@ -41,8 +42,6 @@ function handleDebugPassengers() {
   console.log('passengers raw:', passengers.value)
   console.log('passengers normalized data:', data)
 }
-const route = useRoute()
-
 const genderOptions = [
   { label: 'آقا', value: 'male' },
   { label: 'خانم', value: 'female' },
@@ -527,7 +526,7 @@ function selectPreviousPassenger(item){
     item?.passportExpiryDate
   )
 
-  target.firstName=onlyLatin(
+  target.firstName=normalizePassengerName(
     normalizeSpaces(
       item?.fName||
       item?.firstName||
@@ -535,7 +534,7 @@ function selectPreviousPassenger(item){
     )
   )
 
-  target.lastName=onlyLatin(
+  target.lastName=normalizePassengerName(
     normalizeSpaces(
       item?.lName||
       item?.lastName||
@@ -604,6 +603,24 @@ function onlyLatin(value) {
     .replace(/[^a-zA-Z\s]/g, '')
     .replace(/\s+/g, ' ')
     .trimStart()
+}
+
+// در رزرو هتل نام فارسی و انگلیسی مجاز است؛ پرواز بدون تغییر می‌ماند.
+function normalizePassengerName(value) {
+  const text = String(value ?? '')
+  if (!isHotelBooking.value) return onlyLatin(text)
+
+  return text
+    .replace(/[^A-Za-z\u0621-\u063A\u0641-\u064A\u067E\u0686\u0698\u06AF\u06A9\u06CC\u200C\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trimStart()
+}
+
+function isValidPassengerName(value) {
+  const name = String(value ?? '').trim()
+  if (!isHotelBooking.value) return isValidLatinName(name)
+
+  return /^[A-Za-z\u0621-\u063A\u0641-\u064A\u067E\u0686\u0698\u06AF\u06A9\u06CC\u200C]+(?:\s+[A-Za-z\u0621-\u063A\u0641-\u064A\u067E\u0686\u0698\u06AF\u06A9\u06CC\u200C]+)*$/.test(name)
 }
 
 function onlyNumbers(value) {
@@ -1057,8 +1074,8 @@ function validatePassportExpireDate(
 function validatePassenger(passenger) {
   const errors = {}
 
-  passenger.firstName = onlyLatin(normalizeSpaces(passenger.firstName))
-  passenger.lastName = onlyLatin(normalizeSpaces(passenger.lastName))
+  passenger.firstName = normalizeSpaces(normalizePassengerName(passenger.firstName))
+  passenger.lastName = normalizeSpaces(normalizePassengerName(passenger.lastName))
   passenger.nationalCode = onlyNumbers(passenger.nationalCode).slice(0, 10)
   passenger.passportNumber = normalizeSpaces(passenger.passportNumber).toUpperCase().slice(0, 10)
   passenger.birthDate.day = onlyNumbers(passenger.birthDate.day).slice(0, 2)
@@ -1067,14 +1084,18 @@ function validatePassenger(passenger) {
 
   if (!passenger.firstName) {
     errors.firstName = 'نام الزامی است'
-  } else if (!isValidLatinName(passenger.firstName)) {
-    errors.firstName = 'نام باید با حروف لاتین وارد شود'
+  } else if (!isValidPassengerName(passenger.firstName)) {
+    errors.firstName = isHotelBooking.value
+      ? 'نام باید با حروف فارسی یا انگلیسی وارد شود'
+      : 'نام باید با حروف لاتین وارد شود'
   }
 
   if (!passenger.lastName) {
     errors.lastName = 'نام خانوادگی الزامی است'
-  } else if (!isValidLatinName(passenger.lastName)) {
-    errors.lastName = 'نام خانوادگی باید با حروف لاتین وارد شود'
+  } else if (!isValidPassengerName(passenger.lastName)) {
+    errors.lastName = isHotelBooking.value
+      ? 'نام خانوادگی باید با حروف فارسی یا انگلیسی وارد شود'
+      : 'نام خانوادگی باید با حروف لاتین وارد شود'
   }
 
   if (!passenger.gender) {
@@ -1212,12 +1233,12 @@ passportIssueDate:
 }
 
 function onFirstNameChange(passenger, value) {
-  passenger.firstName = onlyLatin(extractValue(value))
+  passenger.firstName = normalizePassengerName(extractValue(value))
   clearFieldError(passenger, 'firstName')
 }
 
 function onLastNameChange(passenger, value) {
-  passenger.lastName = onlyLatin(extractValue(value))
+  passenger.lastName = normalizePassengerName(extractValue(value))
   clearFieldError(passenger, 'lastName')
 }
 

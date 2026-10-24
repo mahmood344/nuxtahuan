@@ -1,6 +1,6 @@
 <template>
  <section
-  class="w-full overflow-hidden bg-white pb-8 mt-7"
+  class="page w-full overflow-hidden bg-white pb-8 mt-7"
   dir="rtl"
  >
   <!-- ===================================== -->
@@ -27,13 +27,13 @@
     <h1
      class="
       font-rokh
-      text-[40px]
+      text-[40px]!
       font-black
       leading-[1.2]
       text-gray-700
-      sm:text-[48px]
-      md:text-[56px]
-      lg:text-[62px]
+      sm:text-[48px]!
+      md:text-[56px]!
+      lg:text-[62px]!
      "
     >
      آژانس گردشگری آهوان
@@ -43,11 +43,11 @@
      class="
       mt-2
       font-rokh
-      text-[17px]
+      text-[17px]!
       font-bold
       text-gray-300
-      sm:text-[19px]
-      md:text-[22px]
+      sm:text-[19px]!
+      md:text-[22px]!
      "
     >
 نیم قرن با افتخار در کنار شماست
@@ -61,7 +61,7 @@
     <p
      class="
       text-justify
-      text-[12px]
+      text-[14px]!
       leading-[2.2]
       text-gray-600
      "
@@ -169,13 +169,13 @@
     <h2
      class="
       font-rokh
-      text-[38px]
+      text-[38px]!
       font-black
       leading-[1.2]
       text-gray-700
-      sm:text-[46px]
-      md:text-[54px]
-      lg:text-[60px]
+      sm:text-[46px]!
+      md:text-[54px]!
+      lg:text-[60px]!
      "
     >
      با اطمینان سفر کنید
@@ -185,11 +185,11 @@
      class="
       mt-2
       font-rokh
-      text-[17px]
+      text-[17px]!
       font-bold
       text-gray-300
-      sm:text-[19px]
-      md:text-[22px]
+      sm:text-[19px]!
+      md:text-[22px]!
      "
     >
 ما کیفیت سفر شما را ضمانت می کنیم
@@ -203,7 +203,7 @@
     <p
      class="
       text-justify
-      text-[12px]
+      text-[12px]!
       leading-[2.2]
       text-gray-600
      "
@@ -236,22 +236,24 @@
      typewriter-text
      font-rokh
      text-center
-     text-[28px]
+     text-[28px]!
      font-black
      leading-[1.6]
      text-gray-700
-     sm:text-[34px]
-     md:text-[40px]
-     lg:text-[44px]
+     sm:text-[34px]!
+     md:text-[40px]!
+     lg:text-[44px]!
     "
    >
-    <span>{{typedText}}</span>
+    <span class="sm:text-[12px]!
+     md:text-[28px]!
+     lg:text-[33px]!">{{typedText}}</span>
 
     <span
      class="
       mr-1
       inline-block
-      h-[35px]
+      h-[35px]!
       w-[3px]
       translate-y-[7px]
       bg-[#304998]
@@ -290,8 +292,8 @@
     <p
      class="
       mx-auto
-      max-w-[220px]
-      text-[10px]
+      max-w-[280px]
+      text-[13px]!
       leading-[2]
       text-gray-500
      "
@@ -304,7 +306,7 @@
      class="
       mt-4
       font-rokh
-      text-[38px]
+      text-[38px]!
       font-black
       text-gray-700
      "
@@ -317,7 +319,7 @@
     <p
      class="
       mt-1
-      text-[10px]
+      text-[14px]!
       font-medium
       text-gray-400
      "
@@ -352,13 +354,13 @@
     <h2
      class="
       font-rokh
-      text-[38px]
+      text-[38px]!
       font-black
       leading-[1.2]
       text-gray-700
-      sm:text-[46px]
-      md:text-[54px]
-      lg:text-[60px]
+      sm:text-[46px]!
+      md:text-[54px]!
+      lg:text-[60px]!
      "
     >
      آژانس گردشگری آهوان
@@ -368,11 +370,11 @@
      class="
       mt-2
       font-rokh
-      text-[17px]
+      text-[17px]!
       font-bold
       text-gray-300
-      sm:text-[19px]
-      md:text-[22px]
+      sm:text-[19px]!
+      md:text-[22px]!
      "
     >
      مشتاق به همکاری با حرفه‌ای‌ها
@@ -386,7 +388,7 @@
  <p
   class="
    text-justify
-   text-[12px]
+   text-[13px]!
    leading-[2.2]
    text-gray-600
   "
@@ -408,7 +410,7 @@
    bg-[#304998]
    px-6
    py-2.5
-   text-[11px]
+   text-[11px]!
    font-bold
    text-white
    transition
@@ -708,4 +710,5 @@ onBeforeUnmount(()=>{
  }
 
 }
+
 </style>

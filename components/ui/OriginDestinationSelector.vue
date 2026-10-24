@@ -74,7 +74,7 @@
 
           ></i>
 
-          <span v-if="mabda" class="mr-2 min-w-0 truncate text-[11px]">
+          <span v-if="mabda" class="mr-2 min-w-0 truncate text-[11px]! font-bold">
 
   {{
 
@@ -263,7 +263,7 @@
 
           ></i>
 
-          <span v-if="maghsad" class="mr-2 min-w-0 truncate text-[11px]">
+          <span v-if="maghsad" class="mr-2 min-w-0 truncate text-[11px]! font-bold">
 
   {{
 
