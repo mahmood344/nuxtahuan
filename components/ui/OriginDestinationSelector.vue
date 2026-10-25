@@ -88,7 +88,7 @@
 
 </span>
 
-          <span v-else class="mr-2 min-w-0 truncate text-[10px] font-bold text-gray-400">انتخاب مبدا</span>
+          <span v-else class="mr-2 min-w-0 truncate text-[10px]! font-bold text-gray-400">انتخاب مبدا</span>
 
         </div>
 
@@ -277,7 +277,7 @@
 
 </span>
 
-          <span v-else class="mr-2 min-w-0 truncate text-[10px] font-bold text-gray-400">انتخاب مقصد</span>
+          <span v-else class="mr-2 min-w-0 truncate text-[10px]! font-bold text-gray-400">انتخاب مقصد</span>
 
         </div>
 

@@ -119,10 +119,10 @@ async loadSnappTripCities(){
    )
 
 
-  console.log(
-   'SNAPPTRIP CITIES RESPONSE:',
-   response
-  )
+  // console.log(
+  //  'SNAPPTRIP CITIES RESPONSE:',
+  //  response
+  // )
 
 
   const items=
@@ -180,10 +180,10 @@ async loadSnappTripCities(){
   this.snappTripCitiesLoaded=true
 
 
-  console.log(
-   'SNAPPTRIP CITIES STORE:',
-   this.snappTripCities
-  )
+  // console.log(
+  //  'SNAPPTRIP CITIES STORE:',
+  //  this.snappTripCities
+  // )
 
 
   return this.snappTripCities
@@ -303,7 +303,7 @@ clearHotelSearch(){
    // =========================
 
    addRoom(room){
-console.log(room , 'room');
+// console.log(room , 'room');
     if(!room)
      return
 

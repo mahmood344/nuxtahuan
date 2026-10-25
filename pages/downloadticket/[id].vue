@@ -4756,13 +4756,13 @@ const processContractTickets=async(
 
     ) as PromiseRejectedResult[]
 
-  console.log(
+  // console.log(
 
-    'Successful printable tickets:',
+  //   'Successful printable tickets:',
 
-    successfulTickets
+  //   successfulTickets
 
-  )
+  // )
 
   console.error(
 

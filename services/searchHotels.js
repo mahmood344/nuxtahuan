@@ -173,10 +173,10 @@ const snappTripDate=
 }
 
 
- console.log(
-  'HOTEL SEARCH PARAMS:',
-  params
- )
+//  console.log(
+//   'HOTEL SEARCH PARAMS:',
+//   params
+//  )
 
 
  /*
@@ -404,9 +404,9 @@ const snappTripDate=
 
   if(!isCurrentSearch()){
 
-   console.log(
-    `نتیجه قدیمی ${providerName} نادیده گرفته شد`
-   )
+  //  console.log(
+  //   `نتیجه قدیمی ${providerName} نادیده گرفته شد`
+  //  )
 
    return
 
@@ -420,9 +420,9 @@ const snappTripDate=
    newRooms.length===0
   ){
 
-   console.log(
-    `${providerName} اتاقی برنگرداند`
-   )
+  //  console.log(
+  //   `${providerName} اتاقی برنگرداند`
+  //  )
 
    return
 
@@ -485,27 +485,27 @@ const snappTripDate=
   showFirstResults()
 
 
-  console.log(
-   `${newRooms.length} اتاق از ${providerName} دریافت شد`
-  )
+  // console.log(
+  //  `${newRooms.length} اتاق از ${providerName} دریافت شد`
+  // )
 
 
-  console.log(
-   'HOTEL AGGREGATED ROOMS:',
-   {
-    provider:
-     providerName,
+  // console.log(
+  //  'HOTEL AGGREGATED ROOMS:',
+  //  {
+  //   provider:
+  //    providerName,
 
-    providerRooms:
-     newRooms.length,
+  //   providerRooms:
+  //    newRooms.length,
 
-    allRooms:
-     allRooms.length,
+  //   allRooms:
+  //    allRooms.length,
 
-    storeRooms:
-     hotelStore.searchRooms.length
-   }
-  )
+  //   storeRooms:
+  //    hotelStore.searchRooms.length
+  //  }
+  // )
 
  }
 
@@ -532,10 +532,10 @@ const snappTripDate=
 
     try{
 
-     console.log(
-      'START AHUAN HOTEL SEARCH:',
-      params
-     )
+    //  console.log(
+    //   'START AHUAN HOTEL SEARCH:',
+    //   params
+    //  )
 
 
      const result=
@@ -558,19 +558,19 @@ const snappTripDate=
 
      if(!isCurrentSearch()){
 
-      console.log(
-       'AHUAN HOTEL RESULT IS OLD'
-      )
+      // console.log(
+      //  'AHUAN HOTEL RESULT IS OLD'
+      // )
 
       return
 
      }
 
 
-     console.log(
-      'AHUAN HOTEL RESPONSE:',
-      result
-     )
+    //  console.log(
+    //   'AHUAN HOTEL RESPONSE:',
+    //   result
+    //  )
 
 
      /*
@@ -601,19 +601,19 @@ const snappTripDate=
      )
 
 
-     console.log(
-      'AHUAN ROOMS APPENDED:',
-      {
-       providerRooms:
-        rooms.length,
+    //  console.log(
+    //   'AHUAN ROOMS APPENDED:',
+    //   {
+    //    providerRooms:
+    //     rooms.length,
 
-       allRooms:
-        allRooms.length,
+    //    allRooms:
+    //     allRooms.length,
 
-       storeRooms:
-        hotelStore.searchRooms.length
-      }
-     )
+    //    storeRooms:
+    //     hotelStore.searchRooms.length
+    //   }
+    //  )
 
     }
     catch(error){
@@ -658,10 +658,10 @@ if(params.cityId){
 
    try{
 
-    console.log(
-     'START SNAPPTRIP SEARCH:',
-     params
-    )
+    // console.log(
+    //  'START SNAPPTRIP SEARCH:',
+    //  params
+    // )
 
 
     const result=
@@ -699,16 +699,16 @@ if(params.cityId){
     )
 
 
-    console.log(
-     'SNAPPTRIP ROOMS APPENDED:',
-     {
-      providerRooms:
-       rooms.length,
+    // console.log(
+    //  'SNAPPTRIP ROOMS APPENDED:',
+    //  {
+    //   providerRooms:
+    //    rooms.length,
 
-      allRooms:
-       allRooms.length
-     }
-    )
+    //   allRooms:
+    //    allRooms.length
+    //  }
+    // )
 
    }
    catch(error){
@@ -862,32 +862,32 @@ if(params.cityId){
  |--------------------------------------------------------------------------
  */
 
- console.log(
-  'ALL HOTEL ROOMS:',
-  finalRooms
- )
+//  console.log(
+//   'ALL HOTEL ROOMS:',
+//   finalRooms
+//  )
 
 
- console.log(
-  'FINAL HOTEL SEARCH:',
-  {
-   count:
-    finalRooms.length,
+//  console.log(
+//   'FINAL HOTEL SEARCH:',
+//   {
+//    count:
+//     finalRooms.length,
 
-   storeCount:
-    hotelStore.searchRooms.length,
+//    storeCount:
+//     hotelStore.searchRooms.length,
 
-   providers:
-    [
-     ...new Set(
-      finalRooms.map(
-       room=>
-        room?.provider
-      )
-     )
-    ]
-  }
- )
+//    providers:
+//     [
+//      ...new Set(
+//       finalRooms.map(
+//        room=>
+//         room?.provider
+//       )
+//      )
+//     ]
+//   }
+//  )
 
 
  /*

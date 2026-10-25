@@ -203,8 +203,8 @@ function subscribe(){
   return
  }
 
- console.log({
-  email:email.value
- })
+//  console.log({
+//   email:email.value
+//  })
 }
 </script>

@@ -1132,10 +1132,10 @@ export async function searchSnappTripHotels(
 }
 
 
- console.log(
-  'SNAPPTRIP SEARCH PAYLOAD:',
-  payload
- )
+//  console.log(
+//   'SNAPPTRIP SEARCH PAYLOAD:',
+//   payload
+//  )
 
 
  /*
@@ -1158,10 +1158,10 @@ export async function searchSnappTripHotels(
   )
 
 
- console.log(
-  'SNAPPTRIP RAW RESPONSE:',
-  response
- )
+//  console.log(
+//   'SNAPPTRIP RAW RESPONSE:',
+//   response
+//  )
 
 
  /*
@@ -1203,10 +1203,10 @@ export async function searchSnappTripHotels(
    )
 
 
- console.log(
-  'SNAPPTRIP STANDARD ROOMS:',
-  rooms
- )
+//  console.log(
+//   'SNAPPTRIP STANDARD ROOMS:',
+//   rooms
+//  )
 
 
  return{

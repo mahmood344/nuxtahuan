@@ -38,13 +38,15 @@
               v-model="flightType" 
               value="domestic"
               label="پرواز داخلی" 
-              class="text-[10px]" 
+             
+              class="flight-radio-small"
             />  
             <UiBaseRadio 
               v-model="flightType" 
               value="international"
               label="پرواز خارجی" 
-              class="text-[10px]" 
+              
+              class="flight-radio-small"
             />
           </div>
 
@@ -54,13 +56,13 @@
               v-model="travelType" 
               value="one-way" 
               label="یک طرفه" 
-              class="text-[10px]" 
+              class="flight-radio-small"
             />  
             <UiBaseRadio 
               v-model="travelType" 
               value="round-trip"
               label="رفت و برگشت" 
-              class="text-[10px]" 
+              class="flight-radio-small" 
             />  
           </div>
         </div>
@@ -975,6 +977,13 @@ async function syncHotelFormFromRoute() {
 
 :deep(.hotel-city-compact > div) {
   min-height: 44px !important;
+}
+:deep(.flight-radio-small label) {
+  font-size: 10px !important;
+}
+
+:deep(.flight-radio-small span) {
+  font-size: 10px !important;
 }
 /* در صورت نیاز به ترنزیشن یا استایل‌های خاص برای کامپوننت */
 </style>

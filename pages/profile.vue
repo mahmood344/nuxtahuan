@@ -4269,10 +4269,10 @@ async function confirmInternationalCancel() {
     )
 
 
-    console.log(
-      'International cancellation SMS:',
-      response
-    )
+    // console.log(
+    //   'International cancellation SMS:',
+    //   response
+    // )
 
 
     toast.success(
@@ -7584,7 +7584,7 @@ function toPersianDigits(value) {
 }
 
 function showOrderDetails(order) {
-  console.log('Selected order:',order)
+  // console.log('Selected order:',order)
 }
 onMounted(async () => {
   await Promise.all([

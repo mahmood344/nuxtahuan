@@ -344,7 +344,7 @@ import { ref, watch, nextTick, onMounted } from 'vue'
 import { useFlightStore } from '~/stores/flights'
 const allFlights  = useFlightStore()
 const handleDateChange = (dateObj) => {
-  console.log('تاریخ انتخاب شده برای جستجو:', dateObj.fullDate)
+  // console.log('تاریخ انتخاب شده برای جستجو:', dateObj.fullDate)
   // اینجا می‌تونی تابع جستجوی پرواز یا قطار رو صدا بزنی
 }
 const selectedOption = ref('A');

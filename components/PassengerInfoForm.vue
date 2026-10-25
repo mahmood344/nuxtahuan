@@ -38,9 +38,9 @@ function handleDebugPassengers() {
   const isValid = validateAll()
   const data = getData()
 
-  console.log('validation result:', isValid)
-  console.log('passengers raw:', passengers.value)
-  console.log('passengers normalized data:', data)
+  // console.log('validation result:', isValid)
+  // console.log('passengers raw:', passengers.value)
+  // console.log('passengers normalized data:', data)
 }
 const genderOptions = [
   { label: 'آقا', value: 'male' },

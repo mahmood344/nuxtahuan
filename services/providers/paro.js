@@ -273,10 +273,10 @@ async function executeParoRequest(
     sessionId=
       await createParoSession()
 
-    console.log(
-      'PARTO NEW SESSION:',
-      sessionId
-    )
+    // console.log(
+    //   'PARTO NEW SESSION:',
+    //   sessionId
+    // )
 
     /*
      * Retry دقیقاً با Session جدید
@@ -308,10 +308,10 @@ async function executeParoRequest(
     sessionId=
       await createParoSession()
 
-    console.log(
-      'PARTO NEW SESSION:',
-      sessionId
-    )
+    // console.log(
+    //   'PARTO NEW SESSION:',
+    //   sessionId
+    // )
 
     /*
      * فقط یک Retry
@@ -1090,10 +1090,10 @@ export async function searchParoFlights(
             sessionId
           )
 
-        console.log(
-          'PARTO REQUEST SESSION:',
-          sessionId
-        )
+        // console.log(
+        //   'PARTO REQUEST SESSION:',
+        //   sessionId
+        // )
 
         const result=
           await $fetch(
@@ -1104,19 +1104,19 @@ export async function searchParoFlights(
             }
           )
 
-        console.log(
-          'PARTO RESPONSE:',
-          {
-            requestSessionId:
-              sessionId,
+        // console.log(
+        //   'PARTO RESPONSE:',
+        //   {
+        //     requestSessionId:
+        //       sessionId,
 
-            success:
-              result?.success,
+        //     success:
+        //       result?.success,
 
-            error:
-              result?.error
-          }
-        )
+        //     error:
+        //       result?.error
+        //   }
+        // )
 
         /*
          * مهم:

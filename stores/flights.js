@@ -47,36 +47,36 @@ export const useFlightStore = defineStore('flights', {
      niraFlightClasses: NIRA_FLIGHT_CLASSES,
     niraFlightClassMap: NIRA_FLIGHT_CLASS_MAP,
     popularCities: [
-      {
-        id: 1,
-        countryCode: 'IR',
-        countryNicName: 'ایران',
-        cityName: 'Tehran',
-        cityNicName: 'تی تی کیو',
-        cityCode: 'TTQ',
-        iataCode: 'TTQ',
-        name: 'Mehrabad Arpt',
-        nicName: 'فرودگاه مهرآباد',
-        isCity: false,
-        latitude: null,
-        longitude: null,
-        orderId: 1
-      },
-      {
-        id: 1,
-        countryCode: 'IR',
-        countryNicName: 'ایران',
-        cityName: 'Tehran',
-        cityNicName: 'یوجی تی',
-        cityCode: 'UGT',
-        iataCode: 'UGT',
-        name: 'Mehrabad Arpt',
-        nicName: 'فرودگاه مهرآباد',
-        isCity: false,
-        latitude: null,
-        longitude: null,
-        orderId: 1
-      },
+      // {
+      //   id: 1,
+      //   countryCode: 'IR',
+      //   countryNicName: 'ایران',
+      //   cityName: 'Tehran',
+      //   cityNicName: 'تی تی کیو',
+      //   cityCode: 'TTQ',
+      //   iataCode: 'TTQ',
+      //   name: 'Mehrabad Arpt',
+      //   nicName: 'فرودگاه مهرآباد',
+      //   isCity: false,
+      //   latitude: null,
+      //   longitude: null,
+      //   orderId: 1
+      // },
+      // {
+      //   id: 1,
+      //   countryCode: 'IR',
+      //   countryNicName: 'ایران',
+      //   cityName: 'Tehran',
+      //   cityNicName: 'یوجی تی',
+      //   cityCode: 'UGT',
+      //   iataCode: 'UGT',
+      //   name: 'Mehrabad Arpt',
+      //   nicName: 'فرودگاه مهرآباد',
+      //   isCity: false,
+      //   latitude: null,
+      //   longitude: null,
+      //   orderId: 1
+      // },
       {
         id: 1001,
         countryCode: 'IR',
@@ -1207,20 +1207,20 @@ clearPartoSessionId(){
     },
 
     selectFlight(flight) {
-       console.log(
-   'SELECTED FLIGHT:',
-   flight.provider,
-   flight.id
- )
+//        console.log(
+//    'SELECTED FLIGHT:',
+//    flight.provider,
+//    flight.id
+//  )
       this.selectedFlight = flight
     },
 
     selectDepartureFlight(flight) {
-      console.log(
-   'DEP SELECT:',
-   flight.provider,
-   flight.id
- )
+//       console.log(
+//    'DEP SELECT:',
+//    flight.provider,
+//    flight.id
+//  )
       this.selectedDepartureFlight = flight
       this.selectedFlight = flight
     },
@@ -1259,10 +1259,10 @@ clearPartoSessionId(){
     },
 
     async refreshSelectedFlightsPricing(passengerCounts) {
-      console.log(
-    'REFRESH PRICING FLIGHTS:',
-    this.selectedFlights
-  )
+  //     console.log(
+  //   'REFRESH PRICING FLIGHTS:',
+  //   this.selectedFlights
+  // )
       const flights = this.selectedFlights || []
 
       if (!flights.length) {
@@ -1315,9 +1315,9 @@ clearPartoSessionId(){
   }
 
   if(provider==='PARTO'){
-    console.log(
-  'PARTO PRICING HIT'
-)
+//     console.log(
+//   'PARTO PRICING HIT'
+// )
     return this.buildPartoFinalPricing(
       flight,
       passengerCounts,

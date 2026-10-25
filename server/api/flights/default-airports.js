@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
         accept: 'application/json'
       }
     })
-    console.log(response , baseUrl , 'response');
+    // console.log(response , baseUrl , 'response');
     return response
 
   } catch (error) {

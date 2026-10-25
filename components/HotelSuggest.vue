@@ -398,8 +398,8 @@ const answers=reactive({
 // Find Trip
 // =====================================
 function findMyTrip(){
- console.log({
-  ...answers
- })
+//  console.log({
+//   ...answers
+//  })
 }
 </script>

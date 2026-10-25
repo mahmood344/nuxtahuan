@@ -95,15 +95,15 @@ export async function searchAllProviders(searchParams){
   const isDomestic=
     flightType==='domestic'
 
-  console.log(
-    'Flight search type:',
-    flightType
-  )
+  // console.log(
+  //   'Flight search type:',
+  //   flightType
+  // )
 
-  console.log(
-    'Flight search params:',
-    currentSearchParams
-  )
+  // console.log(
+  //   'Flight search params:',
+  //   currentSearchParams
+  // )
 
   /*
   |--------------------------------------------------------------------------
@@ -219,9 +219,9 @@ export async function searchAllProviders(searchParams){
     providerName=''
   )=>{
     if(!isCurrentSearch()){
-      console.log(
-        `نتیجه قدیمی ${providerName} نادیده گرفته شد`
-      )
+      // console.log(
+      //   `نتیجه قدیمی ${providerName} نادیده گرفته شد`
+      // )
 
       return
     }
@@ -243,9 +243,9 @@ export async function searchAllProviders(searchParams){
 
     showFirstResults()
 
-    console.log(
-      `${newFlights.length} پرواز از ${providerName} اضافه شد`
-    )
+    // console.log(
+    //   `${newFlights.length} پرواز از ${providerName} اضافه شد`
+    // )
   }
 
   /*
@@ -257,9 +257,9 @@ export async function searchAllProviders(searchParams){
   */
   if(isInternational){
     try{
-      console.log(
-        `ارسال درخواست PARTO برای ${fromCode}-${toCode} در تاریخ ${date}`
-      )
+      // console.log(
+      //   `ارسال درخواست PARTO برای ${fromCode}-${toCode} در تاریخ ${date}`
+      // )
 
       const partoFlights=
         await withTimeout(
@@ -500,10 +500,10 @@ export async function searchAllProviders(searchParams){
     return[]
   }
 
-  console.log(
-    `تمام نتایج جستجوی داخلی تاریخ ${date}:`,
-    allFlights
-  )
+  // console.log(
+  //   `تمام نتایج جستجوی داخلی تاریخ ${date}:`,
+  //   allFlights
+  // )
 
   return sortFlights(
     allFlights

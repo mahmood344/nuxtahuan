@@ -2569,10 +2569,10 @@ async function continueHotelBooking(){
         contactData
       )
 
-    console.log(
-      'HOTEL CONTRACT PAYLOAD',
-      payload
-    )
+    // console.log(
+    //   'HOTEL CONTRACT PAYLOAD',
+    //   payload
+    // )
 
     const response =
       await addHotelContract(
@@ -2587,10 +2587,10 @@ async function continueHotelBooking(){
     bookingData.value.contract =
       response
 
-    console.log(
-      'HOTEL BOOKING DATA',
-      bookingData.value
-    )
+    // console.log(
+    //   'HOTEL BOOKING DATA',
+    //   bookingData.value
+    // )
 
     /*
      * فقط کاربر Login شده
@@ -3296,19 +3296,19 @@ function createHotelPaymentData(){
   hasEnoughCredit
 
 
- console.log(
-  'HOTEL PAYMENT ACCESS',
-  {
-   roles,
-   isAdmin,
-   isHotel,
-   hasNoLimit,
-   userCredit,
-   totalPrice,
-   hasEnoughCredit,
-   isAgency
-  }
- )
+//  console.log(
+//   'HOTEL PAYMENT ACCESS',
+//   {
+//    roles,
+//    isAdmin,
+//    isHotel,
+//    hasNoLimit,
+//    userCredit,
+//    totalPrice,
+//    hasEnoughCredit,
+//    isAgency
+//   }
+//  )
 
 
  /* =========================
@@ -3797,10 +3797,10 @@ async function getSnappTripBalance(){
     }
    )
 
-  console.log(
-   'SNAPPTRIP BALANCE:',
-   response
-  )
+  // console.log(
+  //  'SNAPPTRIP BALANCE:',
+  //  response
+  // )
 
   const balance=
    Number(
@@ -3838,16 +3838,16 @@ async function getSnappTripBalance(){
    )
   }
 
-  console.log(
-   'SNAPPTRIP BALANCE CHECK:',
-   {
-    balance,
-    selectedRoomPriceRial,
-    enough:
-     balance>=
-     selectedRoomPriceRial
-   }
-  )
+  // console.log(
+  //  'SNAPPTRIP BALANCE CHECK:',
+  //  {
+  //   balance,
+  //   selectedRoomPriceRial,
+  //   enough:
+  //    balance>=
+  //    selectedRoomPriceRial
+  //  }
+  // )
 
   if(
    balance<
@@ -4317,10 +4317,10 @@ async function createSnappTripBooking(
 
  try{
 
-  console.log(
-   'SNAPPTRIP BOOKING PAYLOAD:',
-   payload
-  )
+  // console.log(
+  //  'SNAPPTRIP BOOKING PAYLOAD:',
+  //  payload
+  // )
 
   const response=
    await $fetch(
@@ -4338,10 +4338,10 @@ async function createSnappTripBooking(
     }
    )
 
-  console.log(
-   'SNAPPTRIP BOOKING RESPONSE:',
-   response
-  )
+  // console.log(
+  //  'SNAPPTRIP BOOKING RESPONSE:',
+  //  response
+  // )
 
   return response
 
@@ -4443,10 +4443,10 @@ async function handleFinalPayment(){
     const snappBalance=
      await getSnappTripBalance()
 
-    console.log(
-     'SNAPPTRIP BALANCE APPROVED:',
-     snappBalance
-    )
+    // console.log(
+    //  'SNAPPTRIP BALANCE APPROVED:',
+    //  snappBalance
+    // )
 
     const snappBookingPayload=
      buildSnappTripBookingPayload()
@@ -4492,10 +4492,10 @@ async function handleFinalPayment(){
 
    })
 
-  console.log(
-   'HOTEL UPDATE PAYLOAD:',
-   updatePayload
-  )
+  // console.log(
+  //  'HOTEL UPDATE PAYLOAD:',
+  //  updatePayload
+  // )
 
   const updateResponse=
    await updateHotelContract(
@@ -4534,10 +4534,10 @@ async function handleFinalPayment(){
 
    })
 
-  console.log(
-   'HOTEL PAYMENT SESSION',
-   paymentSession
-  )
+  // console.log(
+  //  'HOTEL PAYMENT SESSION',
+  //  paymentSession
+  // )
 
   /*
    * ادامه Flow قبلی:
@@ -6254,22 +6254,22 @@ function mapSnappTripHotelDetail(
    :[]
 
 
- console.log(
-  'SNAPP HOTEL:',
-  hotel.value
- )
+//  console.log(
+//   'SNAPP HOTEL:',
+//   hotel.value
+//  )
 
 
- console.log(
-  'SNAPP GALLERY:',
-  hotelImages.value
- )
+//  console.log(
+//   'SNAPP GALLERY:',
+//   hotelImages.value
+//  )
 
 
- console.log(
-  'SNAPP FACILITIES:',
-  hotelFacilities.value
- )
+//  console.log(
+//   'SNAPP FACILITIES:',
+//   hotelFacilities.value
+//  )
 
 }
 async function loadSnappTripHotel(){
@@ -6471,22 +6471,22 @@ async function loadSnappTripHotel(){
  }
 
 
- console.log(
-  'SNAPP HOTEL DETAIL:',
-  detailResponse
- )
+//  console.log(
+//   'SNAPP HOTEL DETAIL:',
+//   detailResponse
+//  )
 
 
- console.log(
-  'SNAPP AVAILABILITY:',
-  availabilityResponse
- )
+//  console.log(
+//   'SNAPP AVAILABILITY:',
+//   availabilityResponse
+//  )
 
 
- console.log(
-  'SNAPP ROOMS:',
-  rooms
- )
+//  console.log(
+//   'SNAPP ROOMS:',
+//   rooms
+//  )
 
 }
 function mapSnappAvailabilityRoom(

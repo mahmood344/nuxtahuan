@@ -18,10 +18,10 @@ export default defineNuxtPlugin(nuxtApp=>{
           'https://api.ipapi.is/'
         )
 
-      console.log(
-        'VPN CHECK:',
-        response
-      )
+      // console.log(
+      //   'VPN CHECK:',
+      //   response
+      // )
 
       const isVpn=
         response?.is_vpn===true

@@ -487,7 +487,7 @@ const showBackToTop = ref(false)
 function handleWindowScroll() {
   showBackToTop.value = window.scrollY > 400
 }
-console.log(flightStore.finalBookingPrice, 'flightStore.finalBookingPrice')
+// console.log(flightStore.finalBookingPrice, 'flightStore.finalBookingPrice')
 const toast=useToast()
 const selectedDate = ref('')
 const activeTab = ref('ارزان‌ترین')
@@ -643,7 +643,7 @@ const getStartDateForCarousel = (dateStr) => {
 }
 
 function handlePassengersSubmit(passengers) {
-  console.log(passengers)
+  // console.log(passengers)
 }
 
 const normalizeDateForApi = (dateValue) => {
@@ -2375,10 +2375,10 @@ toast.error(
       addResponse:contractResponse
     }
 
-    console.log(
-      currentContractData.value.addResponse,
-      'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
-    )
+    // console.log(
+    //   currentContractData.value.addResponse,
+    //   'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+    // )
 
     flightStore.setCurrentStep(
       previewStep.value
@@ -2436,7 +2436,7 @@ const handleResetTravelCard = () => {
   travelCardError.value = ''
   travelCardData.value = null
   appliedTravelCardNumber.value = ''
-  console.log('Travel card reset. Price reverted to original.')
+  // console.log('Travel card reset. Price reverted to original.')
 }
 const handleApplyTravelCard = async (cardNumber) => {
   try {
@@ -3694,15 +3694,15 @@ async function reservePartoFlight(
         )
       )
 
-    console.log(
-      'PARTO REVALIDATE:',
-      revalidate
-    )
+    // console.log(
+    //   'PARTO REVALIDATE:',
+    //   revalidate
+    // )
 
-    console.log(
-      'PARTO FARE TYPE:',
-      fareType
-    )
+    // console.log(
+    //   'PARTO FARE TYPE:',
+    //   fareType
+    // )
 
     /*
      * WEB FARE
@@ -3791,10 +3791,10 @@ async function reservePartoFlight(
       payLaterServiceId:''
     }
 
-    console.log(
-      'PARTO BOOK PAYLOAD:',
-      bookingPayload
-    )
+    // console.log(
+    //   'PARTO BOOK PAYLOAD:',
+    //   bookingPayload
+    // )
 
     /*
      * BOOK
@@ -3804,10 +3804,10 @@ async function reservePartoFlight(
         bookingPayload
       )
 
-    console.log(
-      'PARTO BOOK RESPONSE:',
-      book
-    )
+    // console.log(
+    //   'PARTO BOOK RESPONSE:',
+    //   book
+    // )
 
     if(
       !book||

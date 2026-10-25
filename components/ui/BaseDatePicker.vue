@@ -351,7 +351,7 @@ defineExpose({
               whitespace-nowrap
               bg-[var(--color-white)]
               px-2
-              text-[10px]
+              text-[10px]!
               leading-5
               text-[var(--color-gray-400)]
             "
