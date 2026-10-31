@@ -917,17 +917,15 @@ const sendContractFlightsSms = async (
 
   if (flights.length === 0) return []
 
-  const mobile = String(
-    contract?.userName ||
-    contract?.mobile ||
-    contract?.contactMobile ||
-    paymentInfo.value?.mobile ||
-    ''
-  ).trim()
+  const session = getPaymentSession()
 
-  if (!mobile) {
-    throw new Error('شماره موبایل قرارداد مشخص نیست.')
-  }
+const mobile = String(
+  session?.mobile ?? ''
+).trim()
+
+if (!/^09\d{9}$/.test(mobile)) {
+  throw new Error('شماره موبایل موجود در SessionStorage معتبر نیست.')
+}
 
   const partoFlights=flights.filter(
     (flight:any)=>

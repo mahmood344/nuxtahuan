@@ -495,7 +495,7 @@ airlineIdMap : {
   VR: 8,
   IRZ: 6,
   FP: 410,
-  IV: 515,
+  CPN: 515,
   IS: 7,
   A1: 212,
   RI: 802,

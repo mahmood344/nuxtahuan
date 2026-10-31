@@ -436,7 +436,7 @@
 
             <tr class="bg-gray-50 text-sm text-gray-800">
 
-              <td class="rounded-r-2xl px-3 py-3 text-end" dir="ltr">{{ contact.phone || '-' }}</td>
+              <td class="rounded-r-2xl px-3 py-3 text-end" dir="ltr">{{ displayedContactPhone || '-' }}</td>
 
               <td class="px-3 py-3 text-center" dir="ltr">{{ contact.email || '-' }}</td>
 
@@ -476,7 +476,7 @@
 
           <div class="text-center text-gray-500">شماره موبایل</div>
 
-          <div class="text-center" dir="ltr">{{ contact.phone || '-' }}</div>
+          <div class="text-center" dir="ltr">{{ displayedContactPhone || '-' }}</div>
 
         </div>
 
@@ -1213,18 +1213,13 @@
               <div>
 
                 <UiBaseInput
-
-                  :model-value="contactForm.phone"
-
-                  label="شماره موبایل"
-
-                  placeholder="شماره موبایل"
-
-                  :rtl="true"
-
-                  @update:model-value="onContactPhoneChange($event)"
-
-                />
+  :model-value="contactForm.phone"
+  :label="props.contact?.buyForOther ? 'شماره موبایل شخص دیگر' : 'شماره موبایل'"
+  placeholder="شماره موبایل"
+  :rtl="true"
+  :disabled="!props.contact?.buyForOther"
+  @update:model-value="onContactPhoneChange($event)"
+/>
 
                 <p v-if="contactErrors.phone" class="mt-1 text-xs text-red-500">
 
@@ -1594,7 +1589,11 @@ const passengerForm=reactive({
 })
 
 
-
+const displayedContactPhone = computed(() =>
+  props.contact?.buyForOther
+    ? props.contact?.recipientPhone || ''
+    : props.contact?.phone || ''
+)
 const contactForm = reactive({
 
   phone: '',
@@ -2572,7 +2571,7 @@ function openContactEdit() {
 
   resetContactErrors()
 
-  contactForm.phone = props.contact?.phone || ''
+  contactForm.phone = displayedContactPhone.value
 
   contactForm.email = props.contact?.email || ''
 
@@ -3123,23 +3122,22 @@ function submitPassengerEdit(){
 
 
 function submitContactEdit() {
-
   if (!validateContactForm()) return
 
-
+  const ownerPhone = props.contact?.phone || ''
+  const recipientPhone = onlyNumbers(contactForm.phone)
 
   emit('update:contact', {
-
-    phone: normalizeSpaces(contactForm.phone),
-
+    ...props.contact,
+    phone: ownerPhone,
     email: normalizeSpaces(contactForm.email),
-
+    buyForOther: props.contact?.buyForOther === true,
+    recipientPhone: props.contact?.buyForOther
+      ? recipientPhone
+      : ownerPhone
   })
 
-
-
   closeContactModal()
-
 }
 
 

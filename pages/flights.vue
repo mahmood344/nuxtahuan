@@ -198,11 +198,17 @@
     @update:passengers="bookingData.passengers = $event"
   />
 
-  <BookingInfoTable
-    mode="contact"
-    :contact="bookingData.contact"
-    @update:contact="bookingData.contact = $event"
-  />
+ <BookingInfoTable
+  mode="contact"
+  :contact="bookingData.contact"
+  @update:contact="
+    bookingData.contact = {
+      ...bookingData.contact,
+      ...$event,
+      phone: getLoggedInMobile()
+    }
+  "
+/>
 
 <PaymentSummary
   :original-price="flightStore.finalBookingPrice"
@@ -424,6 +430,7 @@
     aria-label="بازگشت به بالای صفحه"
     title="بازگشت به بالا"
     class="
+    hidden md:flex
       fixed
       bottom-24 right-5
       md:bottom-8 md:right-8
@@ -1564,7 +1571,19 @@ function normalizeDigits(value) {
     })
     .join('')
 }
+function getLoggedInMobile() {
+  const user = getUserData()
 
+  const mobile = normalizeDigits(
+    user?.mobile ?? user?.data?.mobile ?? ''
+  ).replace(/\D/g, '')
+
+  if (!/^09\d{9}$/.test(mobile)) {
+    throw new Error('شماره موبایل حساب کاربری معتبر نیست')
+  }
+
+  return mobile
+}
 // تبدیل تاریخ تولد به فرمت استاندارد میلادی ISO
 function toIsoBirthDate(birthDate) {
   if (!birthDate) return ''
@@ -2325,12 +2344,7 @@ toast.error(
     const payload={
       id:0,
 
-      userName:
-        String(
-          contact.phone||
-          contact.mobile||
-          ''
-        ).trim(),
+     userName: getLoggedInMobile(),
 
       email:
         String(
@@ -3776,10 +3790,7 @@ async function reservePartoFlight(
           contactInfo?.email||
           '',
 
-        ownerPhoneNumber:
-          contactInfo?.mobile||
-          contactInfo?.phone||
-          '',
+        ownerPhoneNumber: getLoggedInMobile(),
 
         ownerEmail:
           contactInfo?.email||
@@ -4082,16 +4093,22 @@ async function handleFinalPayment() {
       )
     }
 
-    const contactInfo = {
-      mobile:
-        bookingData.value?.contact?.mobile ||
-        bookingData.value?.contact?.phone ||
-        '',
+   const contact = bookingData.value?.contact || {}
+const loginMobile = getLoggedInMobile()
 
-      email:
-        bookingData.value?.contact?.email ||
-        ''
-    }
+const recipientMobile = contact.buyForOther
+  ? normalizeDigits(contact.recipientPhone || '').replace(/\D/g, '')
+  : loginMobile
+
+if (!/^09\d{9}$/.test(recipientMobile)) {
+  throw new Error('شماره موبایل شخص دیگر معتبر نیست')
+}
+
+const contactInfo = {
+  mobile: recipientMobile,
+  email: String(contact.email || '').trim()
+}
+    
 
     /*
      * ۱. رزرو پرواز
@@ -4138,7 +4155,7 @@ async function handleFinalPayment() {
      * اطلاعات پرداخت ساخته می‌شود.
      */
     const paymentData =
-      createPaymentData()
+  createPaymentData(contactInfo.mobile)
 
     /*
      * ۶. ذخیره در sessionStorage
@@ -4300,11 +4317,7 @@ const contractPassengers=
 
   id: contractId,
 
-  userName: String(
-    contactInfo?.mobile ||
-    contactInfo?.phone ||
-    ''
-  ).trim(),
+ userName: getLoggedInMobile(),
 
   email: String(
     contactInfo?.email || ''
@@ -4353,7 +4366,7 @@ function getUserData() {
   return userData
 }
 
-function createPaymentData() {
+function createPaymentData(recipientMobile)  {
   const totalPrice = Number(
     flightStore.finalBookingPrice || 0
   )
@@ -4368,11 +4381,12 @@ const email = String(
     bookingData.value?.contact?.email || ''
   ).trim()
 
-  const mobile = String(
-    bookingData.value?.contact?.mobile ||
-    bookingData.value?.contact?.phone ||
-    ''
-  ).trim()
+ const mobile = normalizeDigits(recipientMobile || '')
+  .replace(/\D/g, '')
+
+if (!/^09\d{9}$/.test(mobile)) {
+  throw new Error('شماره موبایل دریافت‌کننده بلیط معتبر نیست')
+}
   const userData = getUserData()
 
   const isAgency =
@@ -4609,7 +4623,7 @@ async function requestBankToken({
 
     const response=
       await $fetch(
-        'https://test.ahuan.ir/api/Tejarat/BankToken',
+        'https://test.ahuan.ir/api/Tejarat/BankTokenشسی',
         {
           method:'POST',
 

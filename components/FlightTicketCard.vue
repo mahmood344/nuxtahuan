@@ -242,7 +242,7 @@
 
             :class="activeTab === 'rules' ? 'text-blue-600 font-bold bg-gray-300' : 'text-gray-500 font-medium'"
 
-            class="text-[12px] hover:text-blue-600 transition-colors duration-300 transition-all rounded-sm py-2 px-2"
+            class="text-[14px] hover:text-blue-600 transition-colors duration-300 transition-all rounded-sm py-2 px-2"
 
           >
 
@@ -256,7 +256,7 @@
 
             :class="activeTab === 'info' ? 'text-blue-600 font-bold' : 'text-gray-500 font-medium'"
 
-            class="text-[12px] hover:text-blue-600 transition-colors duration-300 transition-all rounded-sm py-2 px-2"
+            class="text-[14px] hover:text-blue-600 transition-colors duration-300 transition-all rounded-sm py-2 px-2"
 
           >
 
@@ -484,7 +484,7 @@
 
     <div class="mt-1 flex justify-between text-sm text-gray-600">
 
-      <span class="text-[12px]">
+      <span class="text-[14px]">
 
         {{ arrivalTime }}
 
@@ -492,7 +492,7 @@
 
 
 
-      <span class="text-[12px]">
+      <span class="text-[14px]">
 
         {{ departureTime }}
 
@@ -567,8 +567,7 @@
       <span
 
         dir="rtl"
-
-        class="text-[12px]"
+        class="text-[14px] font-bold"
 
       >
 
@@ -890,7 +889,7 @@
 
               : 'text-gray-500 font-medium'"
 
-            class="text-[12px] hover:text-blue-600 duration-300 transition-all rounded-t-sm py-2 px-2"
+            class="text-[14px] hover:text-blue-600 duration-300 transition-all rounded-t-sm py-2 px-2"
 
           >
 
@@ -910,7 +909,7 @@
 
               : 'text-gray-500 font-medium'"
 
-            class="text-[12px] hover:text-blue-600 transition-colors duration-300 transition-all rounded-t-sm py-2 px-2"
+            class="text-[14px] hover:text-blue-600 transition-colors duration-300 transition-all rounded-t-sm py-2 px-2"
 
           >
 
@@ -1717,7 +1716,7 @@
 
                         <p
                           class="
-                            text-[10px]
+                            text-[12px]
                             font-medium
                             leading-7
                             text-gray-700
@@ -1919,11 +1918,11 @@
                     </div>
 
                     <div class="text-left">
-                      <span class="text-[12px] font-black text-gray-800">
+                      <span class="text-[14px] font-black text-gray-800">
                         {{ formatPrice(item.total) }}
                       </span>
 
-                      <span class="mr-1 text-[9px] text-gray-400">
+                      <span class="mr-1 text-[10px] text-gray-400">
                         ریال
                       </span>
                     </div>
@@ -2394,17 +2393,18 @@
                           <p
                             class="
                               mt-1
+                              font-bold
                               line-clamp-2
                               text-[9px]
                               leading-5
                               text-gray-400
-                              md:text-[10px]
+                              md:text-[12px]
                             "
                           >
                             {{ getAirportLabel(segment.origin) }}
                           </p>
 
-                          <p class="mt-2 text-[9px] font-medium text-gray-500">
+                          <p class="mt-2 text-[12px] font-bold text-gray-500">
                             {{ formatFlightDate(segment.departure) }}
                           </p>
                         </div>
@@ -2537,18 +2537,19 @@
 
                           <p
                             class="
+                            font-bold
                               mt-1
                               line-clamp-2
                               text-[9px]
                               leading-5
                               text-gray-400
-                              md:text-[10px]
+                              md:text-[12px]
                             "
                           >
                             {{ getAirportLabel(segment.destination) }}
                           </p>
 
-                          <p class="mt-2 text-[9px] font-medium text-gray-500">
+                          <p class="mt-2 text-[12px] font-bold text-gray-500">
                             {{ formatFlightDate(segment.arrival) }}
                           </p>
                         </div>
@@ -2599,7 +2600,7 @@
                           </span>
 
                           <div>
-                            <p class="text-[9px] text-gray-400">
+                            <p class="text-[12px] text-gray-400">
                               شماره پرواز
                             </p>
 
@@ -2639,7 +2640,7 @@
                           </span>
 
                           <div>
-                            <p class="text-[9px] text-gray-400">
+                            <p class="text-[12px] text-gray-400">
                               کلاس پرواز
                             </p>
 
@@ -2679,7 +2680,7 @@
                           </span>
 
                           <div class="min-w-0">
-                            <p class="text-[9px] text-gray-400">
+                            <p class="text-[12px] text-gray-400">
                               نوع هواپیما
                             </p>
 
