@@ -31,41 +31,38 @@
       <div dir="rtl" v-if="activeService == 'flight'" id="app" class="flex flex-col justify-center">
         
         <!-- بخش رادیو باتن‌ها: چیدمان دو تایی در یک ردیف -->
-        <div class="w-full space-y-4 p-4">
-          <!-- ردیف اول: پرواز داخلی و خارجی -->
-          <div class="grid grid-cols-2 gap-4 justify-items-center">
-            <UiBaseRadio 
-              v-model="flightType" 
-              value="domestic"
-              label="پرواز داخلی" 
-             
-              class="flight-radio-small"
-            />  
-            <UiBaseRadio 
-              v-model="flightType" 
-              value="international"
-              label="پرواز خارجی" 
-              
-              class="flight-radio-small"
-            />
-          </div>
+        <!-- انتخاب نوع و مسیر پرواز -->
+<div
+  dir="rtl"
+class="grid grid-cols-2 w-fit mx-auto gap-x-6 gap-y-4 py-4 md:w-full md:max-w-[500px] md:gap-x-4">
+  <UiBaseRadio
+    v-model="flightType"
+    value="domestic"
+    label="پرواز داخلی"
+    class="flight-radio-aligned"
+  />
 
-          <!-- ردیف دوم: یک طرفه و رفت و برگشت -->
-          <div class="grid grid-cols-2 gap-4 justify-items-center">
-            <UiBaseRadio 
-              v-model="travelType" 
-              value="one-way" 
-              label="یک طرفه" 
-              class="flight-radio-small"
-            />  
-            <UiBaseRadio 
-              v-model="travelType" 
-              value="round-trip"
-              label="رفت و برگشت" 
-              class="flight-radio-small" 
-            />  
-          </div>
-        </div>
+  <UiBaseRadio
+    v-model="flightType"
+    value="international"
+    label="پرواز خارجی"
+    class="flight-radio-aligned"
+  />
+
+  <UiBaseRadio
+    v-model="travelType"
+    value="one-way"
+    label="یک طرفه"
+    class="flight-radio-aligned"
+  />
+
+  <UiBaseRadio
+    v-model="travelType"
+    value="round-trip"
+    label="رفت و برگشت"
+    class="flight-radio-aligned"
+  />
+</div>
 
         <!-- ورودی‌ها به صورت ستونی زیر هم -->
         <div dir="rtl" class="w-full flex flex-col gap-4 mt-2">
@@ -978,12 +975,22 @@ async function syncHotelFormFromRoute() {
 :deep(.hotel-city-compact > div) {
   min-height: 44px !important;
 }
-:deep(.flight-radio-small label) {
-  font-size: 10px !important;
+:deep(.flight-radio-aligned) {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  flex-wrap: nowrap !important;
+  min-width: 0;
+  width: 100%;
+  white-space: nowrap !important;
 }
 
-:deep(.flight-radio-small span) {
-  font-size: 10px !important;
+:deep(.flight-radio-aligned label),
+:deep(.flight-radio-aligned span) {
+  font-size: 13px !important;
+  font-weight: 300 !important;
+  line-height: 1.6 !important;
+  white-space: nowrap !important;
 }
 /* در صورت نیاز به ترنزیشن یا استایل‌های خاص برای کامپوننت */
 </style>

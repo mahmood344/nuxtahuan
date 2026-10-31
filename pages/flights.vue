@@ -430,6 +430,7 @@
     aria-label="بازگشت به بالای صفحه"
     title="بازگشت به بالا"
     class="
+    hidden md:flex
       fixed
       bottom-24 right-5
       md:bottom-8 md:right-8
@@ -4154,7 +4155,7 @@ const contactInfo = {
      * اطلاعات پرداخت ساخته می‌شود.
      */
     const paymentData =
-      createPaymentData()
+  createPaymentData(contactInfo.mobile)
 
     /*
      * ۶. ذخیره در sessionStorage
@@ -4365,7 +4366,7 @@ function getUserData() {
   return userData
 }
 
-function createPaymentData() {
+function createPaymentData(recipientMobile)  {
   const totalPrice = Number(
     flightStore.finalBookingPrice || 0
   )
@@ -4380,7 +4381,12 @@ const email = String(
     bookingData.value?.contact?.email || ''
   ).trim()
 
- const mobile = getLoggedInMobile()
+ const mobile = normalizeDigits(recipientMobile || '')
+  .replace(/\D/g, '')
+
+if (!/^09\d{9}$/.test(mobile)) {
+  throw new Error('شماره موبایل دریافت‌کننده بلیط معتبر نیست')
+}
   const userData = getUserData()
 
   const isAgency =

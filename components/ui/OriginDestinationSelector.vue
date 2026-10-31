@@ -1,1199 +1,886 @@
-<template>
 
+<template>
   <div
     dir="rtl"
     class="route-selector-container flex w-full justify-center"
     :class="compact ? 'p-0' : 'p-4'"
   >
-
     <div
-
-      class="
-        route-selector
-        relative
-        flex
-        w-full
-        min-w-0
-        items-center
-        rounded-[12px]
-        border
-        border-gray-300
-        bg-white
-      "
-      :class="
-        compact
-          ? 'h-[44px] max-w-[280px]'
-          : 'h-[54px] max-w-[500px]'
-      "
-
+      class="route-selector relative flex w-full min-w-0 items-center rounded-[12px] border border-gray-300 bg-white"
+      :class="compact ? 'h-[44px] max-w-[280px]' : 'h-[54px] max-w-[500px]'"
     >
-
-      <!-- بخش مبدا -->
-
+      <!-- مبدا -->
       <div class="relative h-full min-w-0 flex-1 group">
-
-        <label class="route-label absolute -top-3 z-20 whitespace-nowrap bg-white text-gray-400"
-        :class="
-          compact
-            ? 'right-3 px-1.5 text-[10px]'
-            : 'right-6 px-2 text-[11px]'
-        ">
-
+        <label
+          class="route-label absolute -top-3 z-20 whitespace-nowrap bg-white text-gray-400"
+          :class="compact ? 'right-3 px-1.5 text-[10px]' : 'right-6 px-2 text-[11px]'"
+        >
           مبدا (شهر)
-
         </label>
 
-        <!-- نمایش مقدار انتخاب شده -->
-
-        <div 
-
-          @click="isMabdaOpen = !isMabdaOpen; isMaghsadOpen = false"
-
-          class="route-field flex h-full w-full min-w-0 cursor-pointer items-center text-gray-700"
+        <div
+          class="route-field flex h-full w-full min-w-0 items-center text-gray-700"
           :class="compact ? 'px-3' : 'px-6'"
-
         >
-
-          <i 
-
-            v-if="mabda"
-
-            @click.stop="clearMabda"
-
-            class="bi bi-x shrink-0 text-xl text-gray-400 transition-colors hover:text-red-500"
-
+          <i
+            v-if="mabda || searchMabda"
+            class="bi bi-x shrink-0 cursor-pointer text-xl text-gray-400 hover:text-red-500"
             title="پاک کردن"
-
+            @click.stop="clearMabda"
           ></i>
 
-          <i 
-
+          <i
             v-else
-
             class="bi bi-chevron-down shrink-0 text-xs text-gray-400"
-
           ></i>
 
-          <span v-if="mabda" class="mr-2 min-w-0 truncate text-[11px]! font-bold">
-
-  {{
-
-    sendFlightType === 'international'
-
-      ? mabda.iataCode
-
-      : mabda.cityNicName
-
-  }}
-
-</span>
-
-          <span v-else class="mr-2 min-w-0 truncate text-[10px]! font-bold text-gray-400">انتخاب مبدا</span>
-
+          <input
+            ref="mabdaInputRef"
+            v-model="searchMabda"
+            type="text"
+            autocomplete="off"
+            :placeholder="compact ? 'مبدا' : 'مبدا را تایپ کنید'"
+            class="mr-2 h-full w-full min-w-0 bg-transparent text-[13px] font-bold text-gray-700 outline-none placeholder:text-gray-400"
+            @focus="openMabda"
+            @input="onMabdaInput"
+            @keydown.enter.prevent="selectFirstMabda"
+            @keydown.esc="isMabdaOpen = false"
+          />
         </div>
 
-        <!-- لیست شهرهای مبدا -->
-
-        <div v-if="isMabdaOpen" class="custom-dropdown" :class="{ 'custom-dropdown-compact-origin': compact }">
-
-          <!-- input سرچ -->
-
-          <div class="relative w-full">
-
-            <input
-
-              v-model="searchMabda"
-
-              placeholder="جستجوی شهر..."
-
-              class="w-full px-3 py-2 text-sm border-b border-[var(--color-gray-100)] outline-none"
-
-            />
-
-            <span
-
+        <!-- پیشنهادهای مبدا -->
+        <div
+          v-if="isMabdaOpen"
+          class="custom-dropdown"
+          :class="{ 'custom-dropdown-compact-origin': compact }"
+        >
+          <div class="flex items-center justify-between border-b border-gray-100 px-4 py-2 text-[11px] text-gray-400">
+            <span>{{ searchMabda.trim() ? 'نتایج جستجو' : 'پرتردد' }}</span>
+            <i
               v-if="loadingMabda"
-
-              class="absolute left-3 top-2 animate-spin text-gray-400"
-
-            >
-
-              <i class="bi bi-arrow-repeat"></i>
-
-            </span>
-
+              class="bi bi-arrow-repeat animate-spin"
+            ></i>
           </div>
 
-          <!-- عنوان پرتردد -->
+          <div
+            v-for="(city, index) in mabdaCities"
+            :key="getCityKey(city, index)"
+            class="city-item"
+            @click="selectMabda(city)"
+          >
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex min-w-0 flex-col">
+                <span class="truncate text-[11px] font-bold text-gray-700">
+                  {{ getCityDisplayName(city) }}
+                </span>
 
-          <div class="px-4 py-2 text-[11px] text-gray-400 bg-gray-50/50">
+                <span
+                  v-if="sendFlightType === 'international'"
+                  class="mt-1 truncate text-[10px] text-gray-400"
+                >
+                  {{ city.cityNicName || city.cityName }}
+                  <template v-if="city.countryNicName">
+                    - {{ city.countryNicName }}
+                  </template>
+                </span>
+              </div>
 
-            پرتردد
-
+              <span
+                dir="ltr"
+                class="shrink-0 rounded-md bg-gray-100 px-2 py-1 text-[10px] font-bold text-gray-600"
+              >
+                {{ getCodeForEmit(city) }}
+              </span>
+            </div>
           </div>
 
-          <!-- لیست شهرها -->
-
-          <div 
-
-  v-for="city in (searchMabda ? dropdownCities : popularCities)"
-
-  :key="city.id || city.iataCode"
-
-  @click="selectMabda(city)"
-
-  class="city-item"
-
->
-
-  <template v-if="sendFlightType==='international'">
-
-    <div class="flex items-center justify-between gap-3">
-
-      <div class="flex flex-col">
-
-        <span class="font-bold text-gray-700 text-[11px]">
-
-          {{ city.nicName || city.cityNicName }}
-
-        </span>
-
-        <span class="mt-1 text-[11px] text-gray-400">
-
-          {{ city.cityNicName }} - {{ city.countryNicName }}
-
-        </span>
-
-      </div>
-
-      <span
-
-        dir="ltr"
-
-        class="shrink-0 rounded-md text-[9px] bg-gray-100 px-2 py-1 text-xs font-bold text-gray-600"
-
-      >
-
-        {{ city.iataCode }}
-
-      </span>
-
-    </div>
-
-  </template>
-
-  <template v-else>
-
-    {{ city.cityNicName }}
-
-  </template>
-
-</div>
-
+          <div
+            v-if="!loadingMabda && !mabdaCities.length"
+            class="px-4 py-5 text-center text-xs text-gray-400"
+          >
+            شهری یافت نشد
+          </div>
         </div>
-
       </div>
 
-      <!-- دکمه جابجایی (با استایل و وسط‌چین دقیق شما) -->
-
-      <div class="swap-zone relative flex h-full shrink-0 items-center justify-center"
-          :class="compact ? 'w-10' : 'w-16'">
-
+      <!-- دکمه جابه‌جایی -->
+      <div
+        class="swap-zone relative flex h-full shrink-0 items-center justify-center"
+        :class="compact ? 'w-10' : 'w-16'"
+      >
         <div class="absolute inset-y-0 w-px bg-gray-300"></div>
 
         <button
-
-          :class="{ disableBtn: !isFormValid }"
-
+          type="button"
           :disabled="!isFormValid"
-
+          :class="{ disableBtn: !isFormValid }"
+          class="relative z-10 flex items-center justify-center rounded-full border border-gray-300 bg-white p-1 shadow-sm transition-all hover:scale-110"
           @click="swapFields"
-
-          class="p-1 rounded-full bg-white shadow-sm flex items-center justify-center border border-gray-300 relative z-10 hover:scale-110 transition-all"
-
         >
-
-          <i class="bi bi-arrow-left-right w-5 h-5 text-gray-600"></i>
-
+          <i class="bi bi-arrow-left-right h-5 w-5 text-gray-600"></i>
         </button>
-
       </div>
 
-      <!-- بخش مقصد -->
-
+      <!-- مقصد -->
       <div class="relative h-full min-w-0 flex-1 group">
-
-        <label class="route-label absolute -top-3 z-20 whitespace-nowrap bg-white text-gray-400"
-        :class="
-          compact
-            ? 'right-2 px-1.5 text-[10px]'
-            : 'right-1 px-2 text-[11px]'
-        ">
-
+        <label
+          class="route-label absolute -top-3 z-20 whitespace-nowrap bg-white text-gray-400"
+          :class="compact ? 'right-2 px-1.5 text-[10px]' : 'right-1 px-2 text-[11px]'"
+        >
           مقصد (شهر)
-
         </label>
 
-        <div 
-
-          @click="isMaghsadOpen = !isMaghsadOpen; isMabdaOpen = false"
-
-          class="route-field flex h-full w-full min-w-0 cursor-pointer items-center text-gray-700"
+        <div
+          class="route-field flex h-full w-full min-w-0 items-center text-gray-700"
           :class="compact ? 'px-3' : 'px-6'"
-
         >
-
-          <i 
-
-            v-if="maghsad"
-
-            @click.stop="clearMaghsad"
-
-            class="bi bi-x shrink-0 text-xl text-gray-400 transition-colors hover:text-red-500"
-
+          <i
+            v-if="maghsad || searchMaghsad"
+            class="bi bi-x shrink-0 cursor-pointer text-xl text-gray-400 hover:text-red-500"
             title="پاک کردن"
-
+            @click.stop="clearMaghsad"
           ></i>
 
-          <i 
-
+          <i
             v-else
-
             class="bi bi-chevron-down shrink-0 text-xs text-gray-400"
-
           ></i>
 
-          <span v-if="maghsad" class="mr-2 min-w-0 truncate text-[11px]! font-bold">
-
-  {{
-
-    sendFlightType === 'international'
-
-      ? maghsad.iataCode
-
-      : maghsad.cityNicName
-
-  }}
-
-</span>
-
-          <span v-else class="mr-2 min-w-0 truncate text-[10px]! font-bold text-gray-400">انتخاب مقصد</span>
-
+          <input
+            ref="maghsadInputRef"
+            v-model="searchMaghsad"
+            type="text"
+            autocomplete="off"
+            :placeholder="compact ? 'مقصد' : 'مقصد را تایپ کنید'"
+            class="mr-2 h-full w-full min-w-0 bg-transparent text-[13px] font-bold text-gray-700 outline-none placeholder:text-gray-400"
+            @focus="openMaghsad"
+            @input="onMaghsadInput"
+            @keydown.enter.prevent="selectFirstMaghsad"
+            @keydown.esc="isMaghsadOpen = false"
+          />
         </div>
 
-        <!-- لیست شهرهای مقصد -->
-
-        <div v-if="isMaghsadOpen" class="custom-dropdown" :class="{ 'custom-dropdown-compact-destination': compact }">
-
-          <!-- input سرچ -->
-
-          <div class="relative w-full">
-
-            <input
-
-              v-model="searchMaghsad"
-
-              placeholder="جستجوی شهر..."
-
-              class="w-full px-3 py-2 text-sm border-b border-[var(--color-gray-100)] outline-none"
-
-            />
-
-            <span
-
+        <!-- پیشنهادهای مقصد -->
+        <div
+          v-if="isMaghsadOpen"
+          class="custom-dropdown"
+          :class="{ 'custom-dropdown-compact-destination': compact }"
+        >
+          <div class="flex items-center justify-between border-b border-gray-100 px-4 py-2 text-[11px] text-gray-400">
+            <span>{{ searchMaghsad.trim() ? 'نتایج جستجو' : 'پرتردد' }}</span>
+            <i
               v-if="loadingMaghsad"
-
-              class="absolute left-3 top-2 animate-spin text-gray-400"
-
-            >
-
-              <i class="bi bi-arrow-repeat"></i>
-
-            </span>
-
+              class="bi bi-arrow-repeat animate-spin"
+            ></i>
           </div>
 
-          <div class="px-4 py-2 text-[11px] text-gray-400 bg-gray-50/50">
+          <div
+            v-for="(city, index) in maghsadCities"
+            :key="getCityKey(city, index)"
+            class="city-item"
+            @click="selectMaghsad(city)"
+          >
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex min-w-0 flex-col">
+                <span class="truncate text-[11px] font-bold text-gray-700">
+                  {{ getCityDisplayName(city) }}
+                </span>
 
-            پرتردد
+                <span
+                  v-if="sendFlightType === 'international'"
+                  class="mt-1 truncate text-[10px] text-gray-400"
+                >
+                  {{ city.cityNicName || city.cityName }}
+                  <template v-if="city.countryNicName">
+                    - {{ city.countryNicName }}
+                  </template>
+                </span>
+              </div>
 
+              <span
+                dir="ltr"
+                class="shrink-0 rounded-md bg-gray-100 px-2 py-1 text-[10px] font-bold text-gray-600"
+              >
+                {{ getCodeForEmit(city) }}
+              </span>
+            </div>
           </div>
 
-          <div 
-
-  v-for="city in (searchMaghsad ? dropdownCities : popularCities)"
-
-  :key="city.id || city.iataCode"
-
-  @click="selectMaghsad(city)"
-
-  class="city-item"
-
->
-
-  <template v-if="sendFlightType==='international'">
-
-    <div class="flex items-center justify-between gap-3">
-
-      <div class="flex flex-col">
-
-        <span class="font-bold text-gray-700 text-[11px]">
-
-          {{ city.nicName || city.cityNicName }}
-
-        </span>
-
-        <span class="mt-1 text-[11px] text-gray-400">
-
-          {{ city.cityNicName }} - {{ city.countryNicName }}
-
-        </span>
-
-      </div>
-
-      <span
-
-        dir="ltr"
-
-        class="shrink-0 rounded-md bg-gray-100 px-2 py-1 text-xs font-bold text-[10px] text-gray-600"
-
-      >
-
-        {{ city.iataCode }}
-
-      </span>
-
-    </div>
-
-  </template>
-
-  <template v-else>
-
-    {{ city.cityNicName }}
-
-  </template>
-
-</div>
-
+          <div
+            v-if="!loadingMaghsad && !maghsadCities.length"
+            class="px-4 py-5 text-center text-xs text-gray-400"
+          >
+            شهری یافت نشد
+          </div>
         </div>
-
       </div>
-
     </div>
-
   </div>
-
 </template>
 
 <script setup>
-
 import {
-
   ref,
-
   computed,
-
   watch,
-
   onMounted,
-
+  onUnmounted,
   nextTick
+} from 'vue'
 
-} from "vue"
-
-import { useFlightStore } from "@/stores/flights"
-const route = useRoute()
+import { useFlightStore } from '@/stores/flights'
 
 const props = defineProps({
-compact: {
+  compact: {
     type: Boolean,
     default: false
   },
   sendFlightType: {
-
     type: String,
-
     default: 'domestic'
-
   },
-
   mabda: {
-
     type: [String, Number],
-
     default: null
-
   },
-
   maghsad: {
-
     type: [String, Number],
-
     default: null
-
   }
-
 })
 
-const toast=useToast()
-
 const emit = defineEmits([
-
   'update:mabda',
-
   'update:maghsad',
-
   'destination-selected'
-
 ])
 
 const flightStore = useFlightStore()
-
-
-
+const toast = useToast()
 
 const mabda = ref(null)
-
 const maghsad = ref(null)
 
-const searchMabda = ref("")
-
-const searchMaghsad = ref("")
+const searchMabda = ref('')
+const searchMaghsad = ref('')
 
 const isMabdaOpen = ref(false)
-
 const isMaghsadOpen = ref(false)
 
-const dropdownCities = ref([])
+const mabdaInputRef = ref(null)
+const maghsadInputRef = ref(null)
+
+const mabdaCities = ref([])
+const maghsadCities = ref([])
 
 const loadingMabda = ref(false)
-
 const loadingMaghsad = ref(false)
-
-const isSelecting = ref(false)
 
 const internationalPopularCities = ref([])
 
-const {public:{baseUrl}} = useRuntimeConfig()
+let mabdaTimer = null
+let maghsadTimer = null
 
-/* -----------------------
+let mabdaRequestId = 0
+let maghsadRequestId = 0
 
-استخراج کد مناسب جهت ارسال به والد (Emit)
+let mabdaResolveId = 0
+let maghsadResolveId = 0
 
-در پرواز داخلی: cityCode
+// کد قابل ارسال به والد
+function normalizeCode(value) {
+  return String(value ?? '')
+    .trim()
+    .toUpperCase()
+}
 
-در پرواز خارجی: iataCode
-
------------------------ */
-
-const getCodeForEmit = (city) => {
-
+function getCodeForEmit(city) {
   if (!city) return null
 
-  return props.sendFlightType === "domestic" ? city.cityCode : city.iataCode
+  const cityCode = normalizeCode(city.cityCode)
+  const iataCode = normalizeCode(city.iataCode)
 
+  if (props.sendFlightType === 'international') {
+    return iataCode || cityCode || null
+  }
+
+  return cityCode || iataCode || null
 }
 
-const normalizeCode = (value) => {
+// عنوان نمایشی شهر
+function getCityDisplayName(city) {
+  if (!city) return ''
 
-  return String(value || '')
-
-    .trim()
-
-    .toUpperCase()
-
-}
-
-const findDomesticCityByCode = (code) => {
-
-  const normalizedCode =
-
-    normalizeCode(code)
-
-  if (!normalizedCode)
-
-    return null
-
-  const cities = [
-
-    ...(flightStore.popularCities || []),
-
-    ...(flightStore.iranAirports || [])
-
-  ]
+  if (props.sendFlightType === 'international') {
+    return (
+      city.nicName ||
+      city.cityNicName ||
+      city.name ||
+      city.cityName ||
+      city.iataCode ||
+      city.cityCode ||
+      ''
+    )
+  }
 
   return (
-
-    cities.find(city =>
-
-      normalizeCode(city?.cityCode) === normalizedCode ||
-
-      normalizeCode(city?.iataCode) === normalizedCode
-
-    ) || null
-
+    city.cityNicName ||
+    city.nicName ||
+    city.cityName ||
+    city.name ||
+    city.iataCode ||
+    city.cityCode ||
+    ''
   )
-
 }
 
-const findInternationalCityByCode =
+function getInputDisplayName(city) {
+  if (!city) return ''
 
-  async (code) => {
-
-    const normalizedCode =
-
-      normalizeCode(code)
-
-    if (!normalizedCode)
-
-      return null
-
-    try {
-
-      const res = await $fetch(
-
-        `https://api.ahuan.ir/api/BasicInfo/airports/${normalizedCode}`
-
-      )
-
-      const items =
-
-        Array.isArray(res)
-
-          ? res
-
-          : res
-
-            ? [res]
-
-            : []
-
-      return (
-
-        items.find(city =>
-
-          normalizeCode(city?.iataCode) === normalizedCode
-
-        ) ||
-
-        items[0] ||
-
-        null
-
-      )
-
-    }
-
-    catch (error) {
-
-      console.error(
-
-        'Resolve airport error:',
-
-        error
-
-      )
-
-      return null
-
-    }
-
+  if (props.sendFlightType === 'international') {
+    return normalizeCode(
+      city.iataCode || city.cityCode
+    ) || getCityDisplayName(city)
   }
 
-  watch(
-
-  [
-
-    () => props.mabda,
-
-    () => props.sendFlightType
-
-  ],
-
-  async ([code, type]) => {
-
-    if (!code) {
-
-      mabda.value = null
-
-      searchMabda.value = ''
-
-      isMabdaOpen.value = false
-
-      return
-
-    }
-
-    let city = null
-
-    if (type === 'international') {
-
-      city =
-
-        await findInternationalCityByCode(code)
-
-    }
-
-    else {
-
-      city =
-
-        findDomesticCityByCode(code)
-
-    }
-
-    if (!city) return
-
-    isSelecting.value = true
-
-    mabda.value = city
-
-    searchMabda.value =
-
-      city.nicName ||
-
-      city.cityNicName ||
-
-      ''
-
-    isMabdaOpen.value = false
-
-    await nextTick()
-
-    isSelecting.value = false
-
-  },
-
-  {
-
-    immediate: true
-
-  }
-
-)
-
-watch(
-
-  [
-
-    () => props.maghsad,
-
-    () => props.sendFlightType
-
-  ],
-
-  async ([code, type]) => {
-
-    if (!code) {
-
-      maghsad.value = null
-
-      searchMaghsad.value = ''
-
-      isMaghsadOpen.value = false
-
-      return
-
-    }
-
-    let city = null
-
-    if (type === 'international') {
-
-      city =
-
-        await findInternationalCityByCode(code)
-
-    }
-
-    else {
-
-      city =
-
-        findDomesticCityByCode(code)
-
-    }
-
-    if (!city) return
-
-    isSelecting.value = true
-
-    maghsad.value = city
-
-    searchMaghsad.value =
-
-      city.nicName ||
-
-      city.cityNicName ||
-
-      ''
-
-    isMaghsadOpen.value = false
-
-    await nextTick()
-
-    isSelecting.value = false
-
-  },
-
-  {
-
-    immediate: true
-
-  }
-
-)
-
-/* -----------------------
-
-popular cities
-
------------------------ */
-
+  return getCityDisplayName(city)
+}
+
+function getCityKey(city, index) {
+  return `${city?.id || ''}-${getCodeForEmit(city) || index}`
+}
+
+// یکسان‌سازی متن برای سرچ
+function normalizeText(value) {
+  return String(value ?? '')
+    .replace(/ي/g, 'ی')
+    .replace(/ك/g, 'ک')
+    .trim()
+    .toLowerCase()
+}
+
+// لیست شهرهای پرتردد
 const popularCities = computed(() => {
-
-  if (props.sendFlightType === "domestic") {
-
-    return flightStore.popularCities || []
-
-  }
-
-  return internationalPopularCities.value
-
+  return props.sendFlightType === 'domestic'
+    ? flightStore.popularCities || []
+    : internationalPopularCities.value
 })
 
-/* -----------------------
+// حذف شهرهای تکراری با حفظ کد معتبر
+function uniqueCities(items) {
+  const seen = new Set()
 
-پرتردد خارجی
+  return items.filter(city => {
+    const code = getCodeForEmit(city)
 
------------------------ */
+    if (!code || seen.has(code)) return false
 
-const fetchInternationalPopular=async()=>{
-
-  try{
-
-    const res=
-
-      await $fetch(
-
-        'https://api.ahuan.ir/api/BasicInfo/default-airports'
-
-      )
-
-    if(
-
-      !Array.isArray(res)||
-
-      !res.length
-
-    ){
-
-      throw new Error(
-
-        'اطلاعاتی دریافت نشد'
-
-      )
-
-    }
-
-    internationalPopularCities.value=
-
-      res
-
-  }catch(err){
-
-    console.error(
-
-      'popular airports error:',
-
-      err
-
-    )
-
-    internationalPopularCities.value=[]
-
-    toast.error(
-
-      'خطا در دریافت اطلاعات'
-
-    )
-
-  }
-
+    seen.add(code)
+    return true
+  })
 }
 
-/* -----------------------
+// سرچ داخلی
+function filterDomesticCities(query) {
+  const q = normalizeText(query)
 
-فیلتر داخلی
+  if (!q) {
+    return uniqueCities(flightStore.popularCities || [])
+  }
 
------------------------ */
+  const cities = [
+    ...(flightStore.popularCities || []),
+    ...(flightStore.iranAirports || [])
+  ]
 
-const filterDomesticCities = (query) => {
+  return uniqueCities(
+    cities.filter(city => {
+      const values = [
+        city.cityNicName,
+        city.cityName,
+        city.nicName,
+        city.name,
+        city.cityCode,
+        city.iataCode
+      ]
 
-  if (!flightStore?.iranAirports) return []
-
-  return flightStore.iranAirports.filter(city =>
-
-    city.cityNicName.toLowerCase().includes(query.toLowerCase())
-
+      return values.some(value =>
+        normalizeText(value).includes(q)
+      )
+    })
   )
-
 }
 
-/* -----------------------
+// دریافت شهرهای پرتردد خارجی
+async function fetchInternationalPopular() {
+  try {
+    const res = await $fetch(
+      'https://api.ahuan.ir/api/BasicInfo/default-airports'
+    )
 
-search cities
+    internationalPopularCities.value =
+      Array.isArray(res) ? res : []
 
------------------------ */
-
-const searchCities = async (query, type) => {
-
-  if (!query) {
-
-    dropdownCities.value = []
-
-    return
-
+  } catch (error) {
+    console.error('Popular airports error:', error)
+    internationalPopularCities.value = []
+    toast.error('خطا در دریافت اطلاعات فرودگاه‌ها')
   }
+}
 
-  if (props.sendFlightType === "domestic") {
+// جستجوی خارجی
+async function fetchInternationalCities(query, type) {
+  const requestId = type === 'mabda'
+    ? ++mabdaRequestId
+    : ++maghsadRequestId
 
-    dropdownCities.value = filterDomesticCities(query)
-
-    return
-
-  }
+  if (type === 'mabda') loadingMabda.value = true
+  else loadingMaghsad.value = true
 
   try {
+    const res = await $fetch(
+      `https://api.ahuan.ir/api/BasicInfo/airports/${encodeURIComponent(query)}`
+    )
 
-    if (type === "mabda") loadingMabda.value = true
+    const cities = Array.isArray(res)
+      ? res
+      : res && typeof res === 'object'
+        ? [res]
+        : []
 
-    if (type === "maghsad") loadingMaghsad.value = true
-
-    const apiUrl = `https://api.ahuan.ir/api/BasicInfo/airports/${query}`
-
-    const res = await $fetch(apiUrl)
-
-    if (Array.isArray(res)) {
-
-      dropdownCities.value = res
-
-    } else if (res && typeof res === 'object') {
-
-      dropdownCities.value = [res]
-
-    } else {
-
-      dropdownCities.value = []
-
+    if (type === 'mabda' && requestId === mabdaRequestId) {
+      mabdaCities.value = uniqueCities(cities)
     }
 
-  } catch (err) {
+    if (type === 'maghsad' && requestId === maghsadRequestId) {
+      maghsadCities.value = uniqueCities(cities)
+    }
 
-    console.error("Airport search error:", err)
+  } catch (error) {
+    console.error('Airport search error:', error)
 
-    dropdownCities.value = []
+    if (type === 'mabda' && requestId === mabdaRequestId) {
+      mabdaCities.value = []
+    }
+
+    if (type === 'maghsad' && requestId === maghsadRequestId) {
+      maghsadCities.value = []
+    }
 
   } finally {
-
-    if (type === "mabda") loadingMabda.value = false
-
-    if (type === "maghsad") loadingMaghsad.value = false
-
-  }
-
-}
-
-/* -----------------------
-
-watch mabda
-
------------------------ */
-
-watch(searchMabda, (val) => {
-
-  if (isSelecting.value) return
-
-  if (val) {
-
-    searchCities(val, "mabda")
-
-    isMabdaOpen.value = true
-
-  } else {
-
-    dropdownCities.value = popularCities.value
-
-  }
-
-})
-
-/* -----------------------
-
-watch maghsad
-
------------------------ */
-
-watch(searchMaghsad, (val) => {
-
-  if (isSelecting.value) return
-
-  if (val) {
-
-    searchCities(val, "maghsad")
-
-    isMaghsadOpen.value = true
-
-  } else {
-
-    dropdownCities.value = popularCities.value
-
-  }
-
-})
-
-/* -----------------------
-
-flightType change (تغییر نوع پرواز و پاکسازی ورودی‌ها)
-
------------------------ */
-
-watch(
-
-  () => props.sendFlightType,
-
-  async (type) => {
-
-    if (type === 'international') {
-
-      await fetchInternationalPopular()
-
+    if (type === 'mabda' && requestId === mabdaRequestId) {
+      loadingMabda.value = false
     }
 
-    isMabdaOpen.value = false
+    if (type === 'maghsad' && requestId === maghsadRequestId) {
+      loadingMaghsad.value = false
+    }
+  }
+}
 
-    isMaghsadOpen.value = false
+// بارگذاری نتایج مبدا
+function searchOriginCities(query) {
+  clearTimeout(mabdaTimer)
 
-    dropdownCities.value =
+  // بی‌اعتبار کردن درخواست قبلی
+  mabdaRequestId++
 
-      popularCities.value
+  const q = String(query ?? '').trim()
 
-  },
-
-  {
-
-    immediate: true
-
+  if (!q) {
+    loadingMabda.value = false
+    mabdaCities.value = uniqueCities(popularCities.value)
+    return
   }
 
-)
+  if (props.sendFlightType === 'domestic') {
+    loadingMabda.value = false
+    mabdaCities.value = filterDomesticCities(q)
+    return
+  }
 
-/* -----------------------
+  loadingMabda.value = true
 
-form valid
-
------------------------ */
-
-const isFormValid = computed(() => {
-
-  return mabda.value && maghsad.value
-
-})
-
-/* -----------------------
-
-swap
-
------------------------ */
-
-const swapFields = () => {
-
-  if (!isFormValid.value) return
-
-  isSelecting.value = true
-
-  const temp = mabda.value
-
-  mabda.value = maghsad.value
-
-  maghsad.value = temp
-
-  const tempSearch = searchMabda.value
-
-  searchMabda.value = searchMaghsad.value
-
-  searchMaghsad.value = tempSearch
-
-  isMabdaOpen.value = false
-
-  isMaghsadOpen.value = false
-
-  dropdownCities.value = []
-
-  // ارسال کد مناسب جابجا شده به والد
-
-  emit('update:mabda', getCodeForEmit(mabda.value))
-
-  emit('update:maghsad', getCodeForEmit(maghsad.value))
-
-  setTimeout(() => {
-
-    isSelecting.value = false
-
-  }, 100)
-
+  mabdaTimer = setTimeout(() => {
+    fetchInternationalCities(q, 'mabda')
+  }, 300)
 }
 
-/* -----------------------
+// بارگذاری نتایج مقصد
+function searchDestinationCities(query) {
+  clearTimeout(maghsadTimer)
 
-select city
+  maghsadRequestId++
 
------------------------ */
+  const q = String(query ?? '').trim()
 
-const selectMabda = async (city) => {
+  if (!q) {
+    loadingMaghsad.value = false
+    maghsadCities.value = uniqueCities(popularCities.value)
+    return
+  }
 
-  isSelecting.value = true
+  if (props.sendFlightType === 'domestic') {
+    loadingMaghsad.value = false
+    maghsadCities.value = filterDomesticCities(q)
+    return
+  }
 
-  mabda.value = city
+  loadingMaghsad.value = true
 
-  searchMabda.value =
+  maghsadTimer = setTimeout(() => {
+    fetchInternationalCities(q, 'maghsad')
+  }, 300)
+}
 
-    city.cityNicName
+// باز کردن مبدأ
+function openMabda() {
+  isMabdaOpen.value = true
+  isMaghsadOpen.value = false
 
-  emit(
+  if (mabda.value && searchMabda.value === getInputDisplayName(mabda.value)) {
+    mabdaCities.value = uniqueCities(popularCities.value)
+  } else {
+    searchOriginCities(searchMabda.value)
+  }
+}
 
-    'update:mabda',
-
-    getCodeForEmit(city)
-
-  )
-
-  // مبدا بسته شود
-
-  isMabdaOpen.value = false
-
-  // داده‌های مقصد آماده شود
-
-  searchMaghsad.value = ""
-
-  dropdownCities.value =
-
-    popularCities.value
-
-  await nextTick()
-
-  // مقصد خودکار باز شود
-
+// باز کردن مقصد
+function openMaghsad() {
   isMaghsadOpen.value = true
+  isMabdaOpen.value = false
 
-  setTimeout(() => {
-
-    isSelecting.value = false
-
-  }, 100)
-
+  if (maghsad.value && searchMaghsad.value === getInputDisplayName(maghsad.value)) {
+    maghsadCities.value = uniqueCities(popularCities.value)
+  } else {
+    searchDestinationCities(searchMaghsad.value)
+  }
 }
 
-const selectMaghsad = (city) => {
-
-  isSelecting.value = true
-
-  maghsad.value = city
-
-  searchMaghsad.value =
-
-    city.cityNicName
-
-  const code =
-
-    getCodeForEmit(city)
-
-  emit(
-
-    'update:maghsad',
-
-    code
-
-  )
-
-  isMaghsadOpen.value = false
-
-  dropdownCities.value = []
-
-  // به والد می‌گوییم مقصد انتخاب شد
-
-  emit(
-
-    'destination-selected',
-
-    code
-
-  )
-
-  setTimeout(() => {
-
-    isSelecting.value = false
-
-  }, 100)
-
-}
-
-/* -----------------------
-
-clear
-
------------------------ */
-
-const clearMabda = () => {
-
+// تایپ در مبدأ
+function onMabdaInput() {
   mabda.value = null
-
-  searchMabda.value = ""
 
   emit('update:mabda', null)
 
-  dropdownCities.value = popularCities.value
-
   isMabdaOpen.value = true
+  isMaghsadOpen.value = false
 
+  searchOriginCities(searchMabda.value)
 }
 
-const clearMaghsad = () => {
-
+// تایپ در مقصد
+function onMaghsadInput() {
   maghsad.value = null
-
-  searchMaghsad.value = ""
 
   emit('update:maghsad', null)
 
-  dropdownCities.value = popularCities.value
-
   isMaghsadOpen.value = true
+  isMabdaOpen.value = false
 
+  searchDestinationCities(searchMaghsad.value)
 }
 
-/* -----------------------
+// انتخاب مبدأ
+async function selectMabda(city) {
+  const code = getCodeForEmit(city)
+  if (!code) return
 
-mounted
+  clearTimeout(mabdaTimer)
+  mabdaRequestId++
 
------------------------ */
+  mabda.value = city
+  searchMabda.value = getInputDisplayName(city)
 
-onMounted(async () => {
+  loadingMabda.value = false
+  isMabdaOpen.value = false
 
-  if (props.sendFlightType === "international") {
+  emit('update:mabda', code)
 
-    await fetchInternationalPopular()
+  // بعد از انتخاب مبدأ، مقصد آماده انتخاب شود
+  if (!maghsad.value) {
+    searchMaghsad.value = ''
+    maghsadCities.value = uniqueCities(popularCities.value)
 
+    await nextTick()
+    maghsadInputRef.value?.focus()
+  }
+}
+
+// انتخاب مقصد
+function selectMaghsad(city) {
+  const code = getCodeForEmit(city)
+  if (!code) return
+
+  clearTimeout(maghsadTimer)
+  maghsadRequestId++
+
+  maghsad.value = city
+  searchMaghsad.value = getInputDisplayName(city)
+
+  loadingMaghsad.value = false
+  isMaghsadOpen.value = false
+
+  emit('update:maghsad', code)
+  emit('destination-selected', code)
+}
+
+// انتخاب اولین پیشنهاد با Enter
+function selectFirstMabda() {
+  if (mabdaCities.value.length) {
+    selectMabda(mabdaCities.value[0])
+  }
+}
+
+function selectFirstMaghsad() {
+  if (maghsadCities.value.length) {
+    selectMaghsad(maghsadCities.value[0])
+  }
+}
+
+// پاک کردن مبدأ
+async function clearMabda() {
+  clearTimeout(mabdaTimer)
+  mabdaRequestId++
+
+  mabda.value = null
+  searchMabda.value = ''
+
+  emit('update:mabda', null)
+
+  mabdaCities.value = uniqueCities(popularCities.value)
+  loadingMabda.value = false
+
+  isMabdaOpen.value = true
+  isMaghsadOpen.value = false
+
+  await nextTick()
+  mabdaInputRef.value?.focus()
+}
+
+// پاک کردن مقصد
+async function clearMaghsad() {
+  clearTimeout(maghsadTimer)
+  maghsadRequestId++
+
+  maghsad.value = null
+  searchMaghsad.value = ''
+
+  emit('update:maghsad', null)
+
+  maghsadCities.value = uniqueCities(popularCities.value)
+  loadingMaghsad.value = false
+
+  isMaghsadOpen.value = true
+  isMabdaOpen.value = false
+
+  await nextTick()
+  maghsadInputRef.value?.focus()
+}
+
+// اعتبار فرم
+const isFormValid = computed(() =>
+  !!getCodeForEmit(mabda.value) &&
+  !!getCodeForEmit(maghsad.value)
+)
+
+// جابه‌جایی مبدا و مقصد
+function swapFields() {
+  if (!isFormValid.value) return
+
+  const oldMabda = mabda.value
+  const oldMaghsad = maghsad.value
+
+  mabda.value = oldMaghsad
+  maghsad.value = oldMabda
+
+  searchMabda.value = getInputDisplayName(mabda.value)
+  searchMaghsad.value = getInputDisplayName(maghsad.value)
+
+  isMabdaOpen.value = false
+  isMaghsadOpen.value = false
+
+  emit('update:mabda', getCodeForEmit(mabda.value))
+  emit('update:maghsad', getCodeForEmit(maghsad.value))
+}
+
+// یافتن شهر داخلی با cityCode یا iataCode
+function findDomesticCityByCode(code) {
+  const normalized = normalizeCode(code)
+  if (!normalized) return null
+
+  const cities = [
+    ...(flightStore.popularCities || []),
+    ...(flightStore.iranAirports || [])
+  ]
+
+  return cities.find(city =>
+    normalizeCode(city.cityCode) === normalized ||
+    normalizeCode(city.iataCode) === normalized
+  ) || null
+}
+
+// یافتن شهر خارجی
+async function findInternationalCityByCode(code) {
+  const normalized = normalizeCode(code)
+  if (!normalized) return null
+
+  const popular = internationalPopularCities.value.find(city =>
+    normalizeCode(city.iataCode) === normalized ||
+    normalizeCode(city.cityCode) === normalized
+  )
+
+  if (popular) return popular
+
+  try {
+    const res = await $fetch(
+      `https://api.ahuan.ir/api/BasicInfo/airports/${encodeURIComponent(normalized)}`
+    )
+
+    const cities = Array.isArray(res)
+      ? res
+      : res && typeof res === 'object'
+        ? [res]
+        : []
+
+    return cities.find(city =>
+      normalizeCode(city.iataCode) === normalized ||
+      normalizeCode(city.cityCode) === normalized
+    ) || null
+
+  } catch (error) {
+    console.error('Resolve airport error:', error)
+    return null
+  }
+}
+
+// هماهنگی مبدأ با والد
+watch(
+  [
+    () => props.mabda,
+    () => props.sendFlightType,
+    () => flightStore.popularCities,
+    () => flightStore.iranAirports
+  ],
+  async ([code, type]) => {
+    const requestId = ++mabdaResolveId
+
+    if (!code) {
+      mabda.value = null
+      searchMabda.value = ''
+      return
+    }
+
+    const city = type === 'international'
+      ? await findInternationalCityByCode(code)
+      : findDomesticCityByCode(code)
+
+    if (requestId !== mabdaResolveId) return
+
+    if (city) {
+      mabda.value = city
+      searchMabda.value = getInputDisplayName(city)
+    }
+  },
+  { immediate: true }
+)
+
+// هماهنگی مقصد با والد
+watch(
+  [
+    () => props.maghsad,
+    () => props.sendFlightType,
+    () => flightStore.popularCities,
+    () => flightStore.iranAirports
+  ],
+  async ([code, type]) => {
+    const requestId = ++maghsadResolveId
+
+    if (!code) {
+      maghsad.value = null
+      searchMaghsad.value = ''
+      return
+    }
+
+    const city = type === 'international'
+      ? await findInternationalCityByCode(code)
+      : findDomesticCityByCode(code)
+
+    if (requestId !== maghsadResolveId) return
+
+    if (city) {
+      maghsad.value = city
+      searchMaghsad.value = getInputDisplayName(city)
+    }
+  },
+  { immediate: true }
+)
+
+// تغییر نوع پرواز
+watch(
+  () => props.sendFlightType,
+  async type => {
+    clearTimeout(mabdaTimer)
+    clearTimeout(maghsadTimer)
+
+    mabdaRequestId++
+    maghsadRequestId++
+
+    isMabdaOpen.value = false
+    isMaghsadOpen.value = false
+
+    if (type === 'international') {
+      await fetchInternationalPopular()
+    }
+
+    mabdaCities.value = uniqueCities(popularCities.value)
+    maghsadCities.value = uniqueCities(popularCities.value)
+  },
+  { immediate: true }
+)
+
+// بستن پیشنهادها با کلیک بیرون
+function handleOutsideClick(event) {
+  const originContainer = mabdaInputRef.value?.closest('.group')
+  const destinationContainer = maghsadInputRef.value?.closest('.group')
+
+  if (isMabdaOpen.value && !originContainer?.contains(event.target)) {
+    isMabdaOpen.value = false
+
+    if (mabda.value) {
+      searchMabda.value = getInputDisplayName(mabda.value)
+    } else {
+      searchMabda.value = ''
+    }
   }
 
-  dropdownCities.value = popularCities.value
+  if (isMaghsadOpen.value && !destinationContainer?.contains(event.target)) {
+    isMaghsadOpen.value = false
 
+    if (maghsad.value) {
+      searchMaghsad.value = getInputDisplayName(maghsad.value)
+    } else {
+      searchMaghsad.value = ''
+    }
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('pointerdown', handleOutsideClick)
 })
 
+onUnmounted(() => {
+  document.removeEventListener('pointerdown', handleOutsideClick)
+
+  clearTimeout(mabdaTimer)
+  clearTimeout(maghsadTimer)
+
+  mabdaRequestId++
+  maghsadRequestId++
+})
 </script>
 
 <style scoped>
-
 .route-selector-container {
   container-type: inline-size;
 }
@@ -1201,31 +888,6 @@ onMounted(async () => {
 .route-selector {
   min-width: 0;
 }
-
-/* اگر حتی در حالت compact خود Parent از 280px هم کوچک‌تر شد */
-@container (max-width: 280px) {
-  .route-field {
-    padding-left: 8px !important;
-    padding-right: 8px !important;
-  }
-
-  .swap-zone {
-    width: 36px !important;
-  }
-
-  .route-field span {
-    margin-right: 4px;
-    font-size: 9px;
-  }
-
-  .route-label {
-    padding-left: 4px !important;
-    padding-right: 4px !important;
-    font-size: 9px !important;
-  }
-}
-
-/* استایل لیست شهرها */
 
 .custom-dropdown {
   position: absolute;
@@ -1256,75 +918,50 @@ onMounted(async () => {
 }
 
 .city-item {
-
   padding: 12px 16px;
-
   font-size: 14px;
-
   color: #374151;
-
   cursor: pointer;
-
   border-bottom: 1px solid #f3f4f6;
-
   transition: background 0.2s;
-
 }
 
 .city-item:last-child {
-
   border-bottom: none;
-
 }
 
 .city-item:hover {
-
   background-color: #f9fafb;
-
 }
-
-/* استایل دکمه غیرفعال شما */
 
 .disableBtn {
-
   background: var(--color-gray-200);
-
   cursor: not-allowed;
-
 }
-
-.shadow-sm {
-
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-
-}
-
-.border-gray-300 {
-
-  border-color: #d1d5db;
-
-}
-
-.w-px {
-
-  width: 1px;
-
-}
-
-/* اسکرول‌بار زیبا برای لیست */
 
 .custom-dropdown::-webkit-scrollbar {
-
   width: 4px;
-
 }
 
 .custom-dropdown::-webkit-scrollbar-thumb {
-
   background: #e5e7eb;
-
   border-radius: 10px;
-
 }
 
+@container (max-width: 280px) {
+  .route-field {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  .swap-zone {
+    width: 36px !important;
+  }
+
+  .route-label {
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+    font-size: 9px !important;
+  }
+}
 </style>
