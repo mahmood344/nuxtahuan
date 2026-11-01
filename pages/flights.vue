@@ -4623,7 +4623,7 @@ async function requestBankToken({
 
     const response=
       await $fetch(
-        'https://test.ahuan.ir/api/Tejarat/BankTokenشسی',
+        'https://test.ahuan.ir/api/Tejarat/BankToken',
         {
           method:'POST',
 
