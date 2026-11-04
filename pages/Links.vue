@@ -1,9 +1,9 @@
 
 <script setup>
-import bg from '/imgs/hotel/menu/background.webp'
-import logo from '/imgs/hotel/menu/logo.png'
-import baleIcon from '/imgs/hotel/menu/bale.png'
-import rubikaIcon from '/imgs/hotel/menu/rubika.png'
+import bg from '/imgs/hotel/Menu/background.webp'
+import logo from '/imgs/hotel/Menu/logo.png'
+import baleIcon from '/imgs/hotel/Menu/bale.png'
+import rubikaIcon from '/imgs/hotel/Menu/rubika.png'
 
 definePageMeta({
   layout: false
@@ -16,17 +16,17 @@ const dataLinks = [
     icon: 'bi-link-45deg'
   },
   {
-    link: 'https://menu.ahuan.ir/menu/main.html#/resturant',
+    link: '/links/menu/restaurant',
     text: 'منو رستوران هتل آهوان',
     icon: 'bi-link-45deg'
   },
   {
-    link: 'https://menu.ahuan.ir/menu/main.html#/coffeshop',
+    link: '/links/menu/Coffeeshop',
     text: 'منو کافی شاپ هتل آهوان',
     icon: 'bi-link-45deg'
   },
   {
-    link: 'https://ahuan.ir/#/',
+    link: 'https://ahuan.ir/',
     text: 'وبسایت آهوان',
     icon: 'bi-link-45deg'
   },
