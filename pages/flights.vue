@@ -2669,12 +2669,15 @@ async function reserveNiraFlight(
       ).trim()
     )
 
-    params.set(
-      'FlightClass',
-      String(
-        flight?.cabinClass||'E'
-      ).trim()
-    )
+    const flightClass = String(
+  flight?.bookingClass || flight?.rbd || ''
+).trim().toUpperCase()
+
+if (!flightClass) {
+  throw new Error('کلاس رزرو پرواز نیرا مشخص نیست')
+}
+
+params.set('FlightClass', flightClass)
 
     params.set(
       'FlightNo',
