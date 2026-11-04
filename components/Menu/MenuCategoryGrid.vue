@@ -2,8 +2,6 @@
 
 import { useHotelStore } from '~/stores/hotels'
 
-
-
 const hotelStore = useHotelStore()
 
 const props = defineProps({
@@ -11,8 +9,6 @@ const props = defineProps({
   menu: { type: String, required: true, validator: value => ['restaurant', 'coffeeshop'].includes(value) }
 
 })
-
-
 
 const route = useRoute()
 
@@ -23,10 +19,6 @@ const isEnglish = computed(() => language.value === 'en')
 const t = (fa, en) => isEnglish.value ? en : fa
 
 const toggleLanguage = () => { language.value = isEnglish.value ? 'fa' : 'en' }
-
-
-
-
 
 const categoryLists = {
 
@@ -131,8 +123,6 @@ const categoryLists = {
     }
 
   ],
-
-
 
   coffeeshop: [
 
@@ -370,23 +360,15 @@ const scrollToSelectedCategory = async () => {
 
   await nextTick()
 
-
-
   const nav = categoryNav.value
 
   if (!nav) return
-
-
 
   const selected = Array.from(nav.querySelectorAll('button'))
 
     .find(button => button.getAttribute('aria-pressed') === 'true')
 
-
-
   if (!selected) return
-
-
 
   selected.scrollIntoView({
 
@@ -404,11 +386,7 @@ const scrollCategories = event => {
 
   const element = event.currentTarget
 
-
-
   if (element.scrollWidth <= element.clientWidth) return
-
-
 
   if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
 
@@ -434,33 +412,82 @@ const menuTitle = computed(() => props.menu === 'restaurant'
 
   : t('منوی کافی شاپ', 'Coffee Shop Menu'))
 
-
-
 const normalize = value => String(value ?? '')
 
   .replace(/ي/g, 'ی').replace(/ك/g, 'ک').replace(/\u200c/g, ' ').trim().replace(/\s+/g, ' ')
 
-
-
 // const staticCoffeeShopImages = {
 
-//   'آیس لاته': '/imgs/hotel/menu/1.jpg',
+//   'آیس لاته': '/imgs/hotel/Menu/1.jpg',
 
-//   'آیس لاته طعم دار': '/imgs/hotel/menu/2.jpg',
+//   'آیس لاته طعم دار': '/imgs/hotel/Menu/2.jpg',
 
-//   'آیس موکا': '/imgs/hotel/menu/3.jpg',
+//   'آیس موکا': '/imgs/hotel/Menu/3.jpg',
 
-//   'آیس آمریکانو': '/imgs/hotel/menu/4.jpg',
+//   'آیس آمریکانو': '/imgs/hotel/Menu/4.jpg',
 
-//   'فراپاچینو': '/imgs/hotel/menu/5.jpg'
+//   'فراپاچینو': '/imgs/hotel/Menu/5.jpg'
 
 // }
 
-
-
-
-
 const search = ref('')
+
+const submittedSearch = ref('')
+
+const searchInput = ref(null)
+
+const searchResults = ref(null)
+const scrollToProducts = async () => {
+  await nextTick()
+
+  searchResults.value?.scrollIntoView({
+    behavior: 'smooth',
+    block: 'start'
+  })
+}
+
+const scrollAfterCategoryChange = ref(false)
+let searchScrollTimer = null
+
+// تایپ کردن فقط مقدار ورودی را تغییر می‌دهد؛ تا ثبت جستجو، لیست فیلتر نمی‌شود.
+
+const onSearchInput = () => { submittedSearch.value = '' }
+
+const clearSearch = () => {
+
+  search.value = ''
+
+  submittedSearch.value = ''
+
+}
+
+const showSearchResults = async () => {
+
+  const term = normalize(search.value)
+
+  if (!term) return
+
+  // ابتدا کیبورد را ببند و بعد جستجو را اعمال کن.
+
+  searchInput.value?.blur()
+
+  submittedSearch.value = term
+
+  await nextTick()
+
+  if (import.meta.client) {
+
+    if (searchScrollTimer) clearTimeout(searchScrollTimer)
+
+    searchScrollTimer = setTimeout(() => {
+
+      searchResults.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+
+    }, 250)
+
+  }
+
+}
 
 const selectedProduct = ref(null)
 
@@ -482,17 +509,7 @@ const activeSlide = computed({
 
 const imageFailures = reactive({})
 
-
-
-
-
-
-
-
-
 const allProducts = computed(() => hotelStore.foods)
-
-
 
 const status = computed(() => {
 
@@ -506,8 +523,6 @@ const status = computed(() => {
 
 })
 
-
-
 const error = computed(() =>
 
   hotelStore.foodsError
@@ -518,19 +533,11 @@ const error = computed(() =>
 
 )
 
-
-
 const refresh = () => hotelStore.loadFoods()
-
-
-
-
 
 const menuRows = computed(() => {
 
   const type = props.menu === 'restaurant' ? 'r' : 'c'
-
-
 
   const allowed = categories.value.flatMap(c =>
 
@@ -540,13 +547,9 @@ const menuRows = computed(() => {
 
   )
 
-
-
   return allProducts.value.filter(item => {
 
     if (!item) return false
-
-
 
     const title = normalize(item.Title)
 
@@ -554,23 +557,15 @@ const menuRows = computed(() => {
 
     const itemType = normalize(item.C_OR_R).toLowerCase()
 
-
-
     if (!title || title.toUpperCase() === 'NULL' ||
 
         !allowed.includes(category)) return false
-
-
 
     return itemType === type || !itemType
 
   })
 
 })
-
-
-
-
 
 const mapProduct = item => {
 
@@ -597,7 +592,9 @@ const mapProduct = item => {
     ingredients: ingredients.toUpperCase() === 'NULL' ? '' : ingredients,
 
     price: Number(item.Price) || 0,
-    image: apiImage,
+
+   image: apiImage,
+
     // image: (props.menu === 'coffeeshop' ? staticCoffeeShopImages[title] : '') || apiImage,
 
     apiImage
@@ -616,8 +613,6 @@ const products = computed(() => {
 
     .map(normalize)
 
-
-
   return allMenuProducts.value.filter(p =>
 
     selected.includes(p.category)
@@ -628,34 +623,60 @@ const products = computed(() => {
 
 const visibleProducts = computed(() => {
 
-  const term = normalize(search.value).toLowerCase()
+  const term = normalize(submittedSearch.value).toLowerCase()
 
-  return term ? products.value.filter(p =>
+  // وقتی جستجو خالی است، محصولات دسته انتخاب‌شده نمایش داده شوند
 
-    [p.title, p.titleEn, p.description, p.ingredients].some(s => s.toLowerCase().includes(term))
+  if (!term) return products.value
 
-  ) : products.value
+  // جستجو در کل اطلاعات ذخیره‌شده در Store
+
+  return allProducts.value
+
+    .filter(item => {
+
+      if (!item) return false
+
+      const title = normalize(item.Title)
+
+      return title && title.toUpperCase() !== 'NULL'
+
+    })
+
+    .map(mapProduct)
+
+    .filter(product =>
+
+      [
+
+        product.title,
+
+        product.titleEn,
+
+        product.category,
+
+        product.description,
+
+        product.ingredients
+
+      ].some(value =>
+
+        normalize(value).toLowerCase().includes(term)
+
+      )
+
+    )
 
 })
 
-
-
 const resolveImage = value => {
-
   const image = String(value || '').trim()
-
   if (!image || image.toUpperCase() === 'NULL') return ''
-
   if (/^data:image\/[a-zA-Z0-9.+-]+;base64,/i.test(image)) return image
-
   if (/^https?:\/\//i.test(image)) return image
-
   if (image.startsWith('/imgs/')) return image
-
   if (image.startsWith('/')) return `https://menu.ahuan.ir${image}`
-
   return ''
-
 }
 
 const getImage = product => {
@@ -712,31 +733,40 @@ const addProduct = id => setQuantity(id, quantity(id) + 1)
 
 const removeProduct = id => setQuantity(id, quantity(id) - 1)
 
-const changeCategory = slug => {
 
-  if (slug === currentSlug.value) return
-
-  search.value = ''
-
+const changeCategory = async slug => {
+  clearSearch()
   selectedProduct.value = null
 
-  return navigateTo(`${basePath.value}/${slug}`)
+  // اگر روی دسته فعلی کلیک شد، فقط اسکرول انجام شود
+  if (slug === currentSlug.value) {
+    await scrollToProducts()
+    return
+  }
 
+  // بعد از تغییر آدرس و نمایش محصولات جدید، اسکرول انجام شود
+  scrollAfterCategoryChange.value = true
+
+  try {
+    await navigateTo(`${basePath.value}/${slug}`)
+  } catch (error) {
+    scrollAfterCategoryChange.value = false
+    throw error
+  }
 }
 
+
 watch(currentSlug, async () => {
-
-  search.value = ''
-
+  clearSearch()
   selectedProduct.value = null
-
-
 
   await scrollToSelectedCategory()
 
+  if (scrollAfterCategoryChange.value) {
+    scrollAfterCategoryChange.value = false
+    await scrollToProducts()
+  }
 })
-
-
 
 // اسلایدر در تمام دسته‌بندی‌های همان منو ثابت است.
 
@@ -770,6 +800,34 @@ const previousSlide = () => {
 
 }
 
+// حرکت انگشت روی بنر اسلایدر (بدون اختلال در اسکرول عمودی)
+let touchStartX = 0
+let touchStartY = 0
+let touchTracking = false
+
+const onSliderTouchStart = event => {
+  if (event.touches.length !== 1) { touchTracking = false; return }
+  touchStartX = event.touches[0].clientX
+  touchStartY = event.touches[0].clientY
+  touchTracking = true
+}
+
+const onSliderTouchEnd = event => {
+  if (!touchTracking || !event.changedTouches.length) return
+  touchTracking = false
+  if (slideProducts.value.length < 2) return
+
+  const dx = event.changedTouches[0].clientX - touchStartX
+  const dy = event.changedTouches[0].clientY - touchStartY
+  if (Math.abs(dx) < 45 || Math.abs(dx) <= Math.abs(dy)) return
+
+  if (dx < 0) nextSlide()
+  else previousSlide()
+  startSlider()
+}
+
+const onSliderTouchCancel = () => { touchTracking = false }
+
 let sliderTimer = null
 
 const stopSlider = () => { if (sliderTimer) clearInterval(sliderTimer); sliderTimer = null }
@@ -785,8 +843,6 @@ const startSlider = () => {
   }, 4000)
 
 }
-
-
 
 const openProduct = product => {
 
@@ -808,7 +864,25 @@ const confirmProduct = () => {
 
 }
 
-const cartProducts = computed(() => allMenuProducts.value.filter(p => quantity(p.id) > 0))
+const cartProducts = computed(() =>
+
+  allProducts.value
+
+    .filter(item => {
+
+      if (!item) return false
+
+      const title = normalize(item.Title)
+
+      return title && title.toUpperCase() !== 'NULL'
+
+    })
+
+    .map(mapProduct)
+
+    .filter(p => quantity(p.id) > 0)
+
+)
 
 const cartCount = computed(() => cartProducts.value.reduce((n, p) => n + quantity(p.id), 0))
 
@@ -824,37 +898,29 @@ onMounted(() => {
 
   refresh()
 
-
-
   if (props.menu === 'restaurant') {
 
     startSlider()
 
   }
 
-
-
   scrollToSelectedCategory()
-
-
 
   window.addEventListener('keydown', closeOverlays)
 
 })
 
-
-
 onUnmounted(() => {
 
   stopSlider()
+
+  if (searchScrollTimer) clearTimeout(searchScrollTimer)
 
   window.removeEventListener('keydown', closeOverlays)
 
 })
 
 </script>
-
-
 
 <template>
 
@@ -890,79 +956,81 @@ onUnmounted(() => {
 
       </header>
 
-
-
       <section class="px-5 pt-6 pb-5">
 
         <h1 class="text-[27px] font-extrabold">{{ menuTitle }}</h1>
 
       </section>
 
+      <!-- جستجو: حفظ همه بخش‌های صفحه هنگام باز بودن کیبورد -->
 
+      <section class="px-5 pb-6">
 
-      <!-- جست‌وجو -->
+        <div class="flex items-center gap-2">
 
+          <div class="flex h-[52px] min-w-0 flex-1 items-center gap-3 rounded-[17px] border border-gray-200 bg-white px-4 focus-within:border-primary">
 
+            <i class="bi bi-search shrink-0 text-[20px] text-primary"></i>
 
-<!-- جستجو -->
+            <input
 
-<section class="px-5 pb-6">
+              ref="searchInput"
 
-  <div
+              v-model="search"
 
-    class="flex h-[52px] items-center gap-3 rounded-[17px] border border-gray-200 bg-white px-4 focus-within:border-primary"
+              type="text"
 
-  >
+              enterkeyhint="search"
 
-    <i class="bi bi-search text-[20px] text-primary"></i>
+              autocomplete="off"
 
+              :placeholder="t('جستجوی غذا و نوشیدنی...', 'Search dishes and drinks...')"
 
+              class="h-full min-w-0 flex-1 bg-transparent text-[16px] text-gray-800 outline-none placeholder:text-gray-400"
 
-    <input
+              @input="onSearchInput"
 
-      v-model="search"
+              @keydown.enter.prevent="showSearchResults"
 
-      type="text"
+            />
 
-      :placeholder="t('جستجوی غذا و نوشیدنی...', 'Search dishes and drinks...')"
+            <button
 
-      class="h-full min-w-0 flex-1 bg-transparent text-[13px] text-gray-800 outline-none placeholder:text-gray-400"
+              v-if="search"
 
-    />
+              type="button"
 
+              :aria-label="t('پاک کردن جستجو', 'Clear search')"
 
+              class="grid size-7 shrink-0 place-items-center rounded-full bg-gray-100 text-gray-500 transition-colors hover:bg-gray-200"
 
-    <!-- فقط یک ضربدر برای پاک کردن متن -->
+              @click="clearSearch"
 
-    <button
+            >
 
-      v-if="search"
+              <i class="bi bi-x-lg block text-[12px] leading-none"></i>
 
-      type="button"
+            </button>
 
-      aria-label="پاک کردن جستجو"
+          </div>
 
-      class="grid size-7 shrink-0 place-items-center rounded-full bg-gray-100 text-gray-500 transition-colors hover:bg-gray-200"
+          <button
 
-      @click="search = ''"
+            v-if="search.trim()"
 
-    >
+            type="button"
 
-      <i class="bi bi-x-lg block text-[12px] leading-none"></i>
+            class="h-[52px] shrink-0 rounded-[14px] bg-primary px-3 text-[12px] font-bold text-white"
 
-    </button>
+            @click="showSearchResults"
 
-  </div>
+          >{{ t('جستجو', 'Search') }}</button>
 
-</section>
+        </div>
 
-
-
-
+      </section>
 
       <!-- دسته‌بندی با آیکن -->
-
-
 
 <!-- دسته‌بندی با اسکرول افقی -->
 
@@ -1009,15 +1077,20 @@ onUnmounted(() => {
       <!-- آیکن -->
 
       <span
+
         aria-hidden="true"
+
         class="block size-8 shrink-0 bg-current"
+
         :style="{
+
           WebkitMask: `url('/icons/menu/${category.slug}.svg') center / contain no-repeat`,
+
           mask: `url('/icons/menu/${category.slug}.svg') center / contain no-repeat`
+
         }"
+
       ></span>
-
-
 
       <!-- نام دسته -->
 
@@ -1033,17 +1106,16 @@ onUnmounted(() => {
 
 </div>
 
-
-
-
-
       <!-- بنر و نقاط زیر آن؛ هر نقطه دقیقاً یک اسلاید -->
 
       <section v-if="menu === 'restaurant' && status === 'success' && currentSlide" class="px-5 pt-3 pb-6">
 
-        <div class="relative h-[175px] overflow-hidden rounded-[22px] bg-primary text-white">
+        <div class="relative h-[175px] touch-pan-y select-none overflow-hidden rounded-[22px] bg-primary text-white"
+          @touchstart.passive="onSliderTouchStart"
+          @touchend.passive="onSliderTouchEnd"
+          @touchcancel.passive="onSliderTouchCancel">
 
-          <img v-if="getImage(currentSlide)" :key="currentSlide.id" :src="getImage(currentSlide)" :alt="productTitle(currentSlide)" class="absolute inset-0 h-full w-full object-cover" @error="handleImageError(currentSlide)" />
+          <img v-if="getImage(currentSlide)" :key="currentSlide.id" :src="getImage(currentSlide)" :alt="productTitle(currentSlide)" draggable="false" class="absolute inset-0 h-full w-full object-cover" @error="handleImageError(currentSlide)" />
 
           <div class="absolute inset-0 bg-gradient-to-l from-primary via-primary/90 to-transparent"></div>
 
@@ -1081,13 +1153,21 @@ onUnmounted(() => {
 
       </section>
 
-
-
       <!-- فهرست محصولات -->
 
-      <div class="flex items-center justify-between px-5 pb-3">
+      <div ref="searchResults" class="flex scroll-mt-4 items-center justify-between px-5 pb-3">
 
-        <h2 class="text-[17px] font-extrabold">{{ isEnglish ? selectedCategory?.titleEn : selectedCategory?.title }}</h2>
+        <h2 class="text-[17px] font-extrabold">
+
+  {{ submittedSearch.trim()
+
+    ? t('نتایج جستجو', 'Search Results')
+
+    : (isEnglish ? selectedCategory?.titleEn : selectedCategory?.title)
+
+  }}
+
+</h2>
 
         <span class="text-[11px] text-gray-500">{{ formatCount(visibleProducts.length) }} {{ t('محصول', 'items') }}</span>
 
@@ -1151,8 +1231,6 @@ onUnmounted(() => {
 
     </div>
 
-
-
     <!-- مودال جزئیات، وسط صفحه -->
 
     <Teleport to="body">
@@ -1161,43 +1239,18 @@ onUnmounted(() => {
 
         <section role="dialog" aria-modal="true" :aria-label="productTitle(selectedProduct)" class="flex max-h-[90dvh] w-full max-w-[420px] flex-col items-center overflow-y-auto rounded-[28px] bg-white px-6 py-7 text-center shadow-2xl">
 
-
-
 <!-- تصویر محصول داخل مودال -->
 
-<div
-
-  class="flex h-[240px] w-full shrink-0 items-center justify-center overflow-hidden rounded-[20px] bg-gray-100"
-
->
-
+<div class="aspect-[420/325] w-full shrink-0 overflow-hidden rounded-[20px]">
   <img
-
     v-if="getImage(selectedProduct)"
-
     :src="getImage(selectedProduct)"
-
     :alt="productTitle(selectedProduct)"
-
-    class="h-full w-full object-contain"
-
+    class="block h-full w-full object-cover"
     @error="handleImageError(selectedProduct)"
-
   />
-
-
-
-  <i
-
-    v-else
-
-    class="bi bi-image text-5xl text-gray-400"
-
-  ></i>
-
+  <i v-else class="bi bi-image text-5xl text-gray-400"></i>
 </div>
-
-
 
           <h2 class="mt-5 text-[22px] leading-9 font-extrabold text-gray-800">{{ productTitle(selectedProduct) }}</h2>
 
@@ -1242,8 +1295,6 @@ onUnmounted(() => {
       </div>
 
     </Teleport>
-
-
 
     <!-- مودال سبد خرید، وسط صفحه -->
 
@@ -1306,3 +1357,4 @@ onUnmounted(() => {
   </main>
 
 </template>
+
