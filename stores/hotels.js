@@ -1,5 +1,5 @@
 import {defineStore} from 'pinia'
-
+const foodsRequests = new WeakMap()
 
 export const useHotelStore=defineStore(
  'hotels',
@@ -52,7 +52,14 @@ export const useHotelStore=defineStore(
 
  selectedRoomsFinalPricing:[],
 
- finalBookingPrice:0
+ finalBookingPrice:0,
+ // =========================
+// Restaurant / CoffeeShop Foods
+// =========================
+foods: [],
+foodsLoading: false,
+foodsLoaded: false,
+foodsError: null,
   }),
 
 
@@ -584,7 +591,71 @@ const exist=
 
     this.finalBookingPrice=0
 
-   }
+   },
+
+async loadFoods(force = false) {
+
+  // اطلاعات قبلاً دریافت شده‌اند
+  if (this.foodsLoaded && !force) {
+    return this.foods
+  }
+
+  // اگر درخواست هم‌زمان در حال اجراست
+  const pending = foodsRequests.get(this)
+
+  if (pending) {
+    return pending
+  }
+
+  this.foodsLoading = true
+  this.foodsError = null
+
+  const request = (async () => {
+    try {
+      const response = await $fetch(
+        'https://menu.ahuan.ir/api/foods'
+      )
+
+      const items = Array.isArray(response)
+        ? response
+        : Array.isArray(response?.data)
+          ? response.data
+          : []
+
+      this.foods = items
+
+      // حتی پاسخ موفق و خالی هم بارگذاری شده محسوب می‌شود
+      this.foodsLoaded = true
+
+      return this.foods
+    }
+    catch (error) {
+      console.error('FOODS API ERROR:', error)
+
+      this.foodsError =
+        error?.message || 'خطا در دریافت محصولات'
+
+      // اگر داده قبلی داریم، با خطای refresh از بین نرود
+      if (!this.foodsLoaded) {
+        this.foods = []
+      }
+
+      throw error
+    }
+    finally {
+      this.foodsLoading = false
+    }
+  })()
+
+  foodsRequests.set(this, request)
+
+  try {
+    return await request
+  }
+  finally {
+    foodsRequests.delete(this)
+  }
+},
 
   }
 
