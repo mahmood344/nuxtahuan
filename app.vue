@@ -1,15 +1,21 @@
-<template>
-    <!-- max-w-[765px] md:max-w-[765px]  container-->
-<NuxtLayout>
-    <div class="mx-auto w-full  xl:max-w-none 2xl:max-w-full mt-[0px] md:mt-[100px]">
-        <NuxtPage></NuxtPage>
-    </div>
-</NuxtLayout>
-<AppToast/>
-</template>
 <script setup>
-// const searchStore = stateManegment()
+const route = useRoute()
+
+const isLinksRoute = computed(() =>
+  route.path === '/links' ||
+  route.path.startsWith('/links/')
+)
 </script>
-        
 
+<template>
+  <NuxtLayout>
+    <div
+      class="mx-auto w-full xl:max-w-none 2xl:max-w-full"
+      :class="isLinksRoute ? 'mt-0' : 'mt-0 md:mt-[100px]'"
+    >
+      <NuxtPage />
+    </div>
+  </NuxtLayout>
 
+  <AppToast />
+</template>
