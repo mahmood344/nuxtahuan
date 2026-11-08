@@ -1508,7 +1508,26 @@ watch(currentSlug, async slug => {
 
 
 
-const slideProducts = computed(() => allMenuProducts.value.filter(p => getImage(p)).slice(0, 5))
+
+const slideProducts = computed(() => [
+  {
+    id: 'slide-1',
+    title: 'ماهی شکم پر',
+    image: '/imgs/hotel/Menu/slider/pro1.jpg'
+  },
+  {
+    id: 'slide-2',
+    title: 'مرغ شکم پر',
+    image: '/imgs/hotel/Menu/slider/pro2.jpg'
+  },
+  // {
+  //   id: 'slide-3',
+  //   title: 'خوراک ماهیچه مخص',
+  //   image: '/imgs/hotel/Menu/slider/pro3.jpg'
+  // },
+
+])
+
 
 
 
@@ -2184,7 +2203,10 @@ onUnmounted(() => {
 
 
 
-      <section v-if="menu === 'restaurant' && status === 'success' && currentSlide" class="px-5 pt-3 pb-6">
+      <section
+  v-if="menu === 'restaurant' && currentSlide"
+  class="px-5 pt-3 pb-6"
+>
 
 
 
@@ -2198,31 +2220,29 @@ onUnmounted(() => {
 
 
 
-          <img v-if="getImage(currentSlide)" :key="currentSlide.id" :src="getImage(currentSlide)" :alt="productTitle(currentSlide)" draggable="false" class="absolute inset-0 h-full w-full object-cover" @error="handleImageError(currentSlide)" />
+<img
+  v-if="currentSlide?.image"
+  :key="currentSlide.id"
+  :src="currentSlide.image"
+  :alt="currentSlide.title"
+  draggable="false"
+  class="absolute inset-0 h-full w-full object-cover"
+/>
+
+
+          <div class="absolute inset-0 bg-gradient-to-l from-primary via-primary/70 to-transparent"></div>
 
 
 
-          <div class="absolute inset-0 bg-gradient-to-l from-primary via-primary/90 to-transparent"></div>
+         <div class="absolute inset-0 flex flex-col items-start justify-center px-5 pb-2 pointer-events-none">
+  <span class="mb-2 text-[11px] font-bold text-secondary">
+      پیشنهاد ویژه از منو آهوان
+  </span>
 
-
-
-          <div class="absolute inset-0 flex flex-col items-start justify-center px-5 pb-2">
-
-
-
-            <span class="mb-2 text-[11px] font-bold text-secondary">{{ t('از منوی آهوان', 'From Ahuan Menu') }}</span>
-
-
-
-            <h2 class="max-w-[65%] text-[20px] leading-8 font-extrabold">{{ productTitle(currentSlide) }}</h2>
-
-
-
-            <button type="button" class="mt-3 rounded-full bg-secondary px-4 py-2 text-[11px] font-bold text-primary" @click="openProduct(currentSlide)">{{ t('مشاهده محصول', 'View item') }}</button>
-
-
-
-          </div>
+  <h2 class="max-w-[65%] text-[20px] leading-8 font-extrabold">
+    {{ currentSlide.title }}
+  </h2>
+</div>
 
 
 
