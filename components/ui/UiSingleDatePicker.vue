@@ -1,409 +1,99 @@
 <script setup>
-import {
-  computed,
-  ref,
-  watch,
-  onMounted,
-  onBeforeUnmount
-} from 'vue'
-
+import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
-
-/*
- * فقط صفحه Home اندازه قدیمی داشته باشد.
- * سایر صفحات حالت Compact می‌گیرند.
- */
-const isHomePage = computed(() =>
-  route.path === '/' ||
-  route.path === '/home'
-)
-
-/*
- * تشخیص موبایل برای Modal شدن DatePicker
- */
+const isHomePage = computed(() => route.path === '/' || route.path === '/home')
 const isMobileCalendar = ref(false)
-
 let mobileMediaQuery = null
-
 function syncCalendarMode(event) {
-
-  if (typeof window === 'undefined')
-    return
-
-  isMobileCalendar.value =
-    event?.matches ??
-    window.innerWidth < 768
+  if (typeof window === 'undefined') return
+  isMobileCalendar.value = event?.matches ?? window.innerWidth < 768
 }
-
 onMounted(() => {
-
-  mobileMediaQuery =
-    window.matchMedia(
-      '(max-width: 767px)'
-    )
-
-  isMobileCalendar.value =
-    mobileMediaQuery.matches
-
-  if (
-    mobileMediaQuery.addEventListener
-  ) {
-
-    mobileMediaQuery.addEventListener(
-      'change',
-      syncCalendarMode
-    )
-
-  }
-  else {
-
-    mobileMediaQuery.addListener?.(
-      syncCalendarMode
-    )
-  }
+  mobileMediaQuery = window.matchMedia('(max-width: 767px)')
+  isMobileCalendar.value = mobileMediaQuery.matches
+  if (mobileMediaQuery.addEventListener) mobileMediaQuery.addEventListener('change', syncCalendarMode)
+  else mobileMediaQuery.addListener?.(syncCalendarMode)
 })
-
 onBeforeUnmount(() => {
-
-  if (!mobileMediaQuery)
-    return
-
-  if (
-    mobileMediaQuery.removeEventListener
-  ) {
-
-    mobileMediaQuery.removeEventListener(
-      'change',
-      syncCalendarMode
-    )
-
-  }
-  else {
-
-    mobileMediaQuery.removeListener?.(
-      syncCalendarMode
-    )
-  }
+  if (!mobileMediaQuery) return
+  if (mobileMediaQuery.removeEventListener) mobileMediaQuery.removeEventListener('change', syncCalendarMode)
+  else mobileMediaQuery.removeListener?.(syncCalendarMode)
 })
 
 const props = defineProps({
-
-  modelValue: {
-    type: [String, Array],
-    default: ''
-  },
-
-  label: {
-    type: String,
-    default: 'تاریخ'
-  },
-
-  placeholder: {
-    type: String,
-    default: 'انتخاب تاریخ'
-  },
-
-  minDate: {
-    type: String,
-    default: ''
-  }
+  modelValue: { type: [String, Array], default: '' },
+  label: { type: String, default: 'تاریخ' },
+  placeholder: { type: String, default: 'انتخاب تاریخ' },
+  minDate: { type: String, default: '' },
+  single: { type: Boolean, default: false }
 })
-
-const emit = defineEmits([
-  'update:modelValue',
-  'change'
-])
-
-const date = ref(
-  props.modelValue || ''
-)
-
+const emit = defineEmits(['update:modelValue', 'change'])
+const date = ref(props.modelValue || '')
 const showPicker = ref(false)
-
 const styles = {
   'primary-color': 'var(--color-primary)',
   'secondary-color': 'var(--color-primary)',
   'in-range-background': 'var(--color-primary-light)'
 }
-const disablePastDates = (date) => {
-  const selected = new Date(date)
+const disablePastDates = value => {
+  const selected = new Date(value)
   const today = new Date()
-
   today.setHours(0, 0, 0, 0)
   selected.setHours(0, 0, 0, 0)
-
   return selected < today
 }
-
-/* -----------------------
-باز کردن تقویم
------------------------ */
-const openPicker = () => {
-  showPicker.value = true
+const getDates = value => !value ? [] : (Array.isArray(value) ? value : String(value).split(','))
+  .map(item => String(item || '').trim()).filter(Boolean)
+const normalizeValue = value => props.single ? (getDates(value)[0] || '') : (value || '')
+const toPersianDigits = value => String(value || '').replace(/\d/g, digit => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)])
+function toJalaliDate(value) {
+  const raw = String(value || '').trim()
+  if (!raw) return ''
+  const parts = raw.replace(/-/g, '/').split('/')
+  if (parts.length !== 3) return toPersianDigits(raw)
+  const [year, month, day] = parts.map(Number)
+  if (year < 1700) return toPersianDigits(`${String(year).padStart(4, '0')}/${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')}`)
+  const dateValue = new Date(year, month - 1, day, 12)
+  if (Number.isNaN(dateValue.getTime())) return toPersianDigits(raw)
+  return new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
+    year: 'numeric', month: '2-digit', day: '2-digit'
+  }).format(dateValue)
 }
-
-
-/* -----------------------
-پاک کردن تاریخ
------------------------ */
-const clearDate = (event) => {
-
-  event?.stopPropagation()
-
-  date.value = ''
-
-  showPicker.value = false
-}
-
-
-/* -----------------------
-تبدیل مقدار تاریخ به Array
------------------------ */
-const getDates = (value) => {
-
-  if (!value)
-    return []
-
-  if (Array.isArray(value)) {
-
-    return value
-      .map(item =>
-        String(item || '').trim()
-      )
-      .filter(Boolean)
-  }
-
-  return String(value)
-    .split(',')
-    .map(item =>
-      item.trim()
-    )
-    .filter(Boolean)
-}
-
-
-/* -----------------------
-تبدیل اعداد به فارسی
------------------------ */
-const toPersianDigits = value =>
-
-  String(value || '').replace(
-    /\d/g,
-    digit =>
-      '۰۱۲۳۴۵۶۷۸۹'[Number(digit)]
-  )
-
-
-/* -----------------------
-تبدیل تاریخ به شمسی
------------------------ */
-const toJalaliDate = value => {
-
-  const raw =
-    String(value || '').trim()
-
-  if (!raw)
-    return ''
-
-  const normalized =
-    raw.replace(/-/g, '/')
-
-  const parts =
-    normalized.split('/')
-
-  if (parts.length !== 3)
-    return toPersianDigits(raw)
-
-  const year =
-    Number(parts[0])
-
-  const month =
-    Number(parts[1])
-
-  const day =
-    Number(parts[2])
-
-
-  /*
-   * اگر از قبل شمسی باشد
-   */
-  if (year < 1700) {
-
-    return toPersianDigits(
-      `${String(year).padStart(4, '0')}/${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')}`
-    )
-  }
-
-
-  /*
-   * اگر میلادی باشد
-   */
-  const dateValue = new Date(
-    year,
-    month - 1,
-    day,
-    12,
-    0,
-    0
-  )
-
-  if (
-    Number.isNaN(
-      dateValue.getTime()
-    )
-  ) {
-
-    return toPersianDigits(raw)
-  }
-
-  return new Intl.DateTimeFormat(
-    'fa-IR-u-ca-persian',
-    {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
-    }
-  ).format(dateValue)
-}
-
-
-/* -----------------------
-مقدار نمایشی داخل Input
------------------------ */
 const displayValue = computed(() => {
-
-  const dates =
-    getDates(date.value)
-
-  const from =
-    String(
-      dates[0] || ''
-    ).trim()
-
-  const to =
-    String(
-      dates[1] || ''
-    ).trim()
-
-
-  if (
-    from &&
-    to
-  ) {
-
-    return (
-      `از ${toJalaliDate(from)} تا ${toJalaliDate(to)}`
-    )
-  }
-
-
-  if (from) {
-
-    return (
-      `از ${toJalaliDate(from)}`
-    )
-  }
-
-
-  return ''
+  const [from, to] = getDates(date.value)
+  if (props.single) return from ? toJalaliDate(from) : ''
+  if (from && to) return `از ${toJalaliDate(from)} تا ${toJalaliDate(to)}`
+  return from ? `از ${toJalaliDate(from)}` : ''
 })
-
-
-/* -----------------------
-Sync از Parent
------------------------ */
-watch(
-  () => props.modelValue,
-
-  value => {
-
-    date.value =
-      value || ''
-  },
-
-  {
-    deep: true
+function openPicker() { showPicker.value = true }
+function clearDate(event) { event?.stopPropagation(); date.value = ''; showPicker.value = false }
+watch(() => props.modelValue, value => {
+  const normalized = normalizeValue(value)
+  if (JSON.stringify(date.value) !== JSON.stringify(normalized)) date.value = normalized
+}, { deep: true })
+watch(date, value => {
+  const result = normalizeValue(value)
+  if (JSON.stringify(result) !== JSON.stringify(value)) {
+    date.value = result
+    return
   }
-)
-
-
-/* -----------------------
-Emit تاریخ
------------------------ */
-watch(
-  date,
-
-  value => {
-
-    const result =
-      value || ''
-
-    emit(
-      'update:modelValue',
-      result
-    )
-
-    emit(
-      'change',
-      result
-    )
-
-
-    const dates =
-      getDates(result)
-
-
-    /*
-     * وقتی ورود و خروج
-     * هر دو انتخاب شدند،
-     * تقویم بسته شود.
-     */
-    if (
-      dates[0] &&
-      dates[1]
-    ) {
-
-      showPicker.value = false
-    }
-  },
-
-  {
-    deep: true
+  if (JSON.stringify(result) !== JSON.stringify(props.modelValue)) {
+    emit('update:modelValue', result)
+    emit('change', result)
   }
-)
+  const dates = getDates(result)
+  if (props.single ? !!dates[0] : !!(dates[0] && dates[1])) showPicker.value = false
+}, { deep: true })
+watch(() => props.single, () => { date.value = normalizeValue(date.value) })
+defineExpose({ openPicker })
 </script>
 
-
 <template>
-
-  <div
-    dir="rtl"
-    class="flex w-full justify-center"
-  >
-
-    <!--
-      Home:
-      اندازه قدیمی
-
-      سایر صفحات:
-      max-width: 280px
-    -->
-    <div
-      class="relative w-full"
-      :class="
-        isHomePage
-          ? ''
-          : 'max-w-[280px]'
-      "
-    >
-
-      <div
-        class="relative cursor-pointer"
-        @click="openPicker"
-      >
-
+  <div dir="rtl" class="flex w-full justify-center">
+    <div class="relative w-full" :class="isHomePage ? '' : 'max-w-[280px]'">
+      <div class="relative cursor-pointer" @click="openPicker">
         <UiBaseInput
           :model-value="displayValue"
           :label="label"
@@ -413,44 +103,18 @@ watch(
           icon-position="right"
           input-class="cursor-pointer"
           class="!mb-0 w-full"
-          :class="{
-            'compact-date-input': !isHomePage
-          }"
+          :class="{ 'compact-date-input': !isHomePage }"
         />
-
-
-        <!-- دکمه پاک کردن -->
         <button
-          v-if="date"
-          type="button"
-          class="
-            absolute
-            top-1/2
-            z-30
-            -translate-y-1/2
-            text-[var(--color-gray-400)]
-            transition-colors
-            hover:text-[var(--color-red-500)]
-          "
-          :class="
-            isHomePage
-              ? 'left-10'
-              : 'left-8 text-[12px]'
-          "
+          v-if="date" type="button"
+          class="absolute top-1/2 z-30 -translate-y-1/2 text-[var(--color-gray-400)] transition-colors hover:text-[var(--color-red-500)]"
+          :class="isHomePage ? 'left-10' : 'left-8 text-[12px]'"
           @click.stop="clearDate"
-        >
-
-          <i class="bi bi-x-lg"></i>
-
-        </button>
-
+        ><i class="bi bi-x-lg"></i></button>
       </div>
-
-
-      <!-- DatePicker -->
       <PersianDatePicker
         v-model="date"
-        mode="range"
+        :mode="single ? 'single' : 'range'"
         class="hidden"
         :styles="styles"
         :show="showPicker"
@@ -462,51 +126,15 @@ watch(
         :min="minDate || undefined"
         @close="showPicker = false"
       >
-
         <template #icon></template>
-
-        <template #footer>
-          {{ label }}
-        </template>
-
+        <template #footer>{{ label }}</template>
       </PersianDatePicker>
-
     </div>
-
   </div>
-
 </template>
 
-
 <style scoped>
-
-/*
- * فقط خارج از Home اعمال می‌شود
- */
-:deep(.compact-date-input input) {
-
-  height: 44px !important;
-
-  min-height: 44px !important;
-
-  font-size: 11px !important;
-  font-weight: bold;
-}
-
-
-/*
- * اگر UiBaseInput یک Wrapper داخلی
- * با ارتفاع ثابت داشته باشد
- */
-:deep(.compact-date-input > div) {
-
-  min-height: 44px !important;
-}
-
-
-:deep(.compact-date-input label) {
-
-  font-size: 10px !important;
-}
-
+:deep(.compact-date-input input) { height: 44px !important; min-height: 44px !important; font-size: 11px !important; font-weight: bold; }
+:deep(.compact-date-input > div) { min-height: 44px !important; }
+:deep(.compact-date-input label) { font-size: 10px !important; }
 </style>

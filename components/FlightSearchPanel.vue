@@ -68,9 +68,10 @@ class="grid grid-cols-2 w-fit mx-auto gap-x-6 gap-y-4 py-4 md:w-full md:max-w-[5
         <div dir="rtl" class="w-full flex flex-col gap-4 mt-2">
           
           <!-- مبدا و مقصد -->
-          <div class="w-full">
+          <div ref="flightOriginWrapperRef" class="w-full">
             <UiOriginDestinationSelector
-            :compact="isCompactSearch"
+              ref="flightOriginDestinationRef"
+              :compact="isCompactSearch"
               :sendFlightType="flightType"
               v-model:mabda="origin"
               v-model:maghsad="destination"
@@ -78,9 +79,10 @@ class="grid grid-cols-2 w-fit mx-auto gap-x-6 gap-y-4 py-4 md:w-full md:max-w-[5
           </div>
           
           <!-- تاریخ رفت و برگشت -->
-          <div class="w-full">
-            <UiBaseDatePicker 
-            :compact="isCompactSearch"
+          <div ref="flightDateWrapperRef" class="w-full">
+            <UiBaseDatePicker
+              ref="flightDatePickerRef"
+              :compact="isCompactSearch"
               :sendTravelType="travelType"
               v-model:departDate="departDate"
               v-model:returnDate="returnDate"
@@ -88,9 +90,10 @@ class="grid grid-cols-2 w-fit mx-auto gap-x-6 gap-y-4 py-4 md:w-full md:max-w-[5
           </div>
           
           <!-- انتخاب مسافران -->
-          <div class="w-full">
-            <UiPassengerSelector 
-            :compact="isCompactSearch"
+          <div ref="flightPassengerWrapperRef" class="w-full">
+            <UiPassengerSelector
+              ref="flightPassengerRef"
+              :compact="isCompactSearch"
               v-model:adl="adl"
               v-model:chd="chd"
               v-model:inf="inf"
@@ -164,12 +167,15 @@ class="grid grid-cols-2 w-fit mx-auto gap-x-6 gap-y-4 py-4 md:w-full md:max-w-[5
           : 'max-w-[500px]'
       "
     >
+      <div ref="ahuanDateWrapperRef" class="w-full">
       <UiSingleDatePicker
+        ref="ahuanDatePickerRef"
         :compact="isCompactSearch"
         v-model="hotelDate"
         label="تاریخ ورود و خروج"
         placeholder="انتخاب تاریخ"
       />
+      </div>
     </div>
 
 
@@ -226,6 +232,7 @@ class="grid grid-cols-2 w-fit mx-auto gap-x-6 gap-y-4 py-4 md:w-full md:max-w-[5
             : 'نام شهر را جستجو کنید...'
         "
         :items="snappTripCities"
+        :popular-items="snappTripPopularCities"
         item-text="name"
         item-value="code"
         :disabled="hotelStore.snappTripCitiesLoading"
@@ -247,12 +254,15 @@ class="grid grid-cols-2 w-fit mx-auto gap-x-6 gap-y-4 py-4 md:w-full md:max-w-[5
           : 'max-w-[500px]'
       "
     >
+      <div ref="snappDateWrapperRef" class="w-full">
       <UiSingleDatePicker
+        ref="snappDatePickerRef"
         :compact="isCompactSearch"
         v-model="snappTripDate"
         label="تاریخ ورود و خروج"
         placeholder="انتخاب تاریخ"
       />
+      </div>
     </div>
 
     <div class="flex w-full justify-center">
@@ -273,9 +283,58 @@ class="grid grid-cols-2 w-fit mx-auto gap-x-6 gap-y-4 py-4 md:w-full md:max-w-[5
     </div>
   </div>
 </div>
+<!-- جستجوی بلیت اتوبوس -->
+<div
+  v-if="activeService === 'bus'"
+  dir="rtl"
+  class="flex w-full flex-col justify-center"
+>
+  <div
+    class="flex w-full flex-col items-center gap-4"
+    :class="isCompactSearch ? 'p-0' : 'p-4 md:p-8'"
+  >
+    <div class="w-full" :class="isCompactSearch ? 'max-w-[280px]' : 'max-w-[500px]'">
+      <UiOriginDestinationSelector
+        ref="busOriginDestinationRef"
+        :compact="isCompactSearch"
+        source="bus"
+        :cities="busCities"
+        :popular-cities="busPopularCities"
+        v-model:mabda="busOrigin"
+        v-model:maghsad="busDestination"
+      />
+    </div>
+
+    <div class="w-full" :class="isCompactSearch ? 'max-w-[280px]' : 'max-w-[500px]'">
+      <div ref="busDateWrapperRef" class="w-full">
+        <UiSingleDatePicker
+          ref="busDatePickerRef"
+          :compact="isCompactSearch"
+          v-model="busDate"
+          label="تاریخ حرکت"
+          placeholder="انتخاب تاریخ حرکت"
+          :single="true"
+        />
+      </div>
+    </div>
+
+    <div class="flex w-full justify-center">
+      <UiBaseButton
+        label="جستجو"
+        variant="filled"
+        color="primary"
+        :active="false"
+        :disabled="!busOrigin || !busDestination || busOrigin === busDestination || !toBusJalaliDate(busDate)"
+        @click="searchBuses"
+        class="w-full !rounded-4xl text-[13px]"
+        :class="isCompactSearch ? 'max-w-[280px] h-[44px]' : 'max-w-[500px] h-[40px]'"
+      />
+    </div>
+  </div>
+</div>
 <!-- بخش‌های در حال توسعه -->
 <div
-  v-if="!['flight', 'hotelAhwan', 'hotel'].includes(activeService)"
+  v-if="!['flight', 'hotelAhwan', 'hotel', 'bus'].includes(activeService)"
   dir="rtl"
   class="
     flex
@@ -324,6 +383,7 @@ class="grid grid-cols-2 w-fit mx-auto gap-x-6 gap-y-4 py-4 md:w-full md:max-w-[5
 import {
   ref,
   computed,
+  nextTick,
   onMounted,
   watch
 } from 'vue'
@@ -333,6 +393,7 @@ import {
   useRouter
 } from 'vue-router'
 import {useHotelStore} from '~/stores/hotels'
+import {useBusStore} from '~/stores/bus'
 const router = useRouter()
 const route = useRoute()
 
@@ -352,6 +413,26 @@ const isHomePage = computed(() => {
 const isCompactSearch = computed(() => {
   return !isHomePage.value
 })
+const flightOriginDestinationRef = ref(null)
+const flightDatePickerRef = ref(null)
+const flightPassengerRef = ref(null)
+const flightOriginWrapperRef = ref(null)
+const flightDateWrapperRef = ref(null)
+const flightPassengerWrapperRef = ref(null)
+const busOriginDestinationRef = ref(null)
+const busDatePickerRef = ref(null)
+const busDateWrapperRef = ref(null)
+const ahuanDatePickerRef = ref(null)
+const ahuanDateWrapperRef = ref(null)
+const snappDatePickerRef = ref(null)
+const snappDateWrapperRef = ref(null)
+
+const busOrigin = ref(null)
+const busDestination = ref(null)
+const busDate = ref(null)
+const busCities = computed(() => busStore.cities || [])
+const busPopularCities = computed(() => busStore.popularCities || [])
+
 const origin = ref('')
 const destination = ref('')
 
@@ -365,9 +446,11 @@ const inf = ref(0)
 const flightType = ref('domestic')
 const travelType = ref('one-way')
 const hotelStore=useHotelStore()
+const busStore=useBusStore()
 const emit=defineEmits([
  'hotel-search',
- 'flight-search'
+ 'flight-search',
+ 'bus-search'
 ])
 const hotelCity=ref(null)
 
@@ -399,6 +482,18 @@ const snappTripCities=computed(()=>{
  })).filter(item=>item.code>0&&item.name)
 })
 
+
+const snappTripPopularCities = computed(() => {
+  const items = Array.isArray(hotelStore.snappTripPopularCities)
+    ? hotelStore.snappTripPopularCities
+    : []
+  return items.map(item => ({
+    code: item.id,
+    name: item.title,
+    stateName: item.stateName,
+    titleEn: item.titleEn
+  }))
+})
 
 let snappTripCitiesRequest = null
 
@@ -513,6 +608,156 @@ async function selectService(serviceKey, index) {
   }
 
 }
+// جلوگیری از باز شدن تقویم هنگام پر شدن فرم از URL
+let routeSyncDepth = 0
+async function runRouteSync(action) {
+  routeSyncDepth++
+  try { await action() }
+  finally {
+    await nextTick()
+    routeSyncDepth--
+  }
+}
+
+// ابتدا تلاش می‌کنیم از API خود DatePicker استفاده کنیم؛
+// اگر expose نشده باشد، روی کنترل داخلیِ قابل کلیک کلیک می‌کنیم.
+async function openSingleDatePicker(componentRef, wrapperRef) {
+  await nextTick()
+  const instance = componentRef.value
+  if (typeof instance?.openPicker === 'function') {
+    instance.openPicker()
+    return
+  }
+  if (typeof instance?.openDatePicker === 'function') {
+    instance.openDatePicker()
+    return
+  }
+  const wrapper = wrapperRef.value
+  const target = wrapper?.querySelector('input:not([type="hidden"]), button, [role="button"]')
+  target?.click()
+}
+
+// زنجیره انتخاب فیلدهای پرواز (داخلی و خارجی)
+// در نسخه صفحه اصلی DatePicker از openDepartPicker استفاده می‌کند.
+async function invokeChildOrClick(componentRef, methodNames, wrapperRef, selectors) {
+  await nextTick()
+  const instance = componentRef.value
+  for (const name of methodNames) {
+    if (typeof instance?.[name] === 'function') {
+      await instance[name]()
+      return true
+    }
+  }
+  const root = wrapperRef.value
+  for (const selector of selectors) {
+    const el = root?.querySelector(selector)
+    if (el && !el.disabled) {
+      el.click()
+      return true
+    }
+  }
+  return false
+}
+
+async function openNextFlightDestination() {
+  return invokeChildOrClick(
+    flightOriginDestinationRef,
+    ['openDestination'],
+    flightOriginWrapperRef,
+    ['[data-field="destination"]', '[data-destination]', 'input:nth-of-type(2)']
+  )
+}
+
+async function openNextFlightDate() {
+  return invokeChildOrClick(
+    flightDatePickerRef,
+    ['openDepartPicker', 'openPicker', 'openDatePicker'],
+    flightDateWrapperRef,
+    ['input[readonly]', 'input:not([type="hidden"])', 'button:not([disabled])', '[role="button"]']
+  )
+}
+
+async function openNextFlightPassengers() {
+  return invokeChildOrClick(
+    flightPassengerRef,
+    ['openSelector', 'openPassengerSelector'],
+    flightPassengerWrapperRef,
+    ['button:not([disabled])', '[role="button"]', 'input[readonly]']
+  )
+}
+
+watch(origin, async (value, oldValue) => {
+  if (routeSyncDepth || activeService.value !== 'flight' || !value || value === oldValue) return
+  await openNextFlightDestination()
+})
+watch(destination, async (value, oldValue) => {
+  if (routeSyncDepth || activeService.value !== 'flight' || !value || value === oldValue) return
+  await openNextFlightDate()
+})
+watch(departDate, async (value, oldValue) => {
+  if (routeSyncDepth || activeService.value !== 'flight' || !value || value === oldValue || travelType.value === 'round-trip') return
+  await openNextFlightPassengers()
+})
+watch(returnDate, async (value, oldValue) => {
+  if (routeSyncDepth || activeService.value !== 'flight' || !value || value === oldValue || travelType.value !== 'round-trip') return
+  await openNextFlightPassengers()
+})
+
+watch(busOrigin, async (value, oldValue) => {
+  if (routeSyncDepth || activeService.value !== 'bus' || !value || value === oldValue) return
+  await nextTick()
+  busOriginDestinationRef.value?.openDestination?.()
+})
+watch(busDestination, async (value, oldValue) => {
+  if (routeSyncDepth || activeService.value !== 'bus' || !value || value === oldValue) return
+  await openSingleDatePicker(busDatePickerRef, busDateWrapperRef)
+})
+watch(hotelCity, async (value, oldValue) => {
+  if (routeSyncDepth || activeService.value !== 'hotelAhwan' || !value || value === oldValue) return
+  if (!hotelCities.value.some(item => String(item.code) === String(value))) return
+  await openSingleDatePicker(ahuanDatePickerRef, ahuanDateWrapperRef)
+})
+watch(snappTripCity, async (value, oldValue) => {
+  if (routeSyncDepth || activeService.value !== 'hotel' || !value || value === oldValue) return
+  if (!snappTripCities.value.some(item => String(item.code) === String(value))) return
+  await openSingleDatePicker(snappDatePickerRef, snappDateWrapperRef)
+})
+
+// اتوبوس: تنها تاریخ رفت با قالب شمسی YYYYMMDD به صفحه نتایج می‌رود.
+function toBusJalaliDate(value) {
+  if (!value || Array.isArray(value)) return ''
+  const raw = String(value).trim()
+    .replace(/[۰-۹]/g, n => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(n)))
+    .replace(/[٠-٩]/g, n => String('٠١٢٣٤٥٦٧٨٩'.indexOf(n)))
+  if (raw.includes(',')) return ''
+  const match = raw.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:T.*)?$/)
+    || raw.match(/^(\d{4})(\d{2})(\d{2})$/)
+  if (!match) return ''
+  const [, y, m, d] = match
+  const year = Number(y), month = Number(m), day = Number(d)
+  if (month < 1 || month > 12 || day < 1 || day > 31) return ''
+  if (year >= 1300 && year < 1500) return `${y}${m.padStart(2, '0')}${d.padStart(2, '0')}`
+  const date = new Date(Date.UTC(year, month - 1, day))
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return ''
+  const parts = new Intl.DateTimeFormat('en-US-u-ca-persian', {
+    year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'UTC'
+  }).formatToParts(date)
+  const map = Object.fromEntries(parts.map(item => [item.type, item.value]))
+  return `${map.year}${map.month.padStart(2, '0')}${map.day.padStart(2, '0')}`
+}
+
+async function searchBuses() {
+  const departDate = toBusJalaliDate(busDate.value)
+  if (!busOrigin.value || !busDestination.value || busOrigin.value === busDestination.value || !departDate) return
+  const searchData = {
+    origin: String(busOrigin.value).toUpperCase(),
+    destination: String(busDestination.value).toUpperCase(),
+    departDate
+  }
+  emit('bus-search', searchData)
+  await router.push({ path: '/bus', query: searchData })
+}
+
 async function searchAhuanHotel(){
 
  if(
@@ -777,19 +1022,22 @@ onMounted(async() => {
     route.path.startsWith('/flights')
   ) {
 
-    syncFlightFormFromRoute()
+    await runRouteSync(syncFlightFormFromRoute)
   }
 
-  if (
-    route.path === '/hotels'
-  ) {
-    await syncSnappTripHotelFormFromRoute()
+  if (route.path === '/hotels') {
+    await runRouteSync(syncSnappTripHotelFormFromRoute)
   }
 
-  if (
-    route.path.startsWith('/hotels/')
-  ) {
-    await syncHotelFormFromRoute()
+  if (route.path.startsWith('/hotels/')) {
+    await runRouteSync(syncHotelFormFromRoute)
+  }
+
+  if (route.path === '/bus') {
+    activeService.value = 'bus'
+    busOrigin.value = route.query.origin || null
+    busDestination.value = route.query.destination || null
+    busDate.value = route.query.departDate || null
   }
 })
 watch(
@@ -804,7 +1052,7 @@ watch(
     if (
       route.path.startsWith('/hotels/')
     ) {
-      await syncHotelFormFromRoute()
+      await runRouteSync(syncHotelFormFromRoute)
     }
   }
 )
@@ -816,7 +1064,7 @@ watch(
  ],
  async() => {
   if(route.path==='/hotels'){
-   await syncSnappTripHotelFormFromRoute()
+   await runRouteSync(syncSnappTripHotelFormFromRoute)
   }
  }
 )
@@ -835,7 +1083,9 @@ watch(
   ],
 
   () => {
-    syncFlightFormFromRoute()
+    if (route.path.startsWith('/flights')) {
+      runRouteSync(syncFlightFormFromRoute)
+    }
   }
 )
 
@@ -844,7 +1094,7 @@ watch(
 
   async() => {
 
-    await applySnappTripCity()
+    await runRouteSync(applySnappTripCity)
 
   },
 
@@ -853,6 +1103,18 @@ watch(
   }
 )
 
+
+watch(
+  () => [route.query.origin, route.query.destination, route.query.departDate],
+  async () => {
+    if (route.path !== '/bus') return
+    await runRouteSync(() => {
+      busOrigin.value = route.query.origin || null
+      busDestination.value = route.query.destination || null
+      busDate.value = route.query.departDate || null
+    })
+  }
+)
 
 async function searchFlights() {
 
