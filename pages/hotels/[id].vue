@@ -2388,7 +2388,7 @@ function buildHotelContractPayload(
   customerId:4,
 
   userName:
-   contact.phone,
+   getHotelLoginMobile(),
 
   issueDate:
    new Date()
@@ -3060,11 +3060,7 @@ function buildHotelUpdateContractPayload({
      ),
 
   userName:
-   String(
-    contact?.phone||
-    contact?.mobile||
-    ''
-   ).trim(),
+   getHotelLoginMobile(),
 
   email:
    String(
@@ -3126,6 +3122,31 @@ function extractHotelContractId(
  }
 
  return contractId
+}
+function getHotelLoginMobile(){
+ const user=getUserData()
+ const raw=String(user?.mobile ?? user?.data?.mobile ?? '')
+ const mobile=raw
+  .replace(/[۰-۹]/g,d=>String(d.charCodeAt(0)-1776))
+  .replace(/[٠-٩]/g,d=>String(d.charCodeAt(0)-1632))
+  .replace(/\D/g,'')
+ if(!/^09\d{9}$/.test(mobile)){
+  throw new Error('شماره موبایل حساب کاربری معتبر نیست')
+ }
+ return mobile
+}
+function getHotelRecipientMobile(contact){
+ const raw=contact?.buyForOther
+  ? contact?.recipientPhone
+  : getHotelLoginMobile()
+ const mobile=String(raw ?? '')
+  .replace(/[۰-۹]/g,d=>String(d.charCodeAt(0)-1776))
+  .replace(/[٠-٩]/g,d=>String(d.charCodeAt(0)-1632))
+  .replace(/\D/g,'')
+ if(!/^09\d{9}$/.test(mobile)){
+  throw new Error('شماره موبایل دریافت‌کننده واچر معتبر نیست')
+ }
+ return mobile
 }
 function getUserData(){
 
@@ -3230,11 +3251,9 @@ function createHotelPaymentData(){
  ).trim()
 
 
- const mobile = String(
-  bookingData.value?.contact?.mobile ||
-  bookingData.value?.contact?.phone ||
-  ''
- ).trim()
+ const mobile = getHotelRecipientMobile(
+  bookingData.value?.contact || {}
+ )
 
 
  /* =========================
@@ -4271,11 +4290,7 @@ function buildSnappTripBookingPayload(){
   note:'',
 
   phone:
-   String(
-    contact?.mobile||
-    contact?.phone||
-    ''
-   ).trim(),
+   getHotelRecipientMobile(contact),
 
   rooms:
    buildSnappTripBookingRooms(

@@ -378,7 +378,7 @@ defineExpose({
               pr-10
               pt-1.5
               text-[11px]!
-              font-bold
+              
               text-[var(--color-gray-800)]
               outline-none
               placeholder:text-[var(--color-gray-400)]
@@ -506,7 +506,7 @@ defineExpose({
               pr-10
               pt-1.5
               text-[11px]!
-              font-bold
+              
               text-[var(--color-gray-800)]
               outline-none
               placeholder:text-[var(--color-gray-400)]

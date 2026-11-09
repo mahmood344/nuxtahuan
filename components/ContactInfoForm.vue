@@ -234,10 +234,12 @@ defineExpose({
 
   <!-- خرید بلیط برای شخص دیگر -->
   <div class="mt-4">
-    <UiBaseCheckbox
-      v-model="buyForOther"
-      label="گرفتن بلیط برای شخص دیگر"
-    />
+  <UiBaseCheckbox
+  v-model="buyForOther"
+  :label="isHotelBooking
+    ? 'دریافت واچر برای شخص دیگر'
+    : 'گرفتن بلیط برای شخص دیگر'"
+/>
   </div>
 </div>
 

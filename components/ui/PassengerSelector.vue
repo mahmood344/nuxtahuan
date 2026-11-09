@@ -56,7 +56,7 @@
         "
         :class="compact ? 'px-4' : 'px-6'"
       >
-        <span class="font-bold text-[11px]!">
+        <span class=" text-[11px]!">
           {{ totalPassengers }} مسافر
         </span>
 
