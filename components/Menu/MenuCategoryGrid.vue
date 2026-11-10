@@ -877,7 +877,7 @@ const slideProducts = computed(() => [
 
     title: 'خوراک ماهی سفید شکم پر',
 
-    image: '/imgs/hotel/Menu/slider/pro1.jpg'
+    image: '/imgs/hotel/Menu/Slider/pro1.jpg'
 
   },
 
@@ -887,7 +887,7 @@ const slideProducts = computed(() => [
 
     title: 'خوراک مرغ شکم پر(مرغ کامل،سبزیجات محلی معطر،گردو)',
 
-    image: '/imgs/hotel/Menu/slider/pro2.jpg'
+    image: '/imgs/hotel/Menu/Slider/pro2.jpg'
 
   },
 
@@ -897,7 +897,7 @@ const slideProducts = computed(() => [
 
     title: 'خوراک گوشت مخصوص گوسفندی(400گرم)',
 
-    image: '/imgs/hotel/Menu/slider/pro3.jpg'
+    image: '/imgs/hotel/Menu/Slider/pro3.jpg'
 
   },
 
