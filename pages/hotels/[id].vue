@@ -95,33 +95,26 @@ mode="aside"
           <!-- Loading Hotel -->
           <!-- ========================= -->
           <div
-  v-if="loading"
-  dir="rtl"
-  class="fixed inset-0 z-[999] flex items-center justify-center bg-[color:var(--color-gray-800)]/10 backdrop-blur-[3px] transition-all duration-300"
->
-  <div
-    dir="rtl"
-    class="bg-white/95 p-8 rounded-3xl shadow-2xl border border-[var(--color-gray-100)] flex flex-col items-center text-center max-w-sm mx-4"
-  >
-    <div
-      class="animate-spin rounded-full h-14 w-14 border-4 border-[var(--color-primary-light)] border-t-[var(--color-primary)] mb-4"
-    ></div>
-
-    <h4
-      dir="rtl"
-      class="font-bold text-[var(--color-gray-800)] text-base"
-    >
-      در حال دریافت اطلاعات هتل...
-    </h4>
-
-    <!-- <p
-      dir="rtl"
-      class="text-xs text-[var(--color-gray-500)] mt-2 leading-relaxed"
-    >
-      اطلاعات هتل و اتاق‌ها در حال بارگذاری است.
-    </p> -->
-  </div>
-</div>
+            v-if="loading"
+            dir="rtl"
+            class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/10 backdrop-blur-[3px]"
+          >
+            <div class="flex flex-col items-center rounded-3xl bg-white p-8 shadow-2xl">
+              <div class="relative flex h-24 w-24 items-center justify-center rounded-full bg-[var(--color-primary)]">
+                <!-- دایره چرخان مشابه Flight -->
+                <div class="absolute inset-0 animate-spin rounded-full border-4 border-blue-300 border-t-blue-100"></div>
+                <!-- GIF مشابه Flight -->
+                <img
+                  src="/imgs/flight/loading.gif"
+                  alt="Loading"
+                  class="relative z-10 h-[60px] w-[60px] object-contain"
+                />
+              </div>
+              <h4 class="mt-5 text-base font-bold text-gray-800" dir="rtl">
+                در حال دریافت اطلاعات هتل...
+              </h4>
+            </div>
+          </div>
 
 
           <!-- ========================= -->

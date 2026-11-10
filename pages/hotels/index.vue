@@ -132,93 +132,39 @@
           |--------------------------------------------------------------------------
           -->
 
-          <transition name="fade">
-            <div
-              v-if="hotelStore.loading"
-               dir="rtl"
-              class="
-                fixed
-                inset-0
-                z-[999]
-                flex
-                items-center
-                justify-center
-                bg-slate-900/10
-                backdrop-blur-[3px]
-                transition-all
-                duration-300
-              "
-            >
-              <div
-                class="
-                  bg-white/95
-                  p-8
-                  rounded-3xl
-                  shadow-2xl
-                  border
-                  border-gray-100
-                  flex
-                  flex-col
-                  items-center
-                  text-center
-                  max-w-sm
-                  mx-4
-                "
-              >
-                <div
-                  class="
-                    animate-spin
-                    rounded-full
-                    h-14
-                    w-14
-                    border-4
-                    border-blue-200
-                    bg-primary
-                    mb-4
-                  "
-                ></div>
+         
+<!-- Full Loading -->
+<Transition name="fade">
+  <div
+    v-if="hotelStore.loading"
+    class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/10 backdrop-blur-[3px]"
+  >
+    <div class="flex flex-col items-center rounded-3xl bg-white p-8 shadow-2xl">
 
-                <h4
-                  class="
-                    font-bold
-                    text-gray-800
-                    text-base
-                  "
-                >
-                  در حال جستجوی هتل‌ها...
-                </h4>
+      <div
+        class="relative flex h-24 w-24 items-center justify-center rounded-full bg-[var(--color-primary)]"
+      >
+        <!-- دایره چرخان -->
+        <div
+          class="absolute inset-0 animate-spin rounded-full border-4 border-blue-300 border-t-blue-100"
+        ></div>
 
-                <!-- <p
-                  class="
-                    text-xs
-                    text-gray-500
-                    mt-2
-                    leading-relaxed
-                  "
-                >
-                  نتایج در حال دریافت هستند.
-                </p> -->
+        <!-- GIF -->
+        <img
+          src="/imgs/flight/loading.gif"
+          alt="Loading"
+          class="relative z-10 h-[60px] w-[60px] object-contain"
+        />
+      </div>
 
-                <div
-                  v-if="hotels.length"
-                  class="
-                    mt-4
-                    bg-blue-50
-                    text-blue-700
-                    text-xs
-                    px-4
-                    py-2
-                    rounded-full
-                    font-bold
-                  "
-                >
-                  تاکنون
-                  {{ hotels.length }}
-                  هتل پیدا شده است
-                </div>
-              </div>
-            </div>
-          </transition>
+      <h4 class="mt-5 text-base font-bold text-gray-800" dir="rtl">
+        در حال جستجوی هتل‌ها...
+      </h4>
+
+    </div>
+  </div>
+</Transition>
+
 
 
           <!--
