@@ -691,169 +691,169 @@ export const useBusStore=defineStore(
     {
       "name": "ایران پیما",
       "code": "iranpeyma",
-      "image": null,
+      "image": '/imgs/bus/iranpeyma.svg',
       "pageUrl": "https://payaneh.ir/company-bus/iranpeyma"
     },
     {
       "name": "همسفر",
       "code": "hamsafar",
-      "image": null,
+      "image": '/imgs/bus/hamsafar.svg',
       "pageUrl": "https://payaneh.ir/company-bus/hamsafar"
     },
     {
       "name": "ترابر بی تا",
       "code": "tbt",
-      "image": null,
+      "image": '/imgs/bus/bita.svg',
       "pageUrl": "https://payaneh.ir/company-bus/tbt"
     },
     {
       "name": "آریا سفر",
       "code": "aryasafar",
-      "image": null,
+      "image": '/imgs/bus/ariya.svg',
       "pageUrl": "https://payaneh.ir/company-bus/aryasafar"
     },
     {
       "name": "پیک معتمد (پی ام تی)",
       "code": "pmt",
-      "image": null,
+      "image": '/imgs/bus/pmt.svg',
       "pageUrl": "https://payaneh.ir/company-bus/pmt"
     },
     {
       "name": "گیتی پیما",
       "code": "gitipeyma",
-      "image": null,
+      "image": '/imgs/bus/giti.svg',
       "pageUrl": "https://payaneh.ir/company-bus/gitipeyma"
     },
     {
       "name": "تک سفر ایرانیان",
       "code": "taksafar",
-      "image": null,
+      "image": '/imgs/bus/tak.svg',
       "pageUrl": "https://payaneh.ir/company-bus/taksafar"
     },
     {
       "name": "سیر و سفر",
       "code": "seirosafar",
-      "image": null,
+      "image": '/imgs/bus/seirsafar.svg',
       "pageUrl": "https://payaneh.ir/company-bus/seirosafar"
     },
     {
       "name": "لوان نور",
       "code": "lavannour",
-      "image": null,
+      "image": '/imgs/bus/lavan.svg',
       "pageUrl": "https://payaneh.ir/company-bus/lavannour"
     },
     {
       "name": "عدل",
       "code": "adl",
-      "image": null,
+      "image": '/imgs/bus/adl.svg',
       "pageUrl": "https://payaneh.ir/company-bus/adl"
     },
     {
       "name": "پیک صبا",
       "code": "peykesaba",
-      "image": null,
+      "image": '/imgs/bus/saba.svg',
       "pageUrl": "https://payaneh.ir/company-bus/peykesaba"
     },
     {
       "name": "رویال سفر ایرانیان",
       "code": "royalsafar",
-      "image": null,
-      "pageUrl": "https://payaneh.ir/company-bus/royalsafar"
+      "image": '/imgs/bus/royal.svg',
+      "pageUrl": "/imgs/bus/royal.svg"
     },
     {
       "name": "گیتی نورد",
       "code": "gitinavard",
-      "image": null,
+      "image": '/imgs/bus/gitinavard.svg',
       "pageUrl": "https://payaneh.ir/company-bus/gitinavard"
     },
     {
       "name": "مارال سیر ایرانیان",
       "code": "maralseir",
-      "image": null,
+      "image": '/imgs/bus/maral.svg',
       "pageUrl": "https://payaneh.ir/company-bus/maralseir"
     },
     {
       "name": "ماهان سفر",
       "code": "mahansafar",
-      "image": null,
+      "image": '/imgs/bus/mahan.svg',
       "pageUrl": "https://payaneh.ir/company-bus/mahansafar"
     },
     {
       "name": "ایران پیمان",
       "code": "iranpeyman",
-      "image": null,
+      "image": '/imgs/bus/iranpeyman.svg',
       "pageUrl": "https://payaneh.ir/company-bus/iranpeyman"
     },
     {
       "name": "میهن نور",
       "code": "mihannour",
-      "image": null,
+      "image": '/imgs/bus/mihan.svg',
       "pageUrl": "https://payaneh.ir/company-bus/mihannour"
     },
     {
       "name": "آسیا سفر",
       "code": "asiasafar",
-      "image": null,
+      "image": '/imgs/bus/asiyasafar.svg',
       "pageUrl": "https://payaneh.ir/company-bus/asiasafar"
     },
     {
       "name": "ایمن سفر ایرانیان",
       "code": "imensafariranian",
-      "image": null,
+      "image": '/imgs/bus/imensafar.svg',
       "pageUrl": "https://payaneh.ir/company-bus/imensafariranian"
     },
     {
       "name": "آرتا سبلان",
       "code": "artasabalan",
-      "image": null,
+      "image": '/imgs/bus/arta.svg',
       "pageUrl": "https://payaneh.ir/company-bus/artasabalan"
     },
     {
       "name": "کیان سفر پاسارگاد",
       "code": "kiansafarpasargad",
-      "image": null,
+      "image": '/imgs/bus/kiyan.svg',
       "pageUrl": "https://payaneh.ir/company-bus/kiansafarpasargad"
     },
     {
       "name": "سفر سیر",
       "code": "safarseir",
-      "image": null,
+      "image": '/imgs/bus/safirseir.svg',
       "pageUrl": "https://payaneh.ir/company-bus/safarseir"
     },
     {
       "name": "جوان سیر ایثار",
       "code": "javanseireisar",
-      "image": null,
+      "image": '/imgs/bus/javan.svg',
       "pageUrl": "https://payaneh.ir/company-bus/javanseireisar"
     },
     {
       "name": "آرو",
       "code": "aro",
-      "image": null,
+      "image": '/imgs/bus/aro.svg',
       "pageUrl": "https://payaneh.ir/company-bus/aro"
     },
     {
       "name": "سپهر آسیا",
       "code": "sepehrasia",
-      "image": null,
+      "image": '/imgs/bus/sepehr.svg',
       "pageUrl": "https://payaneh.ir/company-bus/sepehrasia"
     },
     {
       "name": "پارسیان",
       "code": "parsian",
-      "image": null,
+      "image": '/imgs/bus/parsian.svg',
       "pageUrl": "https://payaneh.ir/company-bus/parsian"
     },
     {
       "name": "راهپیمای پارسیان",
       "code": "rahpeymaparsian",
-      "image": null,
+      "image": '/imgs/bus/rahparsian.svg',
       "pageUrl": "https://payaneh.ir/company-bus/rahpeymaparsian"
     },
     {
       "name": "جهان گشت مهر",
       "code": "jahangashtmehr",
-      "image": null,
+      "image": '/imgs/bus/jahangasht.svg',
       "pageUrl": "https://payaneh.ir/company-bus/jahangashtmehr"
     }
   ]

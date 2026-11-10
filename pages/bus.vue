@@ -13,7 +13,7 @@
         <!-- سایدبار: کامپوننت مشترک با پرواز -->
         <aside class="hidden lg:block lg:col-span-3 order-1 lg:order-2">
           <div class="top-24 space-y-4">
-            <FlightSearchPanel mode="aside" :showServices="true" @flight-search="isFilterModalOpen = false" />
+            <FlightSearchPanel mode="aside" :showServices="true" @bus-search="isFilterModalOpen = false" />
 
             <div class="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm" dir="rtl">
               <div class="flex items-center justify-between mb-4">
@@ -77,39 +77,17 @@
             <button class="mr-3 underline" type="button" @click="loadBuses">تلاش مجدد</button>
           </div>
 
-          <!-- نمایش موقت داده‌ها در خود صفحه، بدون ساخت BusTicketCard -->
+          <!-- همان کارت برای داده استاتیک و خروجی واقعی API -->
           <div v-if="!loading && !errorMessage && filteredBuses.length" class="space-y-4 px-2 md:px-0">
-            <div v-for="bus in filteredBuses" :key="bus.id || bus.moveCode"
-              class="rounded-2xl border border-gray-100 bg-white p-4 md:p-5 shadow-sm">
-              <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-3">
-                <div>
-                  <div class="font-bold text-gray-800">{{ bus.companyName || 'شرکت مسافربری' }}</div>
-                  <div class="mt-1 text-xs text-gray-500">{{ bus.busType || 'نوع اتوبوس مشخص نیست' }}</div>
-                </div>
-                <span class="rounded-full px-3 py-1 text-xs font-bold"
-                  :class="bus.disabled ? 'bg-gray-100 text-gray-500' : 'bg-green-50 text-green-700'">
-                  {{ bus.statusMessage || (bus.disabled ? 'غیرقابل خرید' : 'قابل خرید') }}
-                </span>
-              </div>
-              <div class="grid grid-cols-3 items-center gap-3 py-5">
-                <div>
-                  <p class="font-black text-lg text-gray-800">{{ bus.departureTime || '--:--' }}</p>
-                  <p class="text-sm text-gray-700">{{ bus.originName || bus.origin }}</p>
-                </div>
-                <div class="text-center text-gray-400 text-xs">🚌 ─────</div>
-                <div class="text-left">
-                  <p class="font-bold text-gray-800">{{ bus.destinationName || bus.destination }}</p>
-                  <p class="mt-1 text-xs text-gray-500">{{ bus.getOffPlace || 'مقصد' }}</p>
-                </div>
-              </div>
-              <div class="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-3">
-                <div>
-                  <span class="text-xs text-gray-500">{{ bus.capacity }} صندلی باقی‌مانده</span>
-                  <p class="mt-1 font-bold text-primary">{{ formatPrice(bus.priceFrom) }} <span class="text-xs">ریال</span></p>
-                </div>
-                <span class="text-xs text-gray-400">مرحله انتخاب صندلی هنوز متصل نشده است</span>
-              </div>
+            <div v-if="useMockBuses" class="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs leading-6 text-amber-800">
+              حالت نمایشی: داده‌های زیر نمونه ثبت‌شده برای ۱۴۰۵/۰۸/۱۷ هستند؛ تاریخ انتخابی URL روی این داده‌های آزمایشی اعمال نمی‌شود و امکان رزرو وجود ندارد.
             </div>
+            <BusTicketCard
+              v-for="(bus, index) in filteredBuses"
+              :key="bus.id || bus.moveCode || index"
+              :bus="bus"
+              :enable-selection="false"
+            />
           </div>
 
           <div v-else-if="!loading && !errorMessage" class="mx-2 rounded-[2rem] border-2 border-dashed border-gray-100 bg-white py-20 text-center">
@@ -129,7 +107,7 @@
             <button type="button" class="text-2xl text-gray-500" @click="isFilterModalOpen = false">×</button>
           </div>
           <div class="flex-1 overflow-y-auto p-4 space-y-5">
-            <FlightSearchPanel mode="aside" :showServices="true" @flight-search="isFilterModalOpen = false" />
+            <FlightSearchPanel mode="aside" :showServices="true" @bus-search="isFilterModalOpen = false" />
             <div class="rounded-xl border border-gray-100 p-4 space-y-4">
               <label class="flex gap-2 text-sm"><input v-model="onlyAvailable" type="checkbox" /> فقط سرویس‌های قابل خرید</label>
               <label class="flex gap-2 text-sm"><input v-model="onlyVip" type="checkbox" /> فقط اتوبوس‌های VIP</label>
@@ -152,11 +130,7 @@
         <div class="flex flex-col items-center rounded-3xl bg-white p-8 shadow-2xl">
           <div class="relative flex h-24 w-24 items-center justify-center rounded-full bg-[var(--color-primary)]">
             <div class="absolute inset-0 animate-spin rounded-full border-4 border-blue-300 border-t-blue-100"></div>
-            <img
-  src="/imgs/flight/loading.gif"
-  alt="در حال جستجوی اتوبوس"
-  class="relative z-10 h-[70px] w-[70px] object-contain"
-/>
+            <img src="/imgs/flight/loading.gif" alt="در حال جستجوی اتوبوس" class="relative z-10 h-[70px] w-[70px] object-contain" />
           </div>
           <h4 class="mt-5 text-base font-bold text-gray-800" dir="rtl">در حال جستجوی اتوبوس‌ها...</h4>
         </div>
@@ -177,6 +151,42 @@ import { useRoute, useRouter } from 'vue-router'
 import moment from 'moment-jalaali'
 import { toGregorian, toJalaali } from 'jalaali-js'
 import { searchAllBusProviders } from '~/services/searchBuses.js'
+import BusTicketCard from '~/components/BusTicketCard.vue'
+
+// برای اتصال به API واقعی، فقط مقدار زیر را false کن.
+const useMockBuses = false
+
+function mapNiraBus(raw, index) {
+  const capacity = Number(raw.capacity ?? 0)
+  const priceFrom = Number(raw.tripDestinationFare ?? 0)
+  const canceled = /کنسل|لغو|باطل/.test(String(raw.type || '') + ' ' + String(raw.explanation || ''))
+  const disabled = canceled || capacity <= 0 || priceFrom <= 0
+  return {
+    id: `NIRABUS-${raw.moveCode || index}`,
+    provider: 'NIRABUS',
+    companyCode: raw.companyCode || '',
+    companyName: String(raw.companyName || '').trim(),
+    companyBrand: raw.rmtO_CompanyBrand || '',
+    moveCode: raw.moveCode || '',
+    origin: raw.tripOrigin || '',
+    originName: raw.tripOriginName || '',
+    destination: raw.tripDestination || '',
+    destinationName: raw.tripDestinationName || '',
+    departureDate: raw.departureDate || '',
+    departureTime: raw.hour || '',
+    busType: raw.type || '',
+    busTypeCode: raw.typeE || '',
+    capacity,
+    priceFrom,
+    currency: 'IRR',
+    ridingPlace: raw.ridingPlace || '',
+    getOffPlace: raw.getOffPlace || '',
+    explanation: raw.explanation || '',
+    disabled,
+    statusMessage: canceled ? 'کنسل شده' : capacity <= 0 ? 'تکمیل ظرفیت' : priceFrom <= 0 ? 'قیمت نامعتبر' : 'قابل خرید',
+    meta: { raw }
+  }
+}
 
 const route = useRoute()
 const router = useRouter()
@@ -198,16 +208,7 @@ const busSteps = [
   { icon: '💳', label: 'تأیید و پرداخت' },
   { icon: '🎫', label: 'دریافت بلیط' }
 ]
-function formatBusUrlDate(value) {
-  const digits = String(value || '').replace(/\D/g, '')
 
-  if (!/^\d{8}$/.test(digits)) return ''
-
-  return digits.replace(
-    /^(\d{4})(\d{2})(\d{2})$/,
-    '$1/$2/$3'
-  )
-}
 const toCompactJalali = value => {
   const clean = String(value || '').replace(/\D/g, '')
   return /^\d{8}$/.test(clean) ? clean : ''
@@ -261,7 +262,7 @@ async function handleDateChange(dateObj) {
   else jalali = toJalaali(parts[0], parts[1], parts[2])
   const compact = `${jalali.jy}${String(jalali.jm).padStart(2, '0')}${String(jalali.jd).padStart(2, '0')}`
   if (compact === currentDate.value) return
-  await router.replace({ query: { ...route.query, departDate: compact } })
+  await router.replace({ query: { ...route.query, departDate: `${jalali.jy}/${String(jalali.jm).padStart(2, '0')}/${String(jalali.jd).padStart(2, '0')}` } })
 }
 
 let searchId = 0
@@ -280,7 +281,13 @@ async function loadBuses() {
   loading.value = true
   resetFilters()
   try {
-    const result = await searchAllBusProviders({ origin, destination, departureDate, no: 1 })
+    // mockAvailability دقیقاً ساختار {data, error} سرویس نیرا را دارد.
+    // در حالت واقعی، searchAllBusProviders از provider استفاده می‌کند.
+    const result = useMockBuses
+      ? await $fetch('/mock/niraBusAvailability.json').then(response =>
+          Array.isArray(response?.data) ? response.data.map(mapNiraBus) : []
+        )
+      : await searchAllBusProviders({ origin, destination, departureDate, no: 1 })
     if (id !== searchId) return
     buses.value = Array.isArray(result) ? result : []
   } catch (error) {
@@ -294,21 +301,4 @@ async function loadBuses() {
 onMounted(() => { window.addEventListener('scroll', handleWindowScroll, { passive: true }); handleWindowScroll() })
 onUnmounted(() => { ++searchId; window.removeEventListener('scroll', handleWindowScroll) })
 watch(() => [route.query.origin, route.query.destination, route.query.departDate], loadBuses, { immediate: true })
-watch(
-  () => route.query.departDate,
-  async (date) => {
-    const formattedDate = formatBusUrlDate(date)
-
-    if (!formattedDate || formattedDate === date) return
-
-    await router.replace({
-      path: '/bus',
-      query: {
-        ...route.query,
-        departDate: formattedDate
-      }
-    })
-  },
-  { immediate: true }
-)
 </script>
