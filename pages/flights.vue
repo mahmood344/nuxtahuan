@@ -51,11 +51,11 @@
         ></div>
 
         <!-- GIF آهو -->
-        <!-- <img
-          src="/imgs/flight/puzzled_stag_animated_original_color.gif"
-          alt="Loading"
-          class="relative z-10 h-[60px] w-[60px] object-contain"
-        /> -->
+       <img
+  src="/imgs/flight/loading.gif"
+  alt="در حال جستجوی پروازها"
+  class="relative z-10 h-[70px] w-[70px] object-contain"
+/>
       </div>
 
       <h4 class="mt-5 text-base font-bold text-gray-800" dir="rtl">

@@ -746,17 +746,36 @@ function toBusJalaliDate(value) {
   return `${map.year}${map.month.padStart(2, '0')}${map.day.padStart(2, '0')}`
 }
 
+
 async function searchBuses() {
-  const departDate = toBusJalaliDate(busDate.value)
-  if (!busOrigin.value || !busDestination.value || busOrigin.value === busDestination.value || !departDate) return
+  const rawDate = toBusJalaliDate(busDate.value)
+
+  if (
+    !busOrigin.value ||
+    !busDestination.value ||
+    busOrigin.value === busDestination.value ||
+    !rawDate
+  ) return
+
+  const departDate = rawDate.replace(
+    /^(\d{4})(\d{2})(\d{2})$/,
+    '$1/$2/$3'
+  )
+
   const searchData = {
     origin: String(busOrigin.value).toUpperCase(),
     destination: String(busDestination.value).toUpperCase(),
     departDate
   }
+
   emit('bus-search', searchData)
-  await router.push({ path: '/bus', query: searchData })
+
+  await router.push({
+    path: '/bus',
+    query: searchData
+  })
 }
+
 
 async function searchAhuanHotel(){
 
@@ -1037,7 +1056,12 @@ onMounted(async() => {
     activeService.value = 'bus'
     busOrigin.value = route.query.origin || null
     busDestination.value = route.query.destination || null
-    busDate.value = route.query.departDate || null
+    busDate.value = route.query.departDate
+  ? String(route.query.departDate).replace(
+      /^(\d{4})(\d{2})(\d{2})$/,
+      '$1/$2/$3'
+    )
+  : null
   }
 })
 watch(

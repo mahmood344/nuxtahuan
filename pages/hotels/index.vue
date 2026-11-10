@@ -165,18 +165,15 @@
                   mx-4
                 "
               >
-                <div
-                  class="
-                    animate-spin
-                    rounded-full
-                    h-14
-                    w-14
-                    border-4
-                    border-blue-200
-                    bg-primary
-                    mb-4
-                  "
-                ></div>
+                <div class="relative mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-[var(--color-primary)]">
+  <div class="absolute inset-0 animate-spin rounded-full border-4 border-blue-300 border-t-blue-100"></div>
+
+  <img
+    src="/imgs/flight/loading.gif"
+    alt="در حال جستجوی هتل‌ها"
+    class="relative z-10 h-[70px] w-[70px] object-contain"
+  />
+</div>
 
                 <h4
                   class="
