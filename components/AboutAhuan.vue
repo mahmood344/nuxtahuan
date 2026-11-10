@@ -180,7 +180,7 @@ const certificates=[
  },
  {
   title:'مجوز گردشگری الکترونیک',
-  image:'/imgs/hotel/passenger.png',
+  image:'/imgs/hotel/Passenger.png',
   site:'https://www.cao.ir/paxrights'
  }
 ]

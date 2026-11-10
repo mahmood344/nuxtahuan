@@ -506,7 +506,7 @@ const certificates=[
  },
  {
   title:'حقوق مسافر',
-  image:'/imgs/hotel/passenger.png',
+  image:'/imgs/hotel/Passenger.png',
   site:'https://www.cao.ir/paxrights'
  }
 ]
