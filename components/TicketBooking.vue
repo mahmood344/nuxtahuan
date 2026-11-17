@@ -4,8 +4,6 @@
 
   <div class="relative w-full">
 
-
-
     <!-- هدر (تصویر) -->
 
     <div class="h-[404px] w-full">
@@ -28,8 +26,6 @@
 
     </div>
 
-
-
     <!-- کارت جستجو (که روی هدر قرار می‌گیره) -->
 
     <!-- در موبایل با margin-top منفی میاد بالا و در دسکتاپ هم همینطور -->
@@ -48,23 +44,15 @@
 
   :icon="s.icon" 
 
-
-
   variant="outline"
 
   color="white"
-
-
 
   :active="activeService === s.key" 
 
   @click="selectService(s.key, index)" 
 
-
-
   class="text-[13px] font-black lg:h-[72px] transition-colors"
-
-
 
   :class="[
 
@@ -73,8 +61,6 @@
       ? '!bg-[var(--color-primary)] !text-white !border-[var(--color-primary)]'
 
       : '!bg-white !text-[var(--color-primary)] !border-[var(--color-primary)]',
-
-
 
     {
 
@@ -221,39 +207,73 @@
   </div>
 
 <!-- جستجوی بلیت اتوبوس -->
+
 <div v-else-if="activeService === 'bus'" dir="rtl" class="mt-1 flex flex-col justify-center">
+
   <div class="grid w-full grid-cols-1 items-center gap-4 p-4 md:grid-cols-[2fr_2fr_1fr] md:p-5">
+
     <div class="w-full min-w-0">
+
       <UiOriginDestinationSelector
+
         v-model:mabda="busOrigin"
+
         v-model:maghsad="busDestination"
+
         @destination-selected="openBusDatePicker"
+
         source="bus"
+
         :cities="busCities"
+
         :popular-cities="busPopularCities"
+
       />
+
     </div>
+
     <div class="w-full min-w-0">
+
       <UiSingleDatePicker
+
         ref="busDatePickerRef"
+
         v-model="busDate"
+
         label="تاریخ حرکت"
+
         placeholder="انتخاب تاریخ حرکت"
+
         :single="true"
+
       />
+
     </div>
+
     <div class="w-full">
+
       <UiBaseButton
+
         label="جستجو"
+
         variant="filled"
+
         color="primary"
+
         :active="false"
+
         :disabled="!busOrigin || !busDestination || !busDate || busOrigin === busDestination || !toBusJalaliDate(busDate)"
+
         class="h-[40px] w-full !rounded-4xl text-[13px]"
+
         @click="searchBuses"
+
       />
+
     </div>
+
   </div>
+
 </div>
 
 <div
@@ -272,11 +292,7 @@
 
   >
 
-
-
     <div class="w-full">
-
-
 
       <UiBaseAutocomplete
 
@@ -292,7 +308,6 @@
 
         v-model="hotelCity"
 
-
         clearable
 
         icon='<i class="bi bi-geo-alt"></i>'
@@ -303,12 +318,12 @@
 
     </div>
 
-
-
     <div class="w-full">
 
      <UiSingleDatePicker
+
   ref="ahuanHotelDatePickerRef"
+
   v-model="hotelDate"
 
   label=" تاریخ ورود و خروج"
@@ -318,8 +333,6 @@
 />
 
     </div>
-
-
 
     <div class="w-full">
 
@@ -343,8 +356,6 @@
 
     </div>
 
-
-
   </div>
 
 </div>
@@ -359,8 +370,6 @@
 
 \-->
 
-
-
 <div
 
   v-else-if="activeService === 'hotel'"
@@ -370,8 +379,6 @@
   class="flex flex-col justify-center mt-4"
 
 >
-
-
 
   <div
 
@@ -397,13 +404,9 @@
 
   >
 
-
-
     <!-- City -->
 
     <div class="w-full">
-
-
 
       <UiBaseAutocomplete
 
@@ -420,6 +423,7 @@
         "
 
         :items="snappTripCities"
+
         :popular-items="snappTripPopularCities"
 
         item-text="name"
@@ -427,7 +431,6 @@
         item-value="code"
 
         v-model="snappTripCity"
-
 
         :disabled="hotelStore.snappTripCitiesLoading"
 
@@ -439,22 +442,16 @@
 
       />
 
-
-
     </div>
-
-
-
-
 
     <!-- Date -->
 
     <div class="w-full">
 
-
-
       <UiSingleDatePicker
+
         ref="snappTripDatePickerRef"
+
         v-model="snappTripDate"
 
         label="تاریخ ورود و خروج"
@@ -463,19 +460,11 @@
 
       />
 
-
-
     </div>
-
-
-
-
 
     <!-- Search -->
 
     <div class="w-full">
-
-
 
       <UiBaseButton
 
@@ -515,15 +504,9 @@
 
       />
 
-
-
     </div>
 
-
-
   </div>
-
-
 
 </div>
 
@@ -605,8 +588,6 @@
 
       </div>
 
-
-
       <!-- متن -->
 
       <p
@@ -626,8 +607,6 @@
         این قسمت از سایت در حال توسعه می‌باشد...
 
       </p>
-
-
 
       <!-- سه نقطه متحرک -->
 
@@ -653,8 +632,6 @@
 
 </template>
 
-
-
 <script setup>
 
 import {
@@ -678,6 +655,7 @@ import { useRouter } from 'vue-router'
 import { useFlightStore } from '~/stores/flights'
 
 import { useHotelStore } from '~/stores/hotels'
+
 import { useBusStore } from '~/stores/bus'
 
 const originDestinationRef = ref(null)
@@ -687,36 +665,57 @@ const datePickerRef = ref(null)
 const passengerRef = ref(null)
 
 // باز شدن خودکار فیلد بعدی بعد از انتخاب واقعی کاربر
+
 const busDatePickerRef = ref(null)
+
 const ahuanHotelDatePickerRef = ref(null)
+
 const snappTripDatePickerRef = ref(null)
 
 async function openBusDatePicker() {
+
   await nextTick()
+
   busDatePickerRef.value?.openPicker?.()
+
 }
 
 async function openAhuanHotelDatePicker() {
+
   await nextTick()
+
   const picker = ahuanHotelDatePickerRef.value
+
   if (typeof picker?.openPicker === 'function') picker.openPicker()
+
   else picker?.$el?.querySelector('input')?.click()
+
 }
 
 async function openSnappTripDatePicker() {
+
   await nextTick()
+
   const picker = snappTripDatePickerRef.value
+
   if (typeof picker?.openPicker === 'function') picker.openPicker()
+
   else picker?.$el?.querySelector('input')?.click()
+
 }
 
-
 const hotelStore = useHotelStore()
+
 const busStore = useBusStore()
+
 const busOrigin = ref(null)
+
 const busDestination = ref(null)
+
 const busDate = ref(null)
+
 const busCities = computed(() => busStore.cities || [])
+
 const busPopularCities = computed(() => busStore.popularCities || [])
 
 const router = useRouter()
@@ -757,11 +756,7 @@ const hotelDate=ref(null)
 
 const hotelDatePickerOpen=ref(false)
 
-
-
 const hotelCities=computed(()=>{
-
-
 
   const items=Array.isArray(
 
@@ -773,25 +768,13 @@ const hotelCities=computed(()=>{
 
     : []
 
-
-
-
-
   return items.map(item=>({
-
-
 
     code:item.id,
 
-
-
     name:item.title
 
-
-
   }))
-
-
 
 })
 
@@ -805,45 +788,41 @@ const hotelCities=computed(()=>{
 
 */
 
-
-
 const snappTripCity=
 
  ref(null)
-
-
-
-
 
 const snappTripDate=
 
  ref(null)
 
 // وابسته نبودن به رویداد select کامپوننت Autocomplete
+
 // مقدار انتخابی از v-model بعد از انتخاب شهر بررسی می‌شود.
+
 watch(hotelCity, async (value, previous) => {
+
   if (value == null || value === '' || String(value) === String(previous)) return
+
   if (!hotelStore.hotels.some(h => String(h.id) === String(value))) return
+
   await openAhuanHotelDatePicker()
+
 }, { flush: 'post' })
 
 watch(snappTripCity, async (value, previous) => {
+
   if (value == null || value === '' || String(value) === String(previous)) return
+
   if (!hotelStore.snappTripCities.some(c => String(c.id) === String(value))) return
+
   await openSnappTripDatePicker()
+
 }, { flush: 'post' })
-
-
-
-
-
-
 
 const snappTripCities=
 
  computed(()=>{
-
-
 
   const items=
 
@@ -857,71 +836,65 @@ const snappTripCities=
 
     :[]
 
-
-
-
-
   return items.map(
 
    item=>({
-
-
 
     code:
 
      item.id,
 
-
-
     name:
 
      item.title,
-
-
 
     stateName:
 
      item.stateName,
 
-
-
     titleEn:
 
      item.titleEn
-
-
 
    })
 
   )
 
-
-
 })
 
 // The full SnappTrip city list remains available for searching.
+
 // The popular selection is only used when the autocomplete query is empty.
+
 const snappTripPopularCities = computed(() => {
+
   const names = [
+
     'تهران', 'مشهد', 'اصفهان', 'شیراز', 'تبریز',
+
     'کیش', 'قشم', 'رشت', 'یزد', 'کرمان'
+
   ]
+
   const normalize = value => String(value || '')
+
     .replace(/ي/g, 'ی').replace(/ك/g, 'ک')
+
     .replace(/\u200c/g, ' ').replace(/\s+/g, ' ')
+
     .trim().toLowerCase()
+
   const items = snappTripCities.value
+
   return names.map(name => items.find(item => normalize(item.name) === normalize(name)))
+
     .filter(Boolean)
+
 })
 
 const openDatePicker = async () => {
 
-
-
   await nextTick()
-
-
 
   datePickerRef.value
 
@@ -929,19 +902,11 @@ const openDatePicker = async () => {
 
 }
 
-
-
-
-
 const openPassengerSelector =
 
   async () => {
 
-
-
     await nextTick()
-
-
 
     passengerRef.value
 
@@ -951,31 +916,17 @@ const openPassengerSelector =
 
 const hotelDateLabel = computed(()=>{
 
-
-
   if(!hotelDate.value)
 
     return ''
-
-
-
-
 
   const dates = String(hotelDate.value)
 
     .split(',')
 
-
-
-
-
   if(dates.length !== 2)
 
     return hotelDate.value
-
-
-
-
 
   const formatter = new Intl.DateTimeFormat(
 
@@ -993,37 +944,21 @@ const hotelDateLabel = computed(()=>{
 
   )
 
-
-
-
-
   const checkIn = formatter.format(
 
-    new Date(dates[0].replace(/\//g, '-'))
+    new Date(dates[0].replace(/**\/**/g, '-'))
 
   )
-
-
-
-
 
   const checkOut = formatter.format(
 
-    new Date(dates[1].replace(/\//g, '-'))
+    new Date(dates[1].replace(/**\/**/g, '-'))
 
   )
 
-
-
-
-
   return `از ${checkIn} تا ${checkOut}`
 
-
-
 })
-
-
 
 function handleHotelDateChange(value){
 
@@ -1033,19 +968,11 @@ function handleHotelDateChange(value){
 
 }
 
-
-
 function searchAhuanHotel(){
-
-
 
   if(!hotelCity.value || !hotelDate.value)
 
     return
-
-
-
-
 
   const dates = Array.isArray(hotelDate.value)
 
@@ -1053,37 +980,19 @@ function searchAhuanHotel(){
 
     : String(hotelDate.value).split(',')
 
-
-
-
-
   router.push({
-
-
 
     path:`/hotels/${hotelCity.value}`,
 
-
-
     query:{
-
-
 
       checkIn:dates[0],
 
-
-
       checkOut:dates[1]
-
-
 
     }
 
-
-
   })
-
-
 
 }
 
@@ -1097,11 +1006,7 @@ function searchAhuanHotel(){
 
 */
 
-
-
 function searchSnappTripHotel(){
-
-
 
  if(
 
@@ -1114,10 +1019,6 @@ function searchSnappTripHotel(){
   return
 
  }
-
-
-
-
 
  const dates=
 
@@ -1145,10 +1046,6 @@ function searchSnappTripHotel(){
 
      )
 
-
-
-
-
  const checkIn=
 
   String(
@@ -1168,10 +1065,6 @@ function searchSnappTripHotel(){
     '-'
 
    )
-
-
-
-
 
  const checkOut=
 
@@ -1193,10 +1086,6 @@ function searchSnappTripHotel(){
 
    )
 
-
-
-
-
  if(
 
   !checkIn||
@@ -1209,23 +1098,13 @@ function searchSnappTripHotel(){
 
  }
 
-
-
-
-
  router.push({
-
-
 
   path:
 
    '/hotels',
 
-
-
   query:{
-
-
 
    cityId:
 
@@ -1235,23 +1114,13 @@ function searchSnappTripHotel(){
 
     ),
 
-
-
    checkIn,
-
-
 
    checkOut
 
-
-
   }
 
-
-
  })
-
-
 
 }
 
@@ -1265,15 +1134,13 @@ const images = [
 
   '/imgs/ticketbooking/flightbackground2.png',
 
-  '/imgs/ticketbooking/flightbackground4.png',
-
   '/imgs/ticketbooking/flightbackground5.png',
+
+  '/imgs/ticketbooking/flightbackground4.png',
 
   '/imgs/ticketbooking/flightbackground7.png'
 
 ]
-
-
 
 const services = [
 
@@ -1293,17 +1160,11 @@ const services = [
 
 ]
 
-
-
 const activeService = ref("flight")
 
 const currentSlide = ref(0)
 
-
-
 const currentImage = computed(() => images[currentSlide.value] || images[0])
-
-
 
 const selectService=
 
@@ -1315,29 +1176,23 @@ const selectService=
 
  )=>{
 
-
-
   activeService.value=
 
    serviceKey
-
-
-
-
 
   currentSlide.value=
 
    index
 
-
-
-
-
   resetAutoSlide()
 
-
-
-
+  if (serviceKey === 'bus') {
+    try {
+      await busStore.loadOrigins()
+    } catch (error) {
+      console.error('LOAD NIRA BUS ORIGINS ERROR:', error)
+    }
+  }
 
   /*
 
@@ -1349,31 +1204,21 @@ const selectService=
 
   */
 
-
-
   if(
 
    serviceKey==='hotel'
 
   ){
 
-
-
    try{
-
-
 
     await hotelStore
 
      .loadSnappTripCities()
 
-
-
    }
 
    catch(error){
-
-
 
     console.error(
 
@@ -1383,25 +1228,15 @@ const selectService=
 
     )
 
-
-
    }
-
-
 
   }
 
-
-
 }
-
-
 
 // تایمر برای اسلاید خودکار
 
 let autoSlideTimer = null
-
-
 
 // شروع اسلاید خودکار
 
@@ -1421,8 +1256,6 @@ const startAutoSlide = () => {
 
 }
 
-
-
 // توقف اسلاید خودکار
 
 const stopAutoSlide = () => {
@@ -1437,8 +1270,6 @@ const stopAutoSlide = () => {
 
 }
 
-
-
 // ریست تایمر
 
 const resetAutoSlide = () => {
@@ -1449,8 +1280,6 @@ const resetAutoSlide = () => {
 
 }
 
-
-
 // وقتی کامپوننت سوار می‌شود، اسلاید خودکار شروع شود
 
 onMounted(() => {
@@ -1458,8 +1287,6 @@ onMounted(() => {
   // startAutoSlide()
 
 })
-
-
 
 // وقتی کامپوننت از بین می‌رود، تایمر را متوقف کنیم
 
@@ -1470,44 +1297,74 @@ onUnmounted(() => {
 })
 
 // UiSingleDatePicker در حالت single باید یک مقدار (نه بازه) منتشر کند.
+
 function toBusJalaliDate(value) {
+
   if (!value || Array.isArray(value)) return ''
+
   const raw = String(value).trim().replace(/[۰-۹]/g, n => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(n)))
+
     .replace(/[٠-٩]/g, n => String('٠١٢٣٤٥٦٧٨٩'.indexOf(n)))
+
   if (raw.includes(',')) return ''
-  const match = raw.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:T.*)?$/)
+
+  const match = raw.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})(?:T.*)?$/)
+
   const compact = raw.match(/^(\d{4})(\d{2})(\d{2})$/)
+
   const parts = match || compact
+
   if (!parts) return ''
+
   const [, yearText, monthText, dayText] = parts
+
   const year = Number(yearText), month = Number(monthText), day = Number(dayText)
+
   if (month < 1 || month > 12 || day < 1 || day > 31) return ''
+
   if (year >= 1300 && year < 1500) return `${yearText}${String(month).padStart(2,'0')}${String(day).padStart(2,'0')}`
+
   const date = new Date(Date.UTC(year, month - 1, day))
+
   if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return ''
+
   const fmt = new Intl.DateTimeFormat('en-US-u-ca-persian', {
+
     year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'UTC'
+
   })
+
   const result = Object.fromEntries(fmt.formatToParts(date).map(x => [x.type, x.value]))
+
   return `${result.year}${result.month.padStart(2,'0')}${result.day.padStart(2,'0')}`
+
 }
 
 function searchBuses() {
+
   const date = toBusJalaliDate(busDate.value)
+
   if (!busOrigin.value || !busDestination.value || busOrigin.value === busDestination.value || !date) return
+
   router.push({
+
     path: '/bus',
+
     query: {
+
       origin: String(busOrigin.value).toUpperCase(),
+
       destination: String(busDestination.value).toUpperCase(),
-      departDate: date
+
+      departDate: date.replace(/^(\d{4})(\d{2})(\d{2})$/, '$1/$2/$3')
+
     }
+
   })
+
 }
 
 function searchFlights() {
-
-
 
   router.push({
 
@@ -1537,8 +1394,6 @@ function searchFlights() {
 
   })
 
-
-
 }
 
 watch(origin, async (newValue, oldValue) => {
@@ -1547,11 +1402,7 @@ watch(origin, async (newValue, oldValue) => {
 
     return
 
-
-
   await nextTick()
-
-
 
   originDestinationRef.value
 
@@ -1559,21 +1410,13 @@ watch(origin, async (newValue, oldValue) => {
 
 })
 
-
-
-
-
 watch(destination, async (newValue, oldValue) => {
 
   if (!newValue || newValue === oldValue)
 
     return
 
-
-
   await nextTick()
-
-
 
   datePickerRef.value
 
@@ -1581,37 +1424,23 @@ watch(destination, async (newValue, oldValue) => {
 
 })
 
-
-
-
-
 watch(departDate, async (newValue, oldValue) => {
 
   if (!newValue || newValue === oldValue)
 
     return
 
-
-
   if (travelType.value === 'round-trip')
 
     return
 
-
-
   await nextTick()
-
-
 
   passengerRef.value
 
     ?.openSelector?.()
 
 })
-
-
-
-
 
 watch(returnDate, async (newValue, oldValue) => {
 
@@ -1619,17 +1448,11 @@ watch(returnDate, async (newValue, oldValue) => {
 
     return
 
-
-
   if (travelType.value !== 'round-trip')
 
     return
 
-
-
   await nextTick()
-
-
 
   passengerRef.value
 
@@ -1637,17 +1460,11 @@ watch(returnDate, async (newValue, oldValue) => {
 
 })
 
-
-
 </script>
-
-
 
 <style scoped>
 
 /* اگر می‌خوای فونت روخ داشته باشی */
-
-
 
 /* انیمیشن تغییر تصویر */
 
@@ -1671,8 +1488,6 @@ img {
 
 }
 
-
-
 .development-enter-from {
 
   opacity: 0;
@@ -1680,8 +1495,6 @@ img {
   transform: translateY(12px) scale(0.97);
 
 }
-
-
 
 .development-enter-to {
 
@@ -1691,8 +1504,6 @@ img {
 
 }
 
-
-
 .development-leave-from {
 
   opacity: 1;
@@ -1700,8 +1511,6 @@ img {
   transform: translateY(0) scale(1);
 
 }
-
-
 
 .development-leave-to {
 
@@ -1711,10 +1520,6 @@ img {
 
 }
 
-
-
-
-
 /* حرکت آرام آیکن */
 
 .development-icon {
@@ -1722,8 +1527,6 @@ img {
   animation: development-float 2s ease-in-out infinite;
 
 }
-
-
 
 @keyframes development-float {
 
@@ -1735,8 +1538,6 @@ img {
 
   }
 
-
-
   50% {
 
     transform: translateY(-6px);
@@ -1744,10 +1545,6 @@ img {
   }
 
 }
-
-
-
-
 
 /* سه نقطه متحرک */
 
@@ -1765,23 +1562,17 @@ img {
 
 }
 
-
-
 .development-dot:nth-child(2) {
 
   animation-delay: 0.15s;
 
 }
 
-
-
 .development-dot:nth-child(3) {
 
   animation-delay: 0.3s;
 
 }
-
-
 
 @keyframes development-dot {
 
@@ -1796,8 +1587,6 @@ img {
     transform: translateY(0);
 
   }
-
-
 
   30% {
 

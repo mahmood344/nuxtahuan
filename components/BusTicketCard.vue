@@ -1,7 +1,8 @@
 <template>
-  <article class="relative overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm" dir="rtl">
+  <article class="relative overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-opacity"
+    :class="isUnavailable ? 'opacity-60 select-none' : ''" dir="rtl">
     <!-- نوع اتوبوس در گوشه بالا سمت راست کارت -->
-    <span class="hidden md:inline-flex absolute right-3 top-2 z-10 max-w-[calc(100%-24px)] rounded-md bg-gray-100 px-2.5 py-1 text-[10px] font-semibold text-gray-600">
+    <span class="hidden md:inline-flex absolute right-3 top-2 z-10 max-w-[calc(100%-24px)] rounded-md bg-gray-100 px-2.5 py-1 text-small font-semibold text-gray-600">
       {{ shortBusType }}
     </span>
 
@@ -10,7 +11,7 @@
       <!-- سربرگ: نوع اتوبوس در راست، لوگوی شرکت در چپ -->
       <div class="flex min-h-[68px] items-start justify-between gap-3 px-3 pt-3" dir="rtl">
         <div class="flex flex-wrap justify-start gap-1.5 pt-0.5">
-          <span class="rounded-md bg-gray-100 px-2.5 py-1.5 text-[11px] font-semibold text-gray-600">
+          <span class="rounded-md bg-gray-100 px-2.5 py-1.5 text-small font-semibold text-gray-600">
             {{ shortBusType }}
           </span>
         </div>
@@ -23,17 +24,17 @@
             @error="logoFailed = true"
           />
           <i v-else class="bi bi-bus-front-fill text-[30px] text-[var(--color-primary,#1a237e)]"></i>
-          <span class="text-center text-[10px] font-bold leading-4 text-gray-700">{{ displayCompany }}</span>
+          <span class="text-center text-small font-bold leading-4 text-gray-700">{{ displayCompany }}</span>
         </div>
       </div>
 
       <!-- مسیر: مبدا راست، مقصد چپ، خط چین صاف و اتوبوس وسط -->
       <div class="grid grid-cols-[minmax(0,1fr)_minmax(95px,1.65fr)_minmax(0,1fr)] items-start gap-1 px-3 pt-3" dir="rtl">
         <div class="min-w-0 text-right">
-          <p class="flex items-center gap-1 text-[11px] text-gray-400"><i class="bi bi-geo-alt"></i> مبدأ</p>
-          <p class="mt-0.5 text-[16px] font-bold text-gray-800">{{ originCity }}</p>
-          <p class="text-[11px] leading-5 text-gray-500">{{ originTerminal || 'پایانه اعلام نشده' }}</p>
-          <p class="mt-0.5 text-[12px] font-semibold tabular-nums text-gray-600" dir="ltr" style="text-align:right">{{ bus.departureTime || raw.hour || '--:--' }}</p>
+          <p class="flex items-center gap-1 text-small text-gray-400"><i class="bi bi-geo-alt"></i> مبدأ</p>
+          <p class="mt-0.5 text-large font-bold text-gray-800">{{ originCity }}</p>
+          <p class="text-small leading-5 text-gray-500">{{ originTerminal || 'پایانه اعلام نشده' }}</p>
+          <p class="mt-0.5 text-small font-semibold tabular-nums text-gray-600" dir="ltr" style="text-align:right">{{ bus.departureTime || raw.hour || '--:--' }}</p>
         </div>
         <div class="flex min-w-0 items-center pt-[30px] text-gray-400" aria-hidden="true">
           <span class="bus-route-dashes h-[2px] min-w-0 flex-1"></span>
@@ -41,31 +42,41 @@
           <span class="bus-route-dashes h-[2px] min-w-0 flex-1"></span>
         </div>
         <div class="min-w-0 text-left" dir="rtl" style="text-align:left">
-          <p class="flex items-center justify-start gap-1 text-[11px] text-gray-400"><i class="bi bi-geo-alt"></i> مقصد</p>
-          <p class="mt-0.5 text-[16px] font-bold text-gray-800">{{ destinationCity }}</p>
-          <p class="text-[11px] leading-5 text-gray-500">{{ destinationTerminal || 'پایانه اعلام نشده' }}</p>
+          <p class="flex items-center justify-start gap-1 text-small text-gray-400"><i class="bi bi-geo-alt"></i> مقصد</p>
+          <p class="mt-0.5 text-large font-bold text-gray-800">{{ destinationCity }}</p>
+          <p class="text-small leading-5 text-gray-500">{{ destinationTerminal || 'پایانه اعلام نشده' }}</p>
         </div>
       </div>
 
       <!-- تاریخ و وضعیت ظرفیت -->
       <div class="flex flex-col items-center justify-center gap-0.5 px-3 pb-3 pt-1 text-center">
-        <p v-if="displayDate" class="text-[12px] font-bold text-gray-600">{{ departureWeekday }} {{ displayDate }}</p>
-        <p class="text-[12px] font-extrabold text-red-500">{{ statusText }}</p>
+        <p v-if="displayDate" class="text-small font-bold text-gray-600">{{ departureWeekday }} {{ displayDate }}</p>
+        <p v-if="!isUnavailable" class="text-small font-extrabold text-red-500">{{ statusText }}</p>
       </div>
 
       <!-- مبلغ و دکمه در یک ردیف با جداکننده خط‌چین -->
-      <div class="flex items-center justify-between gap-3 border-t-2 border-dashed border-gray-100 px-3 py-3" dir="rtl">
-        <div class="flex min-w-0 flex-wrap items-baseline gap-1">
-          <strong class="text-[19px] font-black tabular-nums text-[var(--color-primary,#1a237e)]">{{ formatPrice(priceToman) }}</strong>
-          <span class="text-[10px] text-gray-500">تومان</span>
+      <div class="flex min-h-[64px] items-center justify-center border-t-2 border-dashed border-gray-100 px-3 py-3" dir="rtl">
+        <p v-if="isUnavailable" class="w-full text-center text-large font-bold text-red-500">{{ statusText }}</p>
+        <div v-else class="flex w-full items-center justify-between gap-3">
+          <div class="flex min-w-0 flex-wrap items-baseline gap-1">
+            <strong class="text-large font-black tabular-nums text-[var(--color-primary,#1a237e)]">{{ formatPrice(priceToman) }}</strong>
+            <span class="text-small text-gray-500">تومان</span>
+          </div>
+          <button
+            v-if="!seatSelectionMode"
+            type="button"
+            :disabled="isUnavailable || !enableSelection"
+            :title="!enableSelection ? 'رزرو و انتخاب صندلی هنوز فعال نشده است' : undefined"
+            class="min-h-[38px] min-w-[116px] shrink-0 rounded-lg bg-[var(--color-primary,#1a237e)] px-3 text-small font-bold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
+            @click="!isUnavailable && enableSelection && emit('select', bus)"
+          >انتخاب بلیت</button>
+          <button
+            v-if="seatSelectionMode"
+            type="button"
+            class="min-h-[38px] min-w-[116px] shrink-0 rounded-lg bg-[var(--color-primary,#1a237e)] px-3 text-small font-bold text-white shadow-sm transition hover:opacity-90"
+            @click="emit('change-bus')"
+          >تغییر اتوبوس انتخابی</button>
         </div>
-        <button
-          type="button"
-          :disabled="isUnavailable || !enableSelection"
-          :title="!enableSelection ? 'رزرو و انتخاب صندلی هنوز فعال نشده است' : undefined"
-          class="min-h-[38px] min-w-[116px] shrink-0 rounded-lg bg-[var(--color-primary,#1a237e)] px-3 text-[12px] font-bold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
-          @click="emit('select', bus)"
-        >{{ isUnavailable ? 'غیرقابل خرید' : 'انتخاب بلیت' }}</button>
       </div>
 
       <!-- تب ها در پایین موبایل -->
@@ -74,9 +85,15 @@
           v-for="tab in tabs"
           :key="tab.key"
           type="button"
-          class="min-w-0 rounded-t-md px-2 py-2 text-[11px] transition-colors"
-          :class="openedPanel === tab.key ? 'bg-gray-100 font-bold text-blue-600' : 'bg-transparent font-medium text-gray-500 hover:text-blue-600'"
-          :aria-expanded="openedPanel === tab.key"
+          class="min-w-0 rounded-t-md px-2 py-2 text-small"
+          :class="isUnavailable
+            ? 'cursor-not-allowed text-gray-400 opacity-60 pointer-events-none'
+            : openedPanel === tab.key
+              ? 'bg-gray-100 font-bold text-blue-600 transition-colors'
+              : 'bg-transparent font-medium text-gray-500 hover:text-blue-600 transition-colors'"
+          :disabled="isUnavailable"
+          :aria-disabled="isUnavailable"
+          :aria-expanded="!isUnavailable && openedPanel === tab.key"
           @click="togglePanel(tab.key)"
         >{{ tab.label }}</button>
       </nav>
@@ -90,23 +107,31 @@
         dir="rtl"
       >
         <div class="flex w-full flex-1 flex-col items-center justify-center gap-2 py-1">
-          <div class="flex items-baseline justify-center gap-1">
-            <strong class="text-[21px] font-black tabular-nums text-[var(--color-primary,#1a237e)]">{{ formatPrice(priceToman) }}</strong>
-            <span class="text-[11px] text-gray-500">تومان</span>
-          </div>
-          <button
-            type="button"
-            :disabled="isUnavailable || !enableSelection"
-            :title="!enableSelection ? 'رزرو و انتخاب صندلی هنوز فعال نشده است' : undefined"
-            class="flex min-h-9 w-full max-w-[150px] items-center justify-center rounded-full bg-[var(--color-primary,#1a237e)] px-3 text-[12px] font-bold text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-            @click="emit('select', bus)"
-          >
-            {{ isUnavailable ? 'غیرقابل خرید' : 'انتخاب بلیت' }}
-          </button>
+          <p v-if="isUnavailable" class="w-full py-6 text-center text-large font-bold text-red-500">{{ statusText }}</p>
+          <template v-else>
+            <div class="flex items-baseline justify-center gap-1">
+              <strong class="text-large font-black tabular-nums text-[var(--color-primary,#1a237e)]">{{ formatPrice(priceToman) }}</strong>
+              <span class="text-small text-gray-500">تومان</span>
+            </div>
+            <button
+              v-if="!seatSelectionMode"
+              type="button"
+              :disabled="isUnavailable || !enableSelection"
+              :title="!enableSelection ? 'رزرو و انتخاب صندلی هنوز فعال نشده است' : undefined"
+              class="flex min-h-9 w-full max-w-[150px] items-center justify-center rounded-full bg-[var(--color-primary,#1a237e)] px-3 text-small font-bold text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              @click="!isUnavailable && enableSelection && emit('select', bus)"
+            >انتخاب بلیت</button>
+            <button
+              v-if="seatSelectionMode"
+              type="button"
+              class="flex min-h-9 w-full max-w-[150px] items-center justify-center rounded-full bg-[var(--color-primary,#1a237e)] px-3 text-small font-bold text-white shadow-sm transition hover:opacity-90"
+              @click="emit('change-bus')"
+            >تغییر اتوبوس انتخابی</button>
+          </template>
         </div>
         <p
-          class="mt-auto w-full pt-1 text-center text-[11px] font-bold leading-5"
-          :class="isUnavailable ? 'text-red-500' : 'text-gray-500'"
+          v-if="!isUnavailable"
+          class="mt-auto w-full pt-1 text-center text-small font-bold leading-5 text-gray-500"
         >
           {{ statusText }}
         </p>
@@ -127,7 +152,7 @@
               />
               <i v-else class="bi bi-bus-front-fill text-[30px]"></i>
             </div>
-            <h3 class="text-center text-[12px] font-extrabold leading-5 text-gray-800">{{ displayCompany }}</h3>
+            <h3 class="text-center text-small font-extrabold leading-5 text-gray-800">{{ displayCompany }}</h3>
           </aside>
 
           <!-- مسیر و تاریخ: مبدأ و مقصد در مرکز فضای کارت -->
@@ -136,10 +161,10 @@
               <div class="mt-2 grid grid-cols-[minmax(0,1fr)_minmax(105px,1.7fr)_minmax(0,1fr)] items-start gap-1 sm:grid-cols-[minmax(0,1fr)_minmax(150px,1.8fr)_minmax(0,1fr)] sm:gap-2" dir="rtl">
                 <!-- مبدأ -->
                 <div class="min-w-0 text-center">
-                  <p class="mb-1 flex items-center justify-center gap-1 text-[11px] text-gray-400"><i class="bi bi-geo-alt"></i> مبدأ</p>
-                  <p class="text-[16px] font-extrabold text-gray-800">{{ originCity }}</p>
-                  <p class="mt-0.5 break-words text-[11px] leading-5 text-gray-500">{{ originTerminal || 'پایانه اعلام نشده' }}</p>
-                  <p class="mt-1 text-center text-[14px] font-bold tabular-nums text-gray-700" dir="ltr">{{ bus.departureTime || raw.hour || '--:--' }}</p>
+                  <p class="mb-1 flex items-center justify-center gap-1 text-small text-gray-400"><i class="bi bi-geo-alt"></i> مبدأ</p>
+                  <p class="text-large font-extrabold text-gray-800">{{ originCity }}</p>
+                  <p class="mt-0.5 break-words text-small leading-5 text-gray-500">{{ originTerminal || 'پایانه اعلام نشده' }}</p>
+                  <p class="mt-1 text-center text-normal font-bold tabular-nums text-gray-700" dir="ltr">{{ bus.departureTime || raw.hour || '--:--' }}</p>
                 </div>
 
                 <!-- خط‌چین صاف، بلند و از ابتدا تا انتهای فاصله میان شهرها -->
@@ -151,12 +176,12 @@
 
                 <!-- مقصد: بدون ساعت رسیدن -->
                 <div class="min-w-0 text-center">
-                  <p class="mb-1 flex items-center justify-center gap-1 text-[11px] text-gray-400"><i class="bi bi-geo-alt"></i> مقصد</p>
-                  <p class="text-[16px] font-extrabold text-gray-800">{{ destinationCity }}</p>
-                  <p class="mt-0.5 break-words text-[11px] leading-5 text-gray-500">{{ destinationTerminal || 'پایانه اعلام نشده' }}</p>
+                  <p class="mb-1 flex items-center justify-center gap-1 text-small text-gray-400"><i class="bi bi-geo-alt"></i> مقصد</p>
+                  <p class="text-large font-extrabold text-gray-800">{{ destinationCity }}</p>
+                  <p class="mt-0.5 break-words text-small leading-5 text-gray-500">{{ destinationTerminal || 'پایانه اعلام نشده' }}</p>
                 </div>
               </div>
-              <div v-if="displayDate" class="mt-1 text-center text-[11px] font-bold text-gray-600">{{ departureWeekday }} {{ displayDate }}</div>
+              <div v-if="displayDate" class="mt-1 text-center text-small font-bold text-gray-600">{{ departureWeekday }} {{ displayDate }}</div>
             </div>
           </section>
         </div>
@@ -171,11 +196,15 @@
             v-for="tab in tabs"
             :key="tab.key"
             type="button"
-            class="rounded-t-md first:rounded-tr-none px-3 py-2 text-[13px] transition-colors duration-200"
-            :class="openedPanel === tab.key
-              ? 'bg-gray-100 font-bold text-blue-600'
-              : 'bg-transparent font-medium text-gray-500 hover:text-blue-600'"
-            :aria-expanded="openedPanel === tab.key"
+            class="rounded-t-md first:rounded-tr-none px-3 py-2 text-normal"
+            :class="isUnavailable
+              ? 'cursor-not-allowed text-gray-400 opacity-60 pointer-events-none'
+              : openedPanel === tab.key
+                ? 'bg-gray-100 font-bold text-blue-600 transition-colors duration-200'
+                : 'bg-transparent font-medium text-gray-500 hover:text-blue-600 transition-colors duration-200'"
+            :disabled="isUnavailable"
+            :aria-disabled="isUnavailable"
+            :aria-expanded="!isUnavailable && openedPanel === tab.key"
             @click="togglePanel(tab.key)"
           >
             {{ tab.label }}
@@ -184,13 +213,13 @@
       </div>
     </div>
 
-    <div v-if="openedPanel" class="border-t border-gray-100 bg-gray-50/50 px-5 py-4 text-xs leading-7 text-gray-600" dir="rtl">
+    <div v-if="openedPanel && !isUnavailable" class="border-t border-gray-100 bg-gray-50/50 px-5 py-4 text-small leading-7 text-gray-600" dir="rtl">
       <template v-if="openedPanel === 'info'">
         <div class="rounded-xl border border-gray-100 bg-white p-4">
           <template v-if="intermediateDestinations.length">
-            <h3 class="text-[13px] font-black text-gray-800">توقف در شهرهای:</h3>
+            <h3 class="text-normal font-black text-gray-800">توقف در شهرهای:</h3>
             <div class="mt-2 flex flex-wrap gap-2">
-              <span v-for="stop in intermediateDestinations" :key="stop.code" class="rounded-full bg-[var(--color-primary-light,#eef2ff)] px-3 py-1.5 text-[11px] font-bold text-[var(--color-primary-dark,#1a237e)]">{{ stop.name }}</span>
+              <span v-for="stop in intermediateDestinations" :key="stop.code" class="rounded-full bg-[var(--color-primary-light,#eef2ff)] px-3 py-1.5 text-small font-bold text-[var(--color-primary-dark,#1a237e)]">{{ stop.name }}</span>
             </div>
           </template>
           <div v-if="finalDestinationName" :class="{ 'mt-4 border-t border-gray-100 pt-3': intermediateDestinations.length }">
@@ -206,6 +235,10 @@
           :error="serviceDetailError"
           :is-mock="useMockServiceDetail"
           :service-mismatch="serviceDetailMismatch"
+          :selectable="seatSelectionMode"
+          :model-value="selectedSeats"
+          :max-selectable="10"
+          @update:model-value="emit('update:selectedSeats', $event)"
         />
       </template>
       <!-- قوانین و شرایط: نمایش در موبایل و دسکتاپ -->
@@ -226,19 +259,24 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted } from 'vue'
 import { useBusStore } from '~/stores/bus'
 import { toGregorian, isValidJalaaliDate } from 'jalaali-js'
 import BusSeatMap from '~/components/BusSeatMap.vue'
 
 const props = defineProps({
   bus: { type: Object, required: true },
-  enableSelection: { type: Boolean, default: false }
+  enableSelection: { type: Boolean, default: false },
+  seatSelectionMode: { type: Boolean, default: false },
+  selectedSeats: { type: Array, default: () => [] }
 })
 
-const emit = defineEmits(['select'])
+const emit = defineEmits(['select', 'update:selectedSeats', 'change-bus'])
 const busStore = useBusStore()
-const openedPanel = ref('')
+const openedPanel = ref(props.seatSelectionMode ? 'seats' : '')
+watch(() => props.seatSelectionMode, value => {
+  if (value && !isUnavailable.value) { openedPanel.value = 'seats'; loadServiceDetail() }
+})
 const tabs = [
   { key: 'seats', label: 'نقشه صندلی‌ها' },
   { key: 'info', label: 'اطلاعات اتوبوس و سفر' },
@@ -246,18 +284,19 @@ const tabs = [
 ]
 const logoFailed = ref(false)
 
-// حالت تست: جزئیات سرویس از فایل public/mock خوانده می‌شود.
-// بعد از فعال شدن وب‌سرویس، آن را false کن.
+// دریافت جزئیات هر سرویس از API واقعی نیرا؛ داده نمونه غیرفعال است.
 const raw = computed(() => props.bus.meta?.raw || props.bus)
 const useMockServiceDetail = false
 const serviceDetail = ref(null)
 const serviceDetailLoading = ref(false)
 const serviceDetailError = ref('')
+onMounted(() => { if (props.seatSelectionMode && !isUnavailable.value) loadServiceDetail() })
 let detailRequestId = 0
 
 const serviceParams = computed(() => ({
-  origin: String(props.bus.searchOrigin || props.bus.origin || raw.value.tripOrigin || '').trim().toLowerCase().replace(/^th[absep]$/, 'thr'),
-  destination: String(raw.value.tripDestination || props.bus.destination || '').trim().toLowerCase(),
+  // کدهای مسیر واقعی همین حرکت از availability، نه مسیر جستجوی کاربر
+  origin: String(raw.value.tripOrigin || props.bus.tripOrigin || '').trim().toLowerCase(),
+  destination: String(raw.value.finalDestination || props.bus.finalDestination || '').trim().toLowerCase(),
   co: String(raw.value.companyCode || props.bus.companyCode || '').trim(),
   seg: String(raw.value.moveCode || props.bus.moveCode || '').trim()
 }))
@@ -273,11 +312,11 @@ watch(serviceKey, () => {
   serviceDetail.value = null
   serviceDetailError.value = ''
   serviceDetailLoading.value = false
-  if (openedPanel.value === 'seats') loadServiceDetail()
+  if (!isUnavailable.value && openedPanel.value === 'seats') loadServiceDetail()
 })
 
 async function loadServiceDetail() {
-  if (serviceDetailLoading.value || serviceDetail.value) return
+  if (isUnavailable.value || serviceDetailLoading.value || serviceDetail.value) return
   const requestId = ++detailRequestId
   serviceDetailLoading.value = true
   serviceDetailError.value = ''
@@ -305,8 +344,10 @@ async function loadServiceDetail() {
 }
 
 function togglePanel(name) {
+  if (isUnavailable.value) return
+  if (props.seatSelectionMode && name === 'seats') { openedPanel.value = 'seats'; return }
   openedPanel.value = openedPanel.value === name ? '' : name
-  if (openedPanel.value === 'seats') loadServiceDetail()
+  if (!isUnavailable.value && openedPanel.value === 'seats') loadServiceDetail()
 }
 
 // پشتیبانی از داده استاتیک و خروجی API
@@ -341,6 +382,16 @@ const isUnavailable = computed(() =>
   priceRial.value <= 0 ||
   isCanceled.value
 )
+
+// ظرفیت ممکن است پس از دریافت مجدد اطلاعات سرویس تغییر کند.
+watch(isUnavailable, unavailable => {
+  if (!unavailable) return
+  openedPanel.value = ''
+  ++detailRequestId
+  serviceDetailLoading.value = false
+  serviceDetail.value = null
+  serviceDetailError.value = ''
+}, { immediate: true })
 
 const statusText = computed(() =>
   isCanceled.value

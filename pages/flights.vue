@@ -58,7 +58,7 @@
 />
       </div>
 
-      <h4 class="mt-5 text-base font-bold text-gray-800" dir="rtl">
+      <h4 class="mt-5 text-normal font-bold text-gray-800" dir="rtl">
         در حال جستجوی پروازها...
       </h4>
     </div>
@@ -73,7 +73,7 @@
               v-if="flightStore.backgroundLoading && !flightStore.loading"
               class="sticky top-3 z-40 mb-4"
             >
-              <div class="bg-blue-50 border border-blue-200 text-blue-700 text-xs md:text-sm px-4 py-3 rounded-2xl shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+              <div class="bg-blue-50 border border-blue-200 text-blue-700 text-small md:text-normal px-4 py-3 rounded-2xl shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                 <div class="flex items-center w-full justify-center gap-2">
                   <div v-for="(n , index) in 3" :key="index" class="w-2.5 h-2.5 rounded-full bg-primary animate-pulse"></div>
                   <span class="font-medium font-bold">
@@ -106,7 +106,7 @@
                   label="مرتب‌سازی"
                   variant="soft"
                   color="primary"
-                  class="inline-flex items-center justify-end gap-1.5 !rounded-full bg-white shadow-xl px-5 py-4 text-[12px] font-bold text-gray-600 border border-gray-100 shadow-sm"
+                  class="inline-flex items-center justify-end gap-1.5 !rounded-full bg-white shadow-xl px-5 py-4 text-small font-bold text-gray-600 border border-gray-100 shadow-sm"
                   icon="↕️"
                 />
                 <transition name="fade">
@@ -118,7 +118,7 @@
                       v-for="tab in sortOptions"
                       :key="tab"
                       @click="selectSortOption(tab)"
-                      class="w-full text-right rounded-xl px-3 py-2 text-[11px] font-bold transition-all"
+                      class="w-full text-right rounded-xl px-3 py-2 text-small font-bold transition-all"
                       :class="activeTab === tab ? 'bg-[var(--color-primary-dark)] text-white' : 'text-gray-600 hover:bg-gray-50'"
                       type="button"
                     >
@@ -132,7 +132,7 @@
                 label="فیلترها"
                 variant="soft"
                 color="primary"
-                class="inline-flex items-center justify-end gap-1.5 !rounded-full bg-white px-5 py-4 text-[12px] shadow-xl font-bold text-gray-600 border border-gray-100 shadow-sm"
+                class="inline-flex items-center justify-end gap-1.5 !rounded-full bg-white px-5 py-4 text-small shadow-xl font-bold text-gray-600 border border-gray-100 shadow-sm"
                 icon="⚙️"
               />
             </div>
@@ -140,14 +140,14 @@
 
 
           <!-- شمارش -->
-          <div class="mb-4 text-center text-xs text-gray-400 font-medium px-2" v-if="showSearchResults">
+          <div class="mb-4 text-center text-small text-gray-400 font-medium px-2" v-if="showSearchResults">
             <!-- <img src="/imgs/flight/puzzled_stag_animated_original_color.gif" alt=""> -->
             <span v-if="flightStore.loading">در حال جستجوی پروازها...</span>
             <span v-else>تعداد {{ pricedFlightsCount }} پرواز یافت شد</span>
           </div>
 
           <!-- Tabs دسکتاپ -->
-          <div class="hidden lg:flex mb-6 items-center gap-1 rounded-xl p-1 text-xs" v-if="showSearchResults">
+          <div class="hidden lg:flex mb-6 items-center gap-1 rounded-xl p-1 text-small" v-if="showSearchResults">
             <UiBaseTabs :items="sortOptions" v-model="activeTab" />
           </div>
            <div v-if="showSelectedSection" class="space-y-4 px-2 md:px-0">
@@ -172,7 +172,7 @@
   :label="editFlightButtonLabel"
   variant="filled"
   color="primary"
-  class="!rounded-3xl !px-6 h-12 text-sm"
+  class="!rounded-3xl !px-6 h-12 text-normal"
   @click="handleEditFlight"
 />
     </div>
@@ -261,7 +261,7 @@
   class="text-center py-20 text-gray-500 border-2 border-dashed border-gray-100 rounded-[2rem] bg-white shadow-sm mx-2 md:mx-0"
 >
             <p class="font-bold text-gray-700">پروازی در تاریخ انتخاب‌شده یافت نشد.</p>
-            <p class="text-xs text-gray-400 mt-2">لطفاً تاریخ یا مسیر دیگری را امتحان کنید.</p>
+            <p class="text-small text-gray-400 mt-2">لطفاً تاریخ یا مسیر دیگری را امتحان کنید.</p>
           </div>
        
 
@@ -314,7 +314,7 @@
     <div>
      <h3
       class="
-       text-[16px]
+       text-large
        font-black
        text-gray-800
       "
@@ -325,7 +325,7 @@
      <p
       class="
        mt-1
-       text-[11px]
+       text-small
        text-gray-400
       "
      >
@@ -343,7 +343,7 @@
       justify-center
       rounded-full
       bg-gray-100
-      text-2xl
+      text-large
       text-gray-500
      "
      @click="isFilterModalOpen=false"
@@ -399,7 +399,7 @@
       w-full
       !rounded-2xl
       !py-4
-      text-[13px]
+      text-normal
       font-bold
       shadow-lg
      "

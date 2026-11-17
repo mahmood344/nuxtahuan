@@ -3,6 +3,17 @@ import {computed,ref,watch,nextTick} from 'vue'
 import { useRoute } from '#app'
 import moment from 'moment-jalaali'
 import { useFlightStore } from '~/stores/flights'
+const props = defineProps({
+  // در صفحات پرواز و هتل null است و رفتار قبلی بدون تغییر می‌ماند.
+  // در صفحه اتوبوس، شماره صندلی‌های انتخاب‌شده مستقیماً به فرم منتقل می‌شود.
+  seatNumbers: { type: Array, default: null }
+})
+const isBusBooking = computed(() => Array.isArray(props.seatNumbers))
+const busSeatNumbers = computed(() =>
+  isBusBooking.value
+    ? [...new Set(props.seatNumbers.map(String))].slice(0, 10)
+    : []
+)
 const route = useRoute()
 const isHotelBooking = computed(() =>
   route.path.startsWith('/hotels')
@@ -501,10 +512,9 @@ function selectPreviousPassenger(item){
 
   const target=passengers.value[index]
 
-  const nationality=
-    normalizePassengerNationality(
-      item?.nationality
-    )
+  const nationality = isBusBooking.value
+    ? 'IR'
+    : normalizePassengerNationality(item?.nationality)
 
   const birthDate=
     parsePreviousPassengerBirthDate(
@@ -583,6 +593,10 @@ function selectPreviousPassenger(item){
   }
 
   target.errors={}
+  if (isBusBooking.value) {
+    if (target.firstName && !isValidPassengerName(target.firstName)) target.errors.firstName = 'نام باید فارسی باشد'
+    if (target.lastName && !isValidPassengerName(target.lastName)) target.errors.lastName = 'نام خانوادگی باید فارسی باشد'
+  }
 
   closePreviousPassengersModal()
 }
@@ -606,8 +620,23 @@ function onlyLatin(value) {
 }
 
 // در رزرو هتل نام فارسی و انگلیسی مجاز است؛ پرواز بدون تغییر می‌ماند.
+// فقط در رزرو اتوبوس نام و نام خانوادگی باید فارسی باشد.
+// قوانین پرواز (لاتین) و هتل (فارسی/لاتین) بدون تغییر باقی می‌مانند.
+const persianNameLetters = '[\u0621-\u063A\u0641-\u064A\u067E\u0686\u0698\u06AF\u06A9\u06CC\u200C]'
+const persianNamePattern = new RegExp(`^${persianNameLetters}+(?:\\s+${persianNameLetters}+)*$`)
+
 function normalizePassengerName(value) {
   const text = String(value ?? '')
+
+  if (isBusBooking.value) {
+    // حروف غیرفارسی را حذف نکن؛ برای نمایش خطای واضح باید در فیلد بمانند.
+    return text
+      .replace(/ي/g, 'ی')
+      .replace(/ك/g, 'ک')
+      .replace(/\s+/g, ' ')
+      .trimStart()
+  }
+
   if (!isHotelBooking.value) return onlyLatin(text)
 
   return text
@@ -618,6 +647,8 @@ function normalizePassengerName(value) {
 
 function isValidPassengerName(value) {
   const name = String(value ?? '').trim()
+
+  if (isBusBooking.value) return persianNamePattern.test(name)
   if (!isHotelBooking.value) return isValidLatinName(name)
 
   return /^[A-Za-z\u0621-\u063A\u0641-\u064A\u067E\u0686\u0698\u06AF\u06A9\u06CC\u200C]+(?:\s+[A-Za-z\u0621-\u063A\u0641-\u064A\u067E\u0686\u0698\u06AF\u06A9\u06CC\u200C]+)*$/.test(name)
@@ -685,15 +716,14 @@ function shouldShowPassport(passenger) {
 
 function getYearOptions(nationality) {
   const years = []
+  // در اتوبوس محدودیت رده سنی نداریم؛ بازه تاریخ تولد مستقل از بازه پرواز است.
+  const minYear = isBusBooking.value
+    ? (nationality === 'IR' ? 1000 : 1600)
+    : (nationality === 'IR' ? 1300 : 1920)
+  const maxYear = nationality === 'IR' ? 1405 : 2026
 
-  if (nationality === 'IR') {
-    for (let year = 1405; year >= 1300; year -= 1) {
-      years.push({ label: String(year), value: String(year) })
-    }
-  } else {
-    for (let year = 2026; year >= 1920; year -= 1) {
-      years.push({ label: String(year), value: String(year) })
-    }
+  for (let year = maxYear; year >= minYear; year -= 1) {
+    years.push({ label: String(year), value: String(year) })
   }
 
   return years
@@ -861,12 +891,24 @@ function createPassenger(type,index){
 }
 
 function initPassengers() {
-  const list = []
+  if (isBusBooking.value) {
+    // نگهداری داده‌های هر مسافر بر اساس شماره صندلی، نه ایندکس فهرست
+    const previous = new Map(passengers.value.map(item => [String(item.seatNo), item]))
+    passengers.value = busSeatNumbers.value.map((seatNo, index) => {
+      const passenger = previous.get(seatNo) || createPassenger('ADL', index)
+      passenger.seatNo = seatNo
+      passenger.nationality = 'IR'
+      passenger.countryCode = 'IR'
+      passenger.label = `صندلی ${seatNo}`
+      return passenger
+    })
+    return
+  }
 
+  const list = []
   for (let i = 0; i < adlCount.value; i += 1) list.push(createPassenger('ADL', i))
   for (let i = 0; i < chdCount.value; i += 1) list.push(createPassenger('CHD', i))
   for (let i = 0; i < infCount.value; i += 1) list.push(createPassenger('INF', i))
-
   passengers.value = list
 }
 
@@ -922,11 +964,14 @@ function validateBirthDate(passenger) {
 
   if (!passenger.birthDate.year) {
     errors.year = 'سال تولد الزامی است'
-  } else if (passenger.nationality === 'IR' && (year < 1300 || year > 1405)) {
-    errors.year = 'باید بین ۱۳۰۰ تا ۱۴۰۵ باشد'
-  } else if (passenger.nationality === 'FOREIGN' && (year < 1920 || year > 2026)) {
-    errors.year = 'باید بین ۱۹۲۰ تا ۲۰۲۶ باشد'
+  } else if (passenger.nationality === 'IR' && (year < (isBusBooking.value ? 1000 : 1300) || year > 1405)) {
+    errors.year = isBusBooking.value ? 'سال تولد نامعتبر است' : 'باید بین ۱۳۰۰ تا ۱۴۰۵ باشد'
+  } else if (passenger.nationality === 'FOREIGN' && (year < (isBusBooking.value ? 1600 : 1920) || year > 2026)) {
+    errors.year = isBusBooking.value ? 'سال تولد نامعتبر است' : 'باید بین ۱۹۲۰ تا ۲۰۲۶ باشد'
   }
+
+  // برای اتوبوس فقط معتبر بودن فیلدهای تاریخ بررسی می‌شود، نه رده سنی ADL/CHD/INF.
+  if (isBusBooking.value) return errors
 
   // اگر فرمت‌های اولیه روز/ماه/سال درست بودند، رده سنی بررسی می‌شود
   if (!errors.day && !errors.month && !errors.year) {
@@ -1074,6 +1119,12 @@ function validatePassportExpireDate(
 function validatePassenger(passenger) {
   const errors = {}
 
+  // ملیت در رزرو اتوبوس نمایش داده نمی‌شود و مقدار داخلی ایرانی است.
+  if (isBusBooking.value) {
+    passenger.nationality = 'IR'
+    passenger.countryCode = 'IR'
+  }
+
   passenger.firstName = normalizeSpaces(normalizePassengerName(passenger.firstName))
   passenger.lastName = normalizeSpaces(normalizePassengerName(passenger.lastName))
   passenger.nationalCode = onlyNumbers(passenger.nationalCode).slice(0, 10)
@@ -1085,17 +1136,21 @@ function validatePassenger(passenger) {
   if (!passenger.firstName) {
     errors.firstName = 'نام الزامی است'
   } else if (!isValidPassengerName(passenger.firstName)) {
-    errors.firstName = isHotelBooking.value
-      ? 'نام باید با حروف فارسی یا انگلیسی وارد شود'
-      : 'نام باید با حروف لاتین وارد شود'
+    errors.firstName = isBusBooking.value
+      ? 'نام باید فارسی باشد'
+      : isHotelBooking.value
+        ? 'نام باید با حروف فارسی یا انگلیسی وارد شود'
+        : 'نام باید با حروف لاتین وارد شود'
   }
 
   if (!passenger.lastName) {
     errors.lastName = 'نام خانوادگی الزامی است'
   } else if (!isValidPassengerName(passenger.lastName)) {
-    errors.lastName = isHotelBooking.value
-      ? 'نام خانوادگی باید با حروف فارسی یا انگلیسی وارد شود'
-      : 'نام خانوادگی باید با حروف لاتین وارد شود'
+    errors.lastName = isBusBooking.value
+      ? 'نام خانوادگی باید فارسی باشد'
+      : isHotelBooking.value
+        ? 'نام خانوادگی باید با حروف فارسی یا انگلیسی وارد شود'
+        : 'نام خانوادگی باید با حروف لاتین وارد شود'
   }
 
   if (!passenger.gender) {
@@ -1181,6 +1236,7 @@ function getData(){
     passenger=>({
       type:passenger.type,
       label:passenger.label,
+      ...(isBusBooking.value ? { seatNo: passenger.seatNo } : {}),
       firstName:passenger.firstName,
       lastName:passenger.lastName,
       nationality:passenger.nationality,
@@ -1235,11 +1291,17 @@ passportIssueDate:
 function onFirstNameChange(passenger, value) {
   passenger.firstName = normalizePassengerName(extractValue(value))
   clearFieldError(passenger, 'firstName')
+  if (isBusBooking.value && passenger.firstName.trim() && !isValidPassengerName(passenger.firstName)) {
+    passenger.errors.firstName = 'نام باید فارسی باشد'
+  }
 }
 
 function onLastNameChange(passenger, value) {
   passenger.lastName = normalizePassengerName(extractValue(value))
   clearFieldError(passenger, 'lastName')
+  if (isBusBooking.value && passenger.lastName.trim() && !isValidPassengerName(passenger.lastName)) {
+    passenger.errors.lastName = 'نام خانوادگی باید فارسی باشد'
+  }
 }
 
 function onNationalCodeChange(passenger, value) {
@@ -1344,16 +1406,11 @@ function onBirthYearChange(passenger, value) {
 }
 
 watch(
- ()=>[
-   route.path,
-   route.query.adl,
-   route.query.chd,
-   route.query.inf
- ],
- ()=>{
-   initPassengers()
- },
- {immediate:true}
+  () => isBusBooking.value
+    ? busSeatNumbers.value.join('|')
+    : [route.path, route.query.adl, route.query.chd, route.query.inf].join('|'),
+  () => { initPassengers() },
+  { immediate: true }
 )
 
 defineExpose({
@@ -1400,7 +1457,7 @@ defineExpose({
 />
           </div>
 
-          <div class="grid grid-cols-1 gap-5 md:grid-cols-3">
+          <div class="grid grid-cols-1 gap-5" :class="isBusBooking ? 'md:grid-cols-2' : 'md:grid-cols-3'">
             <UiBaseInput
               :model-value="passenger.firstName"
               label="نام"
@@ -1420,6 +1477,7 @@ defineExpose({
             />
 
             <UiBaseAutocomplete
+              v-if="!isBusBooking"
               :model-value="passenger.nationality"
               :items="nationalityOptions"
               item-text="label"
@@ -1487,7 +1545,7 @@ defineExpose({
               @update:model-value="onGenderChange(passenger, $event)"
             />
 
-            <div class="space-y-1 text-right md:col-span-3">
+            <div class="space-y-1 text-right" :class="isBusBooking ? 'md:col-span-2' : 'md:col-span-3'">
               <div class="mb-3 pr-1 text-xs text-gray-400">
                 تاریخ تولد
               </div>
@@ -1535,7 +1593,7 @@ defineExpose({
             </div>
             <div
   v-if="shouldShowPassport(passenger)"
-  class="space-y-1 text-right md:col-span-3"
+  class="space-y-1 text-right" :class="isBusBooking ? 'md:col-span-2' : 'md:col-span-3'"
 >
   <div class="mb-3 pr-1 text-xs text-gray-400">
     تاریخ صدور پاسپورت
@@ -1599,7 +1657,7 @@ defineExpose({
 </div>
             <div
   v-if="shouldShowPassport(passenger)"
-  class="space-y-1 text-right md:col-span-3"
+  class="space-y-1 text-right" :class="isBusBooking ? 'md:col-span-2' : 'md:col-span-3'"
 >
   <div class="mb-3 pr-1 text-xs text-gray-400">
     تاریخ انقضای پاسپورت

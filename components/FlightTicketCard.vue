@@ -18,7 +18,7 @@
 
             <div class="w-full text-center py-6">
 
-              <p class="font-bold text-[18px] text-red-500">
+              <p class="font-bold text-large text-red-500">
 
                 {{ statusMessage }}
 
@@ -82,7 +82,7 @@
 
    !py-0
 
-   text-[12px]
+   text-small
 
    font-bold
 
@@ -130,7 +130,7 @@
 
    text-center
 
-   text-[11px]
+   text-small
 
    font-bold
 
@@ -138,7 +138,7 @@
 
    md:max-w-none
 
-   md:text-[12px]
+   md:text-small
 
   "
 
@@ -190,7 +190,7 @@
 
    class="
 
-    text-[22px]
+    text-large
 
     font-bold
 
@@ -210,7 +210,7 @@
 
    class="
 
-    text-[12px]
+    text-small
 
     font-medium
 
@@ -242,7 +242,7 @@
 
             :class="activeTab === 'rules' ? 'text-blue-600 font-bold bg-gray-300' : 'text-gray-500 font-medium'"
 
-            class="text-[14px] hover:text-blue-600 transition-colors duration-300 transition-all rounded-sm py-2 px-2"
+            class="text-normal hover:text-blue-600 transition-colors duration-300 transition-all rounded-sm py-2 px-2"
 
           >
 
@@ -256,7 +256,7 @@
 
             :class="activeTab === 'info' ? 'text-blue-600 font-bold' : 'text-gray-500 font-medium'"
 
-            class="text-[14px] hover:text-blue-600 transition-colors duration-300 transition-all rounded-sm py-2 px-2"
+            class="text-normal hover:text-blue-600 transition-colors duration-300 transition-all rounded-sm py-2 px-2"
 
           >
 
@@ -278,7 +278,7 @@
 
 >
 
-  <p class="text-red-500 text-[12px] font-bold">
+  <p class="text-red-500 text-small font-bold">
 
     {{ capacityText }}
 
@@ -288,7 +288,7 @@
 
   <p
 
-    class="mt-1 text-[11px] font-bold"
+    class="mt-1 text-small font-bold"
 
     :class="
 
@@ -344,7 +344,7 @@
 
               v-if="isParto"
 
-              class="mt-2 text-[12px] font-bold text-gray-700"
+              class="mt-2 text-small font-bold text-gray-700"
 
               dir="rtl"
 
@@ -362,7 +362,7 @@
 
             <UiBaseLabel
 
-              class="mr-2 text-[12px]"
+              class="mr-2 text-small"
 
               :text="flightTypeLabel"
 
@@ -372,7 +372,7 @@
 
             <UiBaseLabel
 
-              class="mr-2 text-[12px]"
+              class="mr-2 text-small"
 
               :text="cabinLabel"
 
@@ -400,11 +400,11 @@
 
 
 
-    <div class="mt-4 flex items-center gap-3 text-gray-400 text-sm">
+    <div class="mt-4 flex items-center gap-3 text-gray-400 text-normal">
 
       <div class="flex items-center gap-1">
 
-        <span class="text-[12px]">مقصد</span>
+        <span class="text-small">مقصد</span>
 
         <i class="bi bi-geo-alt"></i>
 
@@ -452,7 +452,7 @@
 
       <div class="flex flex-row-reverse items-center gap-1">
 
-        <span class="text-[12px]">مبدا</span>
+        <span class="text-small">مبدا</span>
 
         <i class="bi bi-geo-alt"></i>
 
@@ -462,9 +462,9 @@
 
 
 
-    <div class="mt-4 flex justify-between text-sm text-gray-600">
+    <div class="mt-4 flex justify-between text-normal text-gray-600">
 
-      <span class="text-[16px] -mt-5">
+      <span class="text-large -mt-5">
 
         {{ destinationCity }}
 
@@ -472,7 +472,7 @@
 
 
 
-      <span class="text-[16px] -mt-5">
+      <span class="text-large -mt-5">
 
         {{ originCity }}
 
@@ -482,9 +482,9 @@
 
 
 
-    <div class="mt-1 flex justify-between text-sm text-gray-600">
+    <div class="mt-1 flex justify-between text-normal text-gray-600">
 
-      <span class="text-[14px]">
+      <span class="text-normal">
 
         {{ arrivalTime }}
 
@@ -492,7 +492,7 @@
 
 
 
-      <span class="text-[14px]">
+      <span class="text-normal">
 
         {{ departureTime }}
 
@@ -516,7 +516,7 @@
 
       <p
 
-        class="text-[11px] font-bold"
+        class="text-small font-bold"
 
         :class="
 
@@ -540,7 +540,7 @@
 
         v-if="outboundStopAirports.length"
 
-        class="mt-1 text-[10px] text-gray-500"
+        class="mt-1 text-small text-gray-500"
 
       >
 
@@ -562,12 +562,12 @@
 
 
 
-    <div class="mt-1 flex justify-center text-sm text-gray-500">
+    <div class="mt-1 flex justify-center text-normal text-gray-500">
 
       <span
 
         dir="rtl"
-        class="text-[14px] font-bold"
+        class="text-normal font-bold"
 
       >
 
@@ -591,11 +591,11 @@
 
     <template v-if="isRoundTripView">
 
-      <div class="mt-5 flex items-center gap-3 text-gray-400 text-sm">
+      <div class="mt-5 flex items-center gap-3 text-gray-400 text-normal">
 
         <div class="flex items-center gap-1">
 
-          <span class="text-[12px]">مقصد</span>
+          <span class="text-small">مقصد</span>
 
           <i class="bi bi-geo-alt"></i>
 
@@ -643,7 +643,7 @@
 
         <div class="flex flex-row-reverse items-center gap-1">
 
-          <span class="text-[12px]">مبدا</span>
+          <span class="text-small">مبدا</span>
 
           <i class="bi bi-geo-alt"></i>
 
@@ -653,9 +653,9 @@
 
 
 
-      <div class="mt-4 flex justify-between text-sm text-gray-600">
+      <div class="mt-4 flex justify-between text-normal text-gray-600">
 
-        <span class="text-[16px]">
+        <span class="text-large">
 
           {{ returnDestinationCity }}
 
@@ -663,7 +663,7 @@
 
 
 
-        <span class="text-[16px]">
+        <span class="text-large">
 
           {{ returnOriginCity }}
 
@@ -673,9 +673,9 @@
 
 
 
-      <div class="mt-1 flex justify-between text-sm text-gray-600">
+      <div class="mt-1 flex justify-between text-normal text-gray-600">
 
-        <span class="text-[12px]">
+        <span class="text-small">
 
           {{ returnArrivalTime }}
 
@@ -683,7 +683,7 @@
 
 
 
-        <span class="text-[12px]">
+        <span class="text-small">
 
           {{ returnDepartureTime }}
 
@@ -707,7 +707,7 @@
 
         <p
 
-          class="text-[11px] font-bold"
+          class="text-small font-bold"
 
           :class="
 
@@ -731,7 +731,7 @@
 
           v-if="returnStopAirports.length"
 
-          class="mt-1 text-[10px] text-gray-500"
+          class="mt-1 text-small text-gray-500"
 
         >
 
@@ -753,13 +753,13 @@
 
 
 
-      <div class="mt-1 flex justify-center text-sm text-gray-500">
+      <div class="mt-1 flex justify-center text-normal text-gray-500">
 
         <span
 
           dir="rtl"
 
-          class="text-[12px]"
+          class="text-small"
 
         >
 
@@ -811,7 +811,7 @@
 
       v-if="isParto"
 
-      class="mt-2 w-[150px] text-center text-[13px] font-bold text-gray-700"
+      class="mt-2 w-[150px] text-center text-normal font-bold text-gray-700"
 
       dir="rtl"
 
@@ -837,7 +837,7 @@
 
 >
 
-  <p class="text-red-500 text-[12px] font-bold">
+  <p class="text-red-500 text-small font-bold">
 
     {{ capacityText }}
 
@@ -847,7 +847,7 @@
 
   <p
 
-    class="mt-1 text-[11px] font-bold"
+    class="mt-1 text-small font-bold"
 
     :class="
 
@@ -889,7 +889,7 @@
 
               : 'text-gray-500 font-medium'"
 
-            class="text-[14px] hover:text-blue-600 duration-300 transition-all rounded-t-sm py-2 px-2"
+            class="text-normal hover:text-blue-600 duration-300 transition-all rounded-t-sm py-2 px-2"
 
           >
 
@@ -909,7 +909,7 @@
 
               : 'text-gray-500 font-medium'"
 
-            class="text-[14px] hover:text-blue-600 transition-colors duration-300 transition-all rounded-t-sm py-2 px-2"
+            class="text-normal hover:text-blue-600 transition-colors duration-300 transition-all rounded-t-sm py-2 px-2"
 
           >
 
@@ -984,11 +984,11 @@
                 </span>
 
                 <div>
-                  <h4 class="text-[13px] font-black text-gray-800">
+                  <h4 class="text-normal font-black text-gray-800">
                     خلاصه قیمت
                   </h4>
 
-                  <p class="mt-0.5 text-[10px] text-gray-400">
+                  <p class="mt-0.5 text-small text-gray-400">
                     مبلغ بر اساس مسافران انتخاب‌شده
                   </p>
                 </div>
@@ -1028,7 +1028,7 @@
                           rounded-lg
                           bg-white
                           px-2
-                          text-[10px]
+                          text-small
                           font-bold
                           text-gray-500
                           shadow-sm
@@ -1037,7 +1037,7 @@
                         ×{{ item.count }}
                       </span>
 
-                      <span class="text-[11px] font-bold text-gray-700">
+                      <span class="text-small font-bold text-gray-700">
                         {{ item.label }}
                       </span>
 
@@ -1046,11 +1046,11 @@
 
                     <div class="text-left">
 
-                      <span class="text-[12px] font-black text-gray-800">
+                      <span class="text-small font-black text-gray-800">
                         {{ formatPrice(item.total) }}
                       </span>
 
-                      <span class="mr-1 text-[9px] text-gray-400">
+                      <span class="mr-1 text-small text-gray-400">
                         ریال
                       </span>
 
@@ -1090,7 +1090,7 @@
                           rounded-lg
                           bg-white
                           px-2
-                          text-[10px]
+                          text-small
                           font-bold
                           text-gray-500
                           shadow-sm
@@ -1099,7 +1099,7 @@
                         ×1
                       </span>
 
-                      <span class="text-[11px] font-bold text-gray-700">
+                      <span class="text-small font-bold text-gray-700">
                         بزرگسال
                       </span>
 
@@ -1108,11 +1108,11 @@
 
                     <div class="text-left">
 
-                      <span class="text-[12px] font-black text-gray-800">
+                      <span class="text-small font-black text-gray-800">
                         {{ formatPrice(cardPrice) }}
                       </span>
 
-                      <span class="mr-1 text-[9px] text-gray-400">
+                      <span class="mr-1 text-small text-gray-400">
                         ریال
                       </span>
 
@@ -1140,11 +1140,11 @@
                 <div class="flex items-center justify-between gap-3">
 
                   <div>
-                    <p class="text-[10px] text-white/70">
+                    <p class="text-small text-white/70">
                       مبلغ کل
                     </p>
 
-                    <p class="mt-1 text-[10px] text-white/60">
+                    <p class="mt-1 text-small text-white/60">
                       برای همه مسافران
                     </p>
                   </div>
@@ -1152,11 +1152,11 @@
 
                   <div class="text-left">
 
-                    <span class="text-[18px] font-black">
+                    <span class="text-large font-black">
                       {{ formatPrice(panelTotalPrice) }}
                     </span>
 
-                    <span class="mr-1 text-[10px] text-white/70">
+                    <span class="mr-1 text-small text-white/70">
                       ریال
                     </span>
 
@@ -1207,11 +1207,11 @@
 
                   <div>
 
-                    <h3 class="text-[14px] font-black text-gray-800">
+                    <h3 class="text-normal font-black text-gray-800">
                       قوانین کنسلی
                     </h3>
 
-                    <p class="mt-1 text-[10px] leading-5 text-gray-400">
+                    <p class="mt-1 text-small leading-5 text-gray-400">
                       میزان جریمه با توجه به زمان لغو پرواز محاسبه می‌شود.
                     </p>
 
@@ -1230,7 +1230,7 @@
                     bg-white
                     px-3
                     py-1.5
-                    text-[9px]
+                    text-small
                     font-bold
                     text-gray-500
                     sm:inline-flex
@@ -1277,7 +1277,7 @@
                 </span>
 
 
-                <p class="text-[10px] leading-6 text-amber-800">
+                <p class="text-small leading-6 text-amber-800">
                   مبلغ نهایی استرداد ممکن است بر اساس زمان درخواست کنسلی و قوانین ایرلاین تغییر کند.
                 </p>
 
@@ -1319,7 +1319,7 @@
                       "
                     ></div>
 
-                    <p class="mt-3 text-[11px] text-gray-500">
+                    <p class="mt-3 text-small text-gray-500">
                       در حال دریافت قوانین کنسلی...
                     </p>
 
@@ -1363,7 +1363,7 @@
                       <i class="bi bi-exclamation-triangle"></i>
                     </span>
 
-                    <p class="mt-3 text-[11px] font-bold leading-6 text-red-500">
+                    <p class="mt-3 text-small font-bold leading-6 text-red-500">
                       {{ partoRulesError }}
                     </p>
 
@@ -1428,13 +1428,13 @@
 
                         <div>
 
-                          <p class="text-[11px] font-black text-gray-800">
+                          <p class="text-small font-black text-gray-800">
                             {{ rule.categoryFa || 'قوانین کنسلی' }}
                           </p>
 
                           <p
                             v-if="rule.airline"
-                            class="mt-0.5 text-[9px] text-gray-400"
+                            class="mt-0.5 text-small text-gray-400"
                           >
                             ایرلاین:
                             {{ rule.airline }}
@@ -1455,7 +1455,7 @@
                           bg-white
                           px-3
                           py-1.5
-                          text-[9px]
+                          text-small
                           font-bold
                           text-gray-500
                         "
@@ -1502,7 +1502,7 @@
 
                           <p
                             class="
-                              text-[10px]
+                              text-small
                               font-black
                               text-gray-700
                             "
@@ -1521,7 +1521,7 @@
                         <p
                           class="
                             whitespace-pre-line
-                            text-[10px]
+                            text-small
                             leading-7
                             text-gray-600
                           "
@@ -1577,7 +1577,7 @@
                       <i class="bi bi-file-earmark-x"></i>
                     </span>
 
-                    <p class="mt-3 text-[11px] font-bold text-gray-500">
+                    <p class="mt-3 text-small font-bold text-gray-500">
                       قوانین کنسلی برای این پرواز اعلام نشده است.
                     </p>
 
@@ -1623,7 +1623,7 @@
                       "
                     ></div>
 
-                    <p class="mt-3 text-[11px] text-gray-500">
+                    <p class="mt-3 text-small text-gray-500">
                       در حال دریافت اطلاعات نرخ و قوانین...
                     </p>
 
@@ -1655,7 +1655,7 @@
                       bg-gray-50
                       px-4
                       py-3
-                      text-[9px]
+                      text-small
                       font-bold
                       text-gray-400
                       sm:grid
@@ -1705,7 +1705,7 @@
                             justify-center
                             rounded-lg
                             bg-gray-100
-                            text-[10px]
+                            text-small
                             font-black
                             text-gray-500
                           "
@@ -1716,7 +1716,7 @@
 
                         <p
                           class="
-                            text-[12px]
+                            text-small
                             font-medium
                             leading-7
                             text-gray-700
@@ -1743,13 +1743,13 @@
                         "
                       >
 
-                        <span class="text-[9px] text-red-400 sm:hidden">
+                        <span class="text-small text-red-400 sm:hidden">
                           جریمه
                         </span>
 
                         <span
                           class="
-                            text-[11px]
+                            text-small
                             font-black
                             text-red-600
                           "
@@ -1800,7 +1800,7 @@
                       <i class="bi bi-file-earmark-x"></i>
                     </span>
 
-                    <p class="mt-3 text-[11px] font-bold text-gray-500">
+                    <p class="mt-3 text-small font-bold text-gray-500">
                       قوانین کنسلی برای این پرواز اعلام نشده است.
                     </p>
 
@@ -1862,11 +1862,11 @@
                 </span>
 
                 <div>
-                  <h4 class="text-[13px] font-black text-gray-800">
+                  <h4 class="text-normal font-black text-gray-800">
                     جزئیات قیمت
                   </h4>
 
-                  <p class="mt-0.5 text-[10px] text-gray-400">
+                  <p class="mt-0.5 text-small text-gray-400">
                     قیمت بر اساس مسافران انتخاب‌شده
                   </p>
                 </div>
@@ -1903,7 +1903,7 @@
                           rounded-lg
                           bg-white
                           px-2
-                          text-[10px]
+                          text-small
                           font-bold
                           text-gray-500
                           shadow-sm
@@ -1912,17 +1912,17 @@
                         ×{{ item.count }}
                       </span>
 
-                      <span class="text-[11px] font-bold text-gray-700">
+                      <span class="text-small font-bold text-gray-700">
                         {{ item.label }}
                       </span>
                     </div>
 
                     <div class="text-left">
-                      <span class="text-[14px] font-black text-gray-800">
+                      <span class="text-normal font-black text-gray-800">
                         {{ formatPrice(item.total) }}
                       </span>
 
-                      <span class="mr-1 text-[10px] text-gray-400">
+                      <span class="mr-1 text-small text-gray-400">
                         ریال
                       </span>
                     </div>
@@ -1956,7 +1956,7 @@
                           rounded-lg
                           bg-white
                           px-2
-                          text-[10px]
+                          text-small
                           font-bold
                           text-gray-500
                           shadow-sm
@@ -1965,17 +1965,17 @@
                         ×1
                       </span>
 
-                      <span class="text-[11px] font-bold text-gray-700">
+                      <span class="text-small font-bold text-gray-700">
                         بزرگسال
                       </span>
                     </div>
 
                     <div class="text-left">
-                      <span class="text-[12px] font-black text-gray-800">
+                      <span class="text-small font-black text-gray-800">
                         {{ formatPrice(cardPrice) }}
                       </span>
 
-                      <span class="mr-1 text-[9px] text-gray-400">
+                      <span class="mr-1 text-small text-gray-400">
                         ریال
                       </span>
                     </div>
@@ -1998,21 +1998,21 @@
               >
                 <div class="flex items-center justify-between gap-3">
                   <div>
-                    <p class="text-[10px] text-white/70">
+                    <p class="text-small text-white/70">
                       مبلغ کل
                     </p>
 
-                    <p class="mt-1 text-[10px] text-white/60">
+                    <p class="mt-1 text-small text-white/60">
                       برای همه مسافران
                     </p>
                   </div>
 
                   <div class="text-left">
-                    <span class="text-[18px] font-black">
+                    <span class="text-large font-black">
                       {{ formatPrice(panelTotalPrice) }}
                     </span>
 
-                    <span class="mr-1 text-[10px] text-white/70">
+                    <span class="mr-1 text-small text-white/70">
                       ریال
                     </span>
                   </div>
@@ -2056,11 +2056,11 @@
                   </span>
 
                   <div>
-                    <h3 class="text-[14px] font-black text-gray-800">
+                    <h3 class="text-normal font-black text-gray-800">
                       اطلاعات پرواز
                     </h3>
 
-                    <p class="mt-1 text-[10px] text-gray-400">
+                    <p class="mt-1 text-small text-gray-400">
                       زمان، مسیر و مشخصات پرواز
                     </p>
                   </div>
@@ -2075,7 +2075,7 @@
                     bg-white
                     px-3
                     py-1.5
-                    text-[10px]
+                    text-small
                     font-bold
                     text-gray-500
                   "
@@ -2115,7 +2115,7 @@
                       "
                     ></div>
 
-                    <p class="mt-3 text-[11px] text-gray-500">
+                    <p class="mt-3 text-small text-gray-500">
                       در حال دریافت اطلاعات نرخ...
                     </p>
                   </div>
@@ -2169,11 +2169,11 @@
                       </span>
 
                       <div>
-                        <p class="text-[12px] font-black text-gray-800">
+                        <p class="text-small font-black text-gray-800">
                           بار مجاز
                         </p>
 
-                        <p class="mt-0.5 text-[9px] text-gray-400">
+                        <p class="mt-0.5 text-small text-gray-400">
                           میزان بار قابل حمل هر مسیر
                         </p>
                       </div>
@@ -2183,7 +2183,7 @@
 
                   <div
                     v-if="loadingBaggage"
-                    class="px-4 py-5 text-center text-[11px] text-gray-500"
+                    class="px-4 py-5 text-center text-small text-gray-500"
                   >
                     در حال دریافت بار مجاز...
                   </div>
@@ -2191,7 +2191,7 @@
 
                   <div
                     v-else-if="baggageError"
-                    class="bg-red-50 px-4 py-4 text-center text-[11px] text-red-500"
+                    class="bg-red-50 px-4 py-4 text-center text-small text-red-500"
                   >
                     {{ baggageError }}
                   </div>
@@ -2223,13 +2223,13 @@
                     >
 
                       <div class="min-w-0">
-                        <p class="truncate text-[11px] font-bold text-gray-700">
+                        <p class="truncate text-small font-bold text-gray-700">
                           {{ getCityLabel(item.departure) }}
                           <i class="bi bi-arrow-left mx-1 text-gray-400"></i>
                           {{ getCityLabel(item.arrival) }}
                         </p>
 
-                        <p class="mt-1 text-[9px] text-gray-400">
+                        <p class="mt-1 text-small text-gray-400">
                           پرواز
                           {{ item.flightNo||'-' }}
                         </p>
@@ -2242,7 +2242,7 @@
                           bg-white
                           px-3
                           py-2
-                          text-[11px]
+                          text-small
                           font-black
                           text-[var(--color-primary-dark)]
                           shadow-sm
@@ -2257,7 +2257,7 @@
 
                   <div
                     v-else
-                    class="px-4 py-5 text-center text-[11px] text-gray-500"
+                    class="px-4 py-5 text-center text-small text-gray-500"
                   >
                     اطلاعات بار مجاز اعلام نشده است.
                   </div>
@@ -2323,11 +2323,11 @@
                         </span>
 
                         <div>
-                          <p class="text-[11px] font-black text-gray-800">
+                          <p class="text-small font-black text-gray-800">
                             {{ segmentTitle(index) || 'جزئیات پرواز' }}
                           </p>
 
-                          <p class="mt-0.5 text-[9px] text-gray-400">
+                          <p class="mt-0.5 text-small text-gray-400">
                             پرواز
                             {{ segment.flightNumber||'-' }}
                           </p>
@@ -2340,7 +2340,7 @@
                           bg-white
                           px-3
                           py-1.5
-                          text-[9px]
+                          text-small
                           font-bold
                           text-gray-500
                           shadow-sm
@@ -2368,11 +2368,11 @@
                         <div class="text-right">
                           <p
                             class="
-                              text-[22px]
+                              text-large
                               font-black
                               leading-none
                               text-gray-900
-                              md:text-[25px]
+                              md:text-large
                             "
                           >
                             {{ formatTime(segment.departure) }}
@@ -2381,10 +2381,10 @@
                           <p
                             class="
                               mt-3
-                              text-[13px]
+                              text-normal
                               font-black
                               text-gray-800
-                              md:text-[14px]
+                              md:text-normal
                             "
                           >
                             {{ getCityLabel(segment.origin) }}
@@ -2395,16 +2395,16 @@
                               mt-1
                               font-bold
                               line-clamp-2
-                              text-[9px]
+                              text-small
                               leading-5
                               text-gray-400
-                              md:text-[12px]
+                              md:text-small
                             "
                           >
                             {{ getAirportLabel(segment.origin) }}
                           </p>
 
-                          <p class="mt-2 text-[12px] font-bold text-gray-500">
+                          <p class="mt-2 text-small font-bold text-gray-500">
                             {{ formatFlightDate(segment.departure) }}
                           </p>
                         </div>
@@ -2428,7 +2428,7 @@
                               bg-[var(--color-primary-light)]
                               px-3
                               py-1
-                              text-[9px]
+                              text-small
                               font-bold
                               text-[var(--color-primary-dark)]
                             "
@@ -2513,11 +2513,11 @@
                         <div class="text-left">
                           <p
                             class="
-                              text-[22px]
+                              text-large
                               font-black
                               leading-none
                               text-gray-900
-                              md:text-[25px]
+                              md:text-large
                             "
                           >
                             {{ formatTime(segment.arrival) }}
@@ -2526,10 +2526,10 @@
                           <p
                             class="
                               mt-3
-                              text-[13px]
+                              text-normal
                               font-black
                               text-gray-800
-                              md:text-[14px]
+                              md:text-normal
                             "
                           >
                             {{ getCityLabel(segment.destination) }}
@@ -2540,16 +2540,16 @@
                             font-bold
                               mt-1
                               line-clamp-2
-                              text-[9px]
+                              text-small
                               leading-5
                               text-gray-400
-                              md:text-[12px]
+                              md:text-small
                             "
                           >
                             {{ getAirportLabel(segment.destination) }}
                           </p>
 
-                          <p class="mt-2 text-[12px] font-bold text-gray-500">
+                          <p class="mt-2 text-small font-bold text-gray-500">
                             {{ formatFlightDate(segment.arrival) }}
                           </p>
                         </div>
@@ -2600,11 +2600,11 @@
                           </span>
 
                           <div>
-                            <p class="text-[12px] text-gray-400">
+                            <p class="text-small text-gray-400">
                               شماره پرواز
                             </p>
 
-                            <p class="mt-1 text-[11px] font-black text-gray-700">
+                            <p class="mt-1 text-small font-black text-gray-700">
                               {{ segment.flightNumber||'-' }}
                             </p>
                           </div>
@@ -2640,11 +2640,11 @@
                           </span>
 
                           <div>
-                            <p class="text-[12px] text-gray-400">
+                            <p class="text-small text-gray-400">
                               کلاس پرواز
                             </p>
 
-                            <p class="mt-1 text-[11px] font-black text-gray-700">
+                            <p class="mt-1 text-small font-black text-gray-700">
                               {{ getSegmentCabinLabel(segment) }}
                             </p>
                           </div>
@@ -2680,7 +2680,7 @@
                           </span>
 
                           <div class="min-w-0">
-                            <p class="text-[12px] text-gray-400">
+                            <p class="text-small text-gray-400">
                               نوع هواپیما
                             </p>
 
@@ -2688,7 +2688,7 @@
                               class="
                                 mt-1
                                 truncate
-                                text-[11px]
+                                text-small
                                 font-black
                                 text-gray-700
                               "
@@ -2752,13 +2752,13 @@
                         <div class="flex items-center justify-center gap-1.5">
                           <i class="bi bi-clock-history text-[11px] text-orange-500"></i>
 
-                          <p class="text-[10px] font-black text-orange-600">
+                          <p class="text-small font-black text-orange-600">
                             توقف در
                             {{ getCityLabel(segment.destination) }}
                           </p>
                         </div>
 
-                        <p class="mt-1 text-[9px] text-gray-500">
+                        <p class="mt-1 text-small text-gray-500">
                           مدت توقف:
                           {{
                             formatDurationFromMinutes(

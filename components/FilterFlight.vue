@@ -6,7 +6,7 @@
   >
     <!-- فیلتر ساعت -->
     <div>
-      <h3 class="mb-5 text-sm font-bold text-gray-800">
+      <h3 class="mb-5 text-normal font-bold text-gray-800">
         ساعت حرکت
       </h3>
 
@@ -19,13 +19,13 @@
         />
 
         <div class="mt-4 flex items-center justify-between">
-          <div class="rounded-lg bg-gray-50 px-3 py-2 text-xs">
+          <div class="rounded-lg bg-gray-50 px-3 py-2 text-small">
             <span class="font-bold text-primary">
               {{ formatTime(selectedRange[0]) }}
             </span>
           </div>
 
-          <div class="rounded-lg bg-gray-50 px-3 py-2 text-xs">
+          <div class="rounded-lg bg-gray-50 px-3 py-2 text-small">
             <span class="font-bold text-primary">
               {{ formatTime(selectedRange[1]) }}
             </span>
@@ -36,7 +36,7 @@
       <button
         v-if="isRangeChanged"
         type="button"
-        class="mt-4 w-full rounded-xl border border-gray-200 px-3 py-2 text-xs font-bold text-gray-600 transition hover:bg-gray-50"
+        class="mt-4 w-full rounded-xl border border-gray-200 px-3 py-2 text-small font-bold text-gray-600 transition hover:bg-gray-50"
         @click="resetRange"
       >
         نمایش تمام ساعت‌ها
@@ -48,12 +48,12 @@
 
     <!-- فیلتر نوع کابین -->
     <div>
-      <h3 v-if="Object.values(availableCabins).some(Boolean)" class="mb-4 text-sm font-bold text-gray-800">
+      <h3 v-if="Object.values(availableCabins).some(Boolean)" class="mb-4 text-normal font-bold text-gray-800">
         نوع بلیت
       </h3>
 
       
-<div class="space-y-3 text-[13px]">
+<div class="space-y-3 text-normal">
   <UiBaseCheckbox
     v-if="availableCabins.economy"
     v-model="economySelected"
@@ -97,7 +97,7 @@
       <button
         v-if="isCabinFilterChanged"
         type="button"
-        class="mt-4 w-full rounded-xl border border-gray-200 px-3 py-2 text-xs font-bold text-gray-600 transition hover:bg-gray-50"
+        class="mt-4 w-full rounded-xl border border-gray-200 px-3 py-2 text-small font-bold text-gray-600 transition hover:bg-gray-50"
         @click="resetCabinFilters"
       >
         نمایش همه کلاس‌ها
@@ -108,21 +108,21 @@
 <!-- فیلتر ایرلاین -->
 <div v-if="availableAirlines.length">
   <div class="mb-4 flex items-center justify-between">
-    <h3 class="text-sm font-bold text-gray-800">
+    <h3 class="text-normal font-bold text-gray-800">
       شرکت هواپیمایی
     </h3>
 
     <button
       v-if="isAirlineFilterChanged"
       type="button"
-      class="text-[11px] font-bold text-blue-600"
+      class="text-small font-bold text-blue-600"
       @click="resetAirlineFilters"
     >
       نمایش همه
     </button>
   </div>
 
-  <div class="max-h-[260px] space-y-3 overflow-y-auto pl-1 text-[13px]">
+  <div class="max-h-[260px] space-y-3 overflow-y-auto pl-1 text-normal">
     <UiBaseCheckbox
       v-for="airline in availableAirlines"
       :key="airline.code"
@@ -135,7 +135,7 @@
 
   <!-- <p
     v-if="!selectedAirlines.length"
-    class="mt-3 text-[11px] text-gray-400"
+    class="mt-3 text-small text-gray-400"
   >
     همه شرکت‌های هواپیمایی نمایش داده می‌شوند.
   </p> -->

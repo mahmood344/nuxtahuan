@@ -16,7 +16,7 @@
     :color="activeService === s.key ? 'primary' : 'white'"
     :active="activeService === s.key"
     @click="selectService(s.key, index)"
-    class="text-[13px] font-black w-full"
+    class="text-small font-black w-full"
   :class="{
   'col-span-2 !w-[calc(100%-6px)] justify-self-center px-4':
     s.key === 'insurance'
@@ -103,7 +103,7 @@ class="grid grid-cols-2 w-fit mx-auto gap-x-6 gap-y-4 py-4 md:w-full md:max-w-[5
           <!-- دکمه جستجو در وسط -->
           <div class="flex justify-center items-center w-full mt-4">
             <UiBaseButton
-              class="w-full max-w-[280px] h-[44px] !rounded-4xl text-[13px]" 
+              class="w-full max-w-[280px] h-[44px] !rounded-4xl text-normal" 
               label="جستجو"
               variant="filled"
               color="primary"
@@ -190,7 +190,7 @@ class="grid grid-cols-2 w-fit mx-auto gap-x-6 gap-y-4 py-4 md:w-full md:max-w-[5
         :active="false"
         :disabled="!hotelCity || !hotelDate"
         @click="searchAhuanHotel"
-        class="w-full !rounded-4xl text-[13px]"
+        class="w-full !rounded-4xl text-normal"
         :class="
           isCompactSearch
             ? 'max-w-[280px] h-[44px]'
@@ -273,7 +273,7 @@ class="grid grid-cols-2 w-fit mx-auto gap-x-6 gap-y-4 py-4 md:w-full md:max-w-[5
         :active="false"
         :disabled="!snappTripCity || !snappTripDate"
         @click="searchSnappTripHotel"
-        class="w-full !rounded-4xl text-[13px]"
+        class="w-full !rounded-4xl text-normal"
         :class="
           isCompactSearch
             ? 'max-w-[280px] h-[44px]'
@@ -326,7 +326,7 @@ class="grid grid-cols-2 w-fit mx-auto gap-x-6 gap-y-4 py-4 md:w-full md:max-w-[5
         :active="false"
         :disabled="!busOrigin || !busDestination || busOrigin === busDestination || !toBusJalaliDate(busDate)"
         @click="searchBuses"
-        class="w-full !rounded-4xl text-[13px]"
+        class="w-full !rounded-4xl text-normal"
         :class="isCompactSearch ? 'max-w-[280px] h-[44px]' : 'max-w-[500px] h-[40px]'"
       />
     </div>
@@ -366,7 +366,7 @@ class="grid grid-cols-2 w-fit mx-auto gap-x-6 gap-y-4 py-4 md:w-full md:max-w-[5
 
     <p
       class="
-        text-[13px]
+        text-normal
         font-bold
         text-[var(--color-gray-500)]
       "
@@ -394,6 +394,7 @@ import {
 } from 'vue-router'
 import {useHotelStore} from '~/stores/hotels'
 import {useBusStore} from '~/stores/bus'
+import { toGregorian, toJalaali, isValidJalaaliDate } from 'jalaali-js'
 const router = useRouter()
 const route = useRoute()
 
@@ -427,9 +428,9 @@ const ahuanDateWrapperRef = ref(null)
 const snappDatePickerRef = ref(null)
 const snappDateWrapperRef = ref(null)
 
-const busOrigin = ref(null)
-const busDestination = ref(null)
-const busDate = ref(null)
+const busOrigin = ref(route.path === '/bus' ? (route.query.origin || null) : null)
+const busDestination = ref(route.path === '/bus' ? (route.query.destination || null) : null)
+const busDate = ref(route.path === '/bus' ? normalizeBusRouteDate(route.query.departDate) : null)
 const busCities = computed(() => busStore.cities || [])
 const busPopularCities = computed(() => busStore.popularCities || [])
 
@@ -590,7 +591,7 @@ const services = [
   { key: "insurance", label: "بیمه سفر", icon: "" },
 ]
 
-const activeService = ref("flight")
+const activeService = ref(route.path === '/bus' ? 'bus' : 'flight')
 const currentSlide = ref(0)
 
 async function selectService(serviceKey, index) {
@@ -730,22 +731,19 @@ function toBusJalaliDate(value) {
     .replace(/[۰-۹]/g, n => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(n)))
     .replace(/[٠-٩]/g, n => String('٠١٢٣٤٥٦٧٨٩'.indexOf(n)))
   if (raw.includes(',')) return ''
-  const match = raw.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:T.*)?$/)
+  const match = raw.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/)
     || raw.match(/^(\d{4})(\d{2})(\d{2})$/)
   if (!match) return ''
-  const [, y, m, d] = match
-  const year = Number(y), month = Number(m), day = Number(d)
-  if (month < 1 || month > 12 || day < 1 || day > 31) return ''
-  if (year >= 1300 && year < 1500) return `${y}${m.padStart(2, '0')}${d.padStart(2, '0')}`
-  const date = new Date(Date.UTC(year, month - 1, day))
-  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return ''
-  const parts = new Intl.DateTimeFormat('en-US-u-ca-persian', {
-    year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'UTC'
-  }).formatToParts(date)
-  const map = Object.fromEntries(parts.map(item => [item.type, item.value]))
-  return `${map.year}${map.month.padStart(2, '0')}${map.day.padStart(2, '0')}`
+  let year = Number(match[1]), month = Number(match[2]), day = Number(match[3])
+  if (year >= 1700) {
+    const g = new Date(Date.UTC(year, month - 1, day))
+    if (g.getUTCFullYear() !== year || g.getUTCMonth() !== month - 1 || g.getUTCDate() !== day) return ''
+    const j = toJalaali(year, month, day)
+    year = j.jy; month = j.jm; day = j.jd
+  }
+  if (!isValidJalaaliDate(year, month, day)) return ''
+  return `${year}${String(month).padStart(2, '0')}${String(day).padStart(2, '0')}`
 }
-
 
 async function searchBuses() {
   const rawDate = toBusJalaliDate(busDate.value)
@@ -1052,17 +1050,7 @@ onMounted(async() => {
     await runRouteSync(syncHotelFormFromRoute)
   }
 
-  if (route.path === '/bus') {
-    activeService.value = 'bus'
-    busOrigin.value = route.query.origin || null
-    busDestination.value = route.query.destination || null
-    busDate.value = route.query.departDate
-  ? String(route.query.departDate).replace(
-      /^(\d{4})(\d{2})(\d{2})$/,
-      '$1/$2/$3'
-    )
-  : null
-  }
+
 })
 watch(
   () => [
@@ -1128,16 +1116,32 @@ watch(
 )
 
 
+// تاریخ URL منبع اصلی فرم اتوبوس است. فرمت: 1405/08/26
+function normalizeBusRouteDate(value) {
+  const raw = String(value || '').trim()
+    .replace(/[۰-۹]/g, n => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(n)))
+    .replace(/[٠-٩]/g, n => String('٠١٢٣٤٥٦٧٨٩'.indexOf(n)))
+  const match = raw.match(/^(\d{4})[/-]?(\d{2})[/-]?(\d{2})$/)
+  if (!match) return null
+  const year = Number(match[1]), month = Number(match[2]), day = Number(match[3])
+  if (!isValidJalaaliDate(year, month, day)) return null
+  const { gy, gm, gd } = toGregorian(year, month, day)
+  return `${gy}/${String(gm).padStart(2, '0')}/${String(gd).padStart(2, '0')}`
+}
+
 watch(
-  () => [route.query.origin, route.query.destination, route.query.departDate],
-  async () => {
+  () => [route.path, route.query.origin, route.query.destination, route.query.departDate],
+  () => {
     if (route.path !== '/bus') return
-    await runRouteSync(() => {
+    // در همگام‌سازی URL زنجیره بازشدن خودکار فیلدها فعال نمی‌شود.
+    void runRouteSync(() => {
+      activeService.value = 'bus'
       busOrigin.value = route.query.origin || null
       busDestination.value = route.query.destination || null
-      busDate.value = route.query.departDate || null
+      busDate.value = normalizeBusRouteDate(route.query.departDate)
     })
-  }
+  },
+  { immediate: true, flush: 'sync' }
 )
 
 async function searchFlights() {
@@ -1254,7 +1258,7 @@ async function syncHotelFormFromRoute() {
 :deep(.hotel-city-compact input) {
   height: 44px !important;
   min-height: 44px !important;
-  font-size: 13px !important;
+  font-size: var(--text-normal) !important;
   font-weight: bold;
 }
 
@@ -1273,7 +1277,7 @@ async function syncHotelFormFromRoute() {
 
 :deep(.flight-radio-aligned label),
 :deep(.flight-radio-aligned span) {
-  font-size: 13px !important;
+  font-size: var(--text-normal) !important;
   font-weight: 300 !important;
   line-height: 1.6 !important;
   white-space: nowrap !important;
