@@ -58,7 +58,7 @@
   v-if="
     !loading &&
     !errorMessage &&
-    (isHotelBooking ? hotelVoucherRoutes.length > 0 : tickets.length > 0)
+    (isHotelBooking ? hotelVoucherRoutes.length > 0 : isBusBooking ? busTickets.length > 0 : tickets.length > 0)
   "
   class="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm print:hidden"
 >
@@ -98,13 +98,13 @@
 </button>
 
 <button
-  v-else-if="tickets.length"
+  v-else-if="isBusBooking ? busTickets.length > 0 : tickets.length > 0"
   type="button"
-  :disabled="isDownloadingPdf"
+  :disabled="isDownloadingPdf || (isBusBooking && !canDownloadBusTickets)"
   class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-700 px-6 py-3 font-semibold text-white transition hover:bg-blue-800 disabled:opacity-60"
   @click="downloadFlightTicketsPdf"
 >
-  {{ isDownloadingPdf ? 'در حال آماده‌سازی PDF...' : 'دانلود PDF بلیت' }}
+  {{ isDownloadingPdf ? 'در حال آماده‌سازی PDF...' : isBusBooking && !canDownloadBusTickets ? 'شماره بلیت تمام مسافران هنوز دریافت نشده است' : 'دانلود PDF بلیت' }}
 </button>
 
           </div>
@@ -165,6 +165,31 @@
   :route="route"
   :room-index="index"
  />
+</div>
+
+<!-- Nira Bus Tickets -->
+<div v-else-if="isBusBooking && busTickets.length" id="ticket-print-area" class="pdf-only-area">
+  <article v-for="ticket in busTickets" :key="ticket.key" class="ticket-sheet mx-auto mb-5 max-w-5xl overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-sm" dir="rtl">
+    <div class="flex flex-wrap items-center justify-between gap-3 bg-blue-900 px-6 py-5 text-white">
+      <div><h2 class="text-xl font-bold">بلیت اتوبوس</h2><p class="mt-1 text-sm">{{ ticket.companyName }}</p></div>
+      <div class="text-left"><p class="text-sm">شماره رزرو (PNR)</p><p dir="ltr" class="text-xl font-bold">{{ ticket.pnr }}</p></div>
+    </div>
+    <div v-if="ticket.isCancelled" class="border-b border-red-200 bg-red-50 px-6 py-3 text-center font-bold text-red-700">این بلیت کنسل شده است</div>
+    <div v-else-if="!ticket.isIssued" class="border-b border-amber-200 bg-amber-50 px-6 py-3 text-center font-bold text-amber-800">بلیت هنوز قطعی نشده است</div>
+    <div class="grid grid-cols-1 gap-5 px-6 py-6 sm:grid-cols-2">
+      <div><p class="text-xs text-slate-500">مسافر</p><p class="mt-1 font-bold">{{ ticket.passengerName }}</p></div>
+      <div><p class="text-xs text-slate-500">شماره بلیت</p><p dir="ltr" class="mt-1 text-right font-bold">{{ ticket.ticketNo || 'صادر نشده' }}</p></div>
+      <div><p class="text-xs text-slate-500">مبدأ / پایانه</p><p class="mt-1 font-bold">{{ ticket.originName }}</p></div>
+      <div><p class="text-xs text-slate-500">مقصد / پایانه</p><p class="mt-1 font-bold">{{ ticket.destinationName }}</p></div>
+      <div><p class="text-xs text-slate-500">تاریخ حرکت</p><p class="mt-1 font-bold">{{ ticket.departureDate }}</p></div>
+      <div><p class="text-xs text-slate-500">ساعت حرکت</p><p dir="ltr" class="mt-1 text-right font-bold">{{ ticket.departureTime }}</p></div>
+      <div><p class="text-xs text-slate-500">شماره صندلی</p><p class="mt-1 font-bold">{{ ticket.seatNo }}</p></div>
+      <div><p class="text-xs text-slate-500">کد حرکت</p><p dir="ltr" class="mt-1 break-all text-right text-sm font-semibold">{{ ticket.segment }}</p></div>
+      <div><p class="text-xs text-slate-500">مقصد نهایی سرویس</p><p class="mt-1 font-semibold">{{ ticket.finalDestination }}</p></div>
+      <div><p class="text-xs text-slate-500">وضعیت</p><p class="mt-1 font-semibold">{{ ticket.isCancelled ? 'کنسل شده' : ticket.isIssued ? 'صادر شده' : 'در انتظار صدور' }}</p></div>
+    </div>
+    <div class="border-t border-slate-200 px-6 py-3 text-xs text-slate-500">شرکت خدمات مسافرتی آهوان · شماره قرارداد: {{ contractData?.id }}</div>
+  </article>
 </div>
 
 <!-- Flight Tickets -->
@@ -588,6 +613,13 @@ const isDownloadingPdf = ref(false)
 const errorMessage = ref('')
 
 const contractData = ref<any>(null)
+type BusPrintableTicket = { key:string; pnr:string; ticketNo:string; seatNo:string; passengerName:string; originName:string; destinationName:string; departureDate:string; departureTime:string; segment:string; finalDestination:string; companyName:string; isCancelled:boolean; isIssued:boolean }
+const busTickets=ref<BusPrintableTicket[]>([])
+const canDownloadBusTickets=computed(()=>busTickets.value.length>0&&busTickets.value.every(t=>String(t.ticketNo??'').trim().length>0))
+const isBusBooking=computed(()=>{
+ const contract=contractData.value
+ return contract?.travelVehicle==='اتوبوس'||(Array.isArray(contract?.contractBuses)&&contract.contractBuses.some((b:any)=>String(b?.providerCode||'').toUpperCase()==='NIRABUS'))
+})
 const isHotelBooking=computed(
  ()=>contractData.value?.hotel===true
 )
@@ -5113,6 +5145,7 @@ const partoSessionCookie=
 // }
 const downloadFlightTicketsPdf =
   async () => {
+    if(isBusBooking.value&&!canDownloadBusTickets.value){toast.error('شماره بلیت تمام مسافران هنوز دریافت نشده است.');return}
 
     if(
       typeof window === 'undefined'
@@ -5391,7 +5424,7 @@ isDownloadingPdf.value = true
 
 
       pdf.save(
-        `flight-tickets-${
+        `${isBusBooking.value ? 'bus' : 'flight'}-tickets-${
           contractId ||
           'ahuan'
         }.pdf`
@@ -5418,6 +5451,52 @@ isDownloadingPdf.value = true
   isDownloadingPdf.value = false
 }
   }
+const processBusTickets=async(contract:any)=>{
+ const buses=Array.isArray(contract?.contractBuses)?contract.contractBuses:[]
+ const passengers=Array.isArray(contract?.contractPassengers)?contract.contractPassengers:[]
+ const requests=new Map<string,{origin:string;co:string;pnr:string;bus:any}>()
+ for(const bus of buses){
+  if(String(bus?.providerCode||'').toUpperCase()!=='NIRABUS')continue
+  const origin=String(bus?.providerOrigin||'').trim()
+  const co=String(bus?.providerCompanyCode||'').trim()
+  const pnrs=[...new Set([bus?.providerPnr,...passengers.map((p:any)=>p?.goTicketPNR)].map(v=>String(v||'').trim()).filter(Boolean))]
+  for(const pnr of pnrs){
+   if(!origin||!co)continue
+   requests.set(`${origin}|${co}|${pnr}`,{origin,co,pnr,bus})
+  }
+ }
+ if(!requests.size)throw new Error('اطلاعات PNR، مبدأ یا شرکت اتوبوس در قرارداد کامل نیست.')
+ const results:BusPrintableTicket[]=[]
+ for(const {origin,co,pnr,bus} of requests.values()){
+  const response=await $fetch<any>('https://api.ahuan.ir/api/nira-bus/pnr-info',{method:'GET',query:{origin,co,pnr}})
+  const info=response?.data??response
+  if(!info||!Array.isArray(info.passengers))throw new Error(`اطلاعات مسافران رزرو ${pnr} از نیرا دریافت نشد.`)
+  const status=String(info.status||'').trim().toUpperCase()
+  const used=new Set<number>()
+  for(const [index,item] of info.passengers.entries()){
+   const seatNo=String(item?.seatNo||'').trim()
+   const contractIndex=passengers.findIndex((p:any,i:number)=>!used.has(i)&&String(p?.goTicketPNR||'').trim()===pnr&&String(p?.goBusSeatNo||'').trim()===seatNo)
+   const passenger=contractIndex>=0?passengers[contractIndex]:null
+   if(contractIndex>=0)used.add(contractIndex)
+   const ticketNo=String(item?.ticketID||'').trim()
+   const isCancelled=status==='CANCELED'||status==='REFUNDED'||String(item?.cancel||'').trim()==='2'||Boolean(String(item?.refundUser||'').trim())
+   results.push({
+    key:`${pnr}-${seatNo}-${index}`,pnr,ticketNo,seatNo,
+    passengerName:String(item?.passengerFullName||`${passenger?.fName||''} ${passenger?.lName||''}`).trim()||'-',
+    originName:String(info.originName||info.origin||origin),
+    destinationName:String(info.destinationName||info.destination||bus?.providerDestination||'-'),
+    departureDate:String(info.departureDate||'-'),departureTime:String(info.departureTime||'-'),
+    segment:String(info.segment||bus?.providerMoveCode||'-'),
+    finalDestination:String(info.serviceFinalDestinationName||info.serviceFinalDestination||'-'),
+    companyName:String(bus?.companyName||bus?.providerCompanyName||co),
+    isCancelled,isIssued:status==='TICKETED'&&!!ticketNo&&!isCancelled
+   })
+  }
+ }
+ if(!results.length)throw new Error('هیچ مسافری در اطلاعات رزرو نیرا یافت نشد.')
+ busTickets.value=results
+}
+
 const initializePage = async () => {
 
   loading.value = true
@@ -5425,6 +5504,7 @@ const initializePage = async () => {
   errorMessage.value = ''
 
   tickets.value = []
+  busTickets.value = []
 
   try {
 
@@ -5441,7 +5521,9 @@ const initializePage = async () => {
   contractId
  )
 
-if(!isHotelBooking.value){
+if(isBusBooking.value){
+ await processBusTickets(contractData.value)
+}else if(!isHotelBooking.value){
  await processContractTickets(
   contractData.value
  )

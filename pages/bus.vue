@@ -205,8 +205,7 @@
                 :loading="busContactSubmitting"
                 @submit="handleBusContactSubmit"
               />
-              <p v-if="busFormMessage" class="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-normal text-blue-800">{{ busFormMessage }}</p>
-              <p class="text-small text-gray-500">اطلاعات هر مسافر را در فرم صندلی خودش وارد کنید؛ شماره تماس و ایمیل را هم در فرم اطلاعات تماس تکمیل کنید.</p>
+                <p class="text-small text-gray-500">اطلاعات هر مسافر را در فرم صندلی خودش وارد کنید؛ شماره تماس و ایمیل را هم در فرم اطلاعات تماس تکمیل کنید.</p>
             </div>
             <p v-else class="rounded-xl bg-gray-50 p-4 text-normal text-gray-600">برای نمایش فرم مسافران و اطلاعات تماس، ابتدا حداقل یک صندلی انتخاب کنید.</p>
           </div>
@@ -306,7 +305,6 @@
               @reset-travel-card="resetBusTravelCard"
               @clear-travel-card-error="busTravelCardError = ''"
             />
-            <p v-if="busPaymentMessage" class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-normal text-amber-800">{{ busPaymentMessage }}</p>
           </div>
 
         </section>
@@ -500,6 +498,8 @@ function mapNiraBus(raw, index) {
 
 }
 
+const toast = useToast()
+
 const route = useRoute()
 
 const router = useRouter()
@@ -526,7 +526,7 @@ const busPaymentLoading = ref(false)
 const busShaparakFormRef = ref(null)
 const busShaparak = reactive({ bankToken: '' })
 const BUS_PAYMENT_SESSION_KEY = 'flight_payment_session' // قرارداد ذخیره‌سازی مشترک؛ verify هنوز برای اتوبوس بررسی نشده است.
-const BUS_PAYMENT_TEST_BEFORE_VERIFY = true // تست مراحل قرارداد و پرداخت، بدون انتقال به درگاه یا verify
+const BUS_PAYMENT_TEST_BEFORE_VERIFY = false // تا زمان تأیید سازگاری verify و صدور بلیت نیرا، پرداخت واقعی غیرفعال است
 
 
 function busToEnglishDigits(value) {
@@ -627,11 +627,17 @@ function formatBusContractDate(value) {
   return `${gy}-${String(gm).padStart(2, '0')}-${String(gd).padStart(2, '0')}`
 }
 
+// فقط عنوان نوع اتوبوس را برای قرارداد نگه می‌داریم؛ توضیحات بعد از خط تیره حذف می‌شوند.
+function normalizeBusType(value) {
+  const text = String(value ?? '').trim()
+  return text.split(/\s*[-–—]\s*/)[0].trim().slice(0, 50)
+}
+
 // به تعداد صندلی‌ها ContractBus می‌سازیم؛ DTO فیلد مجزای شماره صندلی ندارد.
 function mapBusContractRows(bus, seats, contact) {
   const raw = bus?.meta?.raw || {}
   const originInfo = getBusOriginInfo(bus)
-  const mobile = busToEnglishDigits(contact?.recipientPhone || contact?.phone || '').replace(/\D/g, '')
+  const mobile = getBusRecipientMobile(contact)
   return seats.map(seat => ({
     id: 0,
     contractId: 0,
@@ -640,7 +646,7 @@ function mapBusContractRows(bus, seats, contact) {
     orgTerminal: originInfo.terminal,
     dstTerminal: String(bus.getOffPlace || raw.getOffPlace || ''),
     companyName: String(bus.companyName || ''),
-    busType: String(bus.busType || raw.type || ''),
+    busType: normalizeBusType(bus.busType || raw.type),
     busTypeDetails: String(bus.busTypeCode || raw.typeE || ''),
     finalDestination: String(raw.finalDestinationName || raw.finalDestination || bus.destinationName || ''),
     date: formatBusContractDate(bus.departureDate || raw.departureDate),
@@ -775,6 +781,7 @@ async function handleBusTravelCardApply(cardNumber) {
     const credit = Number(response?.credit)
     if (!response || response.credit == null || !Number.isFinite(credit) || credit < 0) {
       busTravelCardError.value = 'اطلاعات کارت معتبر نیست.'
+      toast.error(busTravelCardError.value)
       return
     }
     busTravelCardData.value = response
@@ -787,6 +794,7 @@ async function handleBusTravelCardApply(cardNumber) {
     busTravelCardError.value = typeof error?.data === 'string'
       ? error.data
       : error?.data?.message || 'چنین شماره کارتی یافت نشد.'
+    toast.error(busTravelCardError.value)
     console.error('Bus travel card API error:', error)
   } finally {
     if (requestId === busTravelCardRequestId) busTravelCardLoading.value = false
@@ -842,15 +850,15 @@ function buildBusUpdateContractPayload(contract, draft) {
   const contractPassengers = mappedPassengers.map((p, i) => {
     const savedPassenger = passengers[i]
     if (!(Number(savedPassenger?.id) > 0)) throw new Error(`شناسه مسافر ${i + 1} در قرارداد معتبر نیست.`)
-    return { ...savedPassenger, ...p, id: Number(savedPassenger.id), contractId: id }
+    return { ...savedPassenger, ...p, id: Number(savedPassenger.id), contractId: id, goTicketPNR: String(draft.busReservation?.pnr || savedPassenger.goTicketPNR || '').trim() || null }
   })
   const contractBus = rows.map((row, i) => ({
     ...mapBusContractRows(draft.bus, [draft.seats[i]], draft.contact)[0],
     id: Number(row.id) || 0,
     contractId: id,
-    providerPnr: row.providerPnr ?? null,
-    providerStatus: row.providerStatus ?? null,
-    reservedAt: row.reservedAt ?? null,
+    providerPnr: draft.busReservation?.pnr ?? row.providerPnr ?? null,
+    providerStatus: draft.busReservation?.pnr ? 'Reserved' : (row.providerStatus ?? null),
+    reservedAt: draft.busReservation?.reservedAt ?? row.reservedAt ?? null,
     providerOperationStatus: row.providerOperationStatus ?? null,
     providerPendingAction: row.providerPendingAction ?? null,
     lastProviderError: row.lastProviderError ?? null
@@ -897,6 +905,97 @@ async function continueBusPayment(session) {
   if (!busShaparakFormRef.value) throw new Error('فرم درگاه بانکی پیدا نشد.')
   HTMLFormElement.prototype.submit.call(busShaparakFormRef.value)
 }
+// اعتبار قابل استفاده نیرا باید پیش از ارسال درخواست رزرو بررسی شود.
+const BUS_CREDIT_UNAVAILABLE_MESSAGE = 'در حال حاضر امکان رزرو این بلیط وجود ندارد'
+
+async function ensureNiraBusCredit(draft) {
+  const price = Number(draft?.bus?.priceFrom)
+  const count = draft?.seats?.length ?? 0
+  const totalPrice = price * count
+  if (!Number.isSafeInteger(totalPrice) || totalPrice <= 0 || !Number.isInteger(count) || count < 1)
+    throw new Error(BUS_CREDIT_UNAVAILABLE_MESSAGE)
+
+  let response
+  try {
+    response = await $fetch('https://api.ahuan.ir/api/nira-bus/credit', { method: 'GET' })
+  } catch (error) {
+    console.error('Nira bus credit request failed:', error)
+    throw new Error(BUS_CREDIT_UNAVAILABLE_MESSAGE)
+  }
+
+  const amount = response?.data?.usableCreditAmount
+  const normalized = busToEnglishDigits(amount).trim()
+  // از تبدیل مقدار نامعتبر به صفر یا مقایسه اعداد اعشاری جلوگیری می‌کنیم.
+  if (response?.success === false || response?.isSuccess === false ||
+      (response?.error && String(response.error).trim().toLowerCase() !== 'no error') ||
+      !/^\d+$/.test(normalized))
+    throw new Error(BUS_CREDIT_UNAVAILABLE_MESSAGE)
+
+  try {
+    if (BigInt(normalized) < BigInt(totalPrice)) throw new Error(BUS_CREDIT_UNAVAILABLE_MESSAGE)
+  } catch {
+    throw new Error(BUS_CREDIT_UNAVAILABLE_MESSAGE)
+  }
+  return true
+}
+
+// درخواست رزرو موقت نیرا؛ فقط یک بار برای هر پیش‌نویس اجرا می‌شود.
+function buildNiraReservePayload(draft) {
+  const { bus, passengers, contact, seats } = draft
+  const raw = bus?.meta?.raw || {}
+  const payload = {
+    origin: String(raw.tripOrigin || bus.origin || '').trim(),
+    destination: String(raw.finalDestination || bus.finalDestination || raw.tripDestination || bus.destination || '').trim(),
+    co: String(bus.companyCode || raw.companyCode || '').trim(),
+    seg: String(bus.moveCode || raw.moveCode || '').trim(),
+    cellPhone: getBusRecipientMobile(contact),
+    AT: 'R',
+    passengers: passengers.map((p, index) => ({
+      seatNo: busToEnglishDigits(seats[index]).trim(),
+      firstName: String(p.firstName || '').trim(),
+      lastName: String(p.lastName || '').trim(),
+      gender: p.gender === 'male' || p.gender === true,
+      nationalID: busToEnglishDigits(p.nationalCode).trim(),
+      birthDate: busBirthDateToIso(p.birthDate),
+      nationality: 'OTR'
+    }))
+  }
+  if (!payload.origin || !payload.destination || !payload.co || !payload.seg)
+    throw new Error('کدهای مسیر، شرکت یا حرکت نیرا کامل نیستند.')
+  if (payload.passengers.length !== seats.length || !payload.passengers.length ||
+      payload.passengers.some(p => !p.seatNo || !p.firstName || !p.lastName || !p.nationalID || !p.birthDate))
+    throw new Error('اطلاعات مسافران برای رزرو نیرا کامل نیست.')
+  return payload
+}
+
+async function reserveNiraBus(draft) {
+  if (draft.busReservation?.pnr) return draft.busReservation
+  if (draft.busReservation?.status === 'unknown')
+    throw new Error('نتیجه رزرو قبلی مشخص نیست. پیش از تلاش مجدد، وضعیت رزرو را از نیرا بررسی کنید.')
+  const payload = buildNiraReservePayload(draft)
+  // در خطای شبکه، ممکن است رزرو سمت نیرا انجام شده باشد؛ درخواست را کورکورانه تکرار نکن.
+  draft.busReservation = { status: 'unknown', payload }
+  let response
+  try {
+    response = await $fetch('https://api.ahuan.ir/api/nira-bus/reserve', {
+      method: 'POST', body: payload, headers: { 'Content-Type': 'application/json' }
+    })
+  } catch (error) {
+    throw new Error(error?.data?.message || error?.message || 'نتیجه درخواست رزرو نیرا نامشخص است؛ وضعیت رزرو را بررسی کنید.')
+  }
+  const data = response?.data ?? response
+  const pnr = data?.pnr ?? data?.PNR ?? data?.providerPnr ?? data?.reservation?.pnr ?? data?.reservation?.PNR
+  const failed = response?.success === false || response?.isSuccess === false || data?.success === false || data?.isSuccess === false
+  if (failed) {
+    draft.busReservation = null
+    throw new Error(response?.message || data?.message || data?.error || 'رزرو نیرا ناموفق بود.')
+  }
+  if (!pnr || typeof pnr !== 'string' && typeof pnr !== 'number')
+    throw new Error('پاسخ رزرو نیرا PNR قابل تشخیص ندارد؛ قبل از درخواست مجدد، وضعیت رزرو را بررسی کنید.')
+  draft.busReservation = { pnr: String(pnr), confirmed: true, status: 'reserved', reservedAt: new Date().toISOString(), response }
+  return draft.busReservation
+}
+
 async function handleBusPaymentSubmit() {
   if (busPaymentLoading.value) return
   busPaymentMessage.value = ''
@@ -907,14 +1006,17 @@ async function handleBusPaymentSubmit() {
     if (!draft || !contract?.response || !contract?.payload) throw new Error('قرارداد ثبت‌شده موجود نیست.')
     if (draft.seats.length !== draft.passengers.length) throw new Error('تعداد مسافران و صندلی‌ها برابر نیست.')
     const paymentData = createBusPaymentData(draft.contact)
-    // در حالت تست، صرفاً تا آماده‌سازی پرداخت پیش می‌رویم؛ هیچ وجهی دریافت نمی‌شود.
-    // قبل از پرداخت واقعی، رزرو نیرا و سازگاری verify باید تکمیل و تأیید شوند.
-    if (!BUS_PAYMENT_TEST_BEFORE_VERIFY && (!draft.busReservation?.pnr || draft.busReservation?.confirmed !== true))
+    // اگر همین پیش‌نویس قبلاً PNR گرفته، درخواست رزرو تکرار نمی‌شود.
+    // در غیر این صورت ابتدا اعتبار کل بلیت‌ها کنترل می‌شود.
+    if (!draft.busReservation?.pnr) await ensureNiraBusCredit(draft)
+    await reserveNiraBus(draft)
+    if (!draft.busReservation?.pnr || draft.busReservation?.confirmed !== true)
       throw new Error('رزرو صندلی در نیرا تأیید نشده است؛ پرداخت واقعی مجاز نیست.')
     const updated = await updateBusContract(contract, draft)
     const session = {
       contractId: updated.contractId, ...paymentData,
       bookingType: 'bus', providerCode: 'NIRABUS',
+      busReservation: { origin: String(draft.bus.meta?.raw?.tripOrigin || draft.bus.origin || '').trim(), co: String(draft.bus.companyCode || '').trim(), pnr: String(draft.busReservation.pnr) },
       providerResults: draft.busReservation?.pnr
         ? [{ supplier: 'NIRABUS', pnr: draft.busReservation.pnr,
           moveCode: draft.bus.moveCode, seats: [...draft.seats] }]
@@ -923,19 +1025,21 @@ async function handleBusPaymentSubmit() {
     }
     sessionStorage.setItem(BUS_PAYMENT_SESSION_KEY, JSON.stringify(session))
     if (BUS_PAYMENT_TEST_BEFORE_VERIFY) {
-      busPaymentMessage.value = `تست موفق: Contract/update انجام شد. شماره قرارداد: ${updated.contractId}؛ روش پرداخت: ${paymentData.type}؛ مبلغ: ${paymentData.payableAmount.toLocaleString('fa-IR')} ریال. اطلاعات پرداخت ذخیره شد. انتقال به درگاه و verify در حالت تست غیرفعال است.`
+      busPaymentMessage.value = `رزرو موقت نیرا و Contract/update انجام شد. شماره قرارداد: ${updated.contractId}؛ روش پرداخت: ${paymentData.type}؛ مبلغ: ${paymentData.payableAmount.toLocaleString('fa-IR')} ریال. اطلاعات پرداخت ذخیره شد. انتقال به درگاه و verify تا تأیید فرایند صدور بلیت غیرفعال است.`
+      toast.success(busPaymentMessage.value)
       return
     }
     await continueBusPayment(session)
   } catch (error) {
     busPaymentMessage.value = error?.data?.message || error?.message || 'خطا در آماده‌سازی پرداخت اتوبوس.'
+    toast.error(busPaymentMessage.value)
     console.error('Bus payment error:', error)
   } finally { busPaymentLoading.value = false }
 }
 
 function updateBusDraftPassengers(passengers) {
   if (!busBookingDraft.value || !Array.isArray(passengers)) return
-  busBookingDraft.value = { ...busBookingDraft.value, passengers }
+  busBookingDraft.value = { ...busBookingDraft.value, passengers: passengers.map((p, index) => ({ ...p, seatNo: String(busBookingDraft.value.seats[index] || '') })) }
 }
 function updateBusDraftContact(contact) {
   if (!busBookingDraft.value || !contact) return
@@ -946,6 +1050,7 @@ async function handleBusContactSubmit() {
   busFormMessage.value = ''
   if (!selectedBus.value || selectedSeatNumbers.value.length === 0) {
     busFormMessage.value = 'ابتدا حداقل یک صندلی انتخاب کنید.'
+    toast.error(busFormMessage.value)
     return
   }
   busContactSubmitting.value = true
@@ -955,6 +1060,7 @@ async function handleBusContactSubmit() {
     const contactValid = await busContactFormRef.value?.validateAll?.()
     if (!passengersValid || !contactValid) {
       busFormMessage.value = 'لطفاً اطلاعات مسافران و اطلاعات تماس را کامل و صحیح وارد کنید.'
+      toast.error(busFormMessage.value)
       return
     }
     const passengers = busPassengerFormRef.value.getData()
@@ -974,7 +1080,7 @@ async function handleBusContactSubmit() {
     busBookingDraft.value = {
       bus: selectedBus.value,
       seats,
-      passengers,
+      passengers: passengers.map((p, index) => ({ ...p, seatNo: String(seats[index]) })),
       contact,
       contract: contract.response
     }
@@ -984,6 +1090,7 @@ async function handleBusContactSubmit() {
   } catch (error) {
     console.error('Bus Contract/add error:', error)
     busFormMessage.value = error?.data?.message || error?.response?._data?.message || error?.message || 'ثبت قرارداد اتوبوس ناموفق بود.'
+    toast.error(busFormMessage.value)
   } finally {
     busContactSubmitting.value = false
     busContractSubmitting.value = false

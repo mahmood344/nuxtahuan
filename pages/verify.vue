@@ -233,7 +233,7 @@
 </div>
           <!-- اطلاعات پرواز صادر شده -->
           <div
-            v-if="contractData && !isHotelBooking" 
+            v-if="contractData && !isHotelBooking && !isBusBooking" 
             class="mb-6 rounded-2xl border border-green-100 bg-green-50 p-5 text-center"
           >
             <div
@@ -365,7 +365,8 @@ type PaymentSession={
  mobile?:string
  travelType?:string
 
- bookingType?:'flight'|'hotel'
+ bookingType?:'flight'|'hotel'|'bus'
+  busReservation?:{origin:string;co:string;pnr:string}
 
  hotel?:{
   hotelId:number|string
@@ -405,6 +406,7 @@ const travelType = computed(() => {
 })
 
 const flightSteps=computed(()=>{
+ if(paymentInfo.value?.bookingType==='bus')return[{icon:'🚌',label:'انتخاب اتوبوس'},{icon:'📄',label:'تکمیل اطلاعات'},{icon:'💳',label:'تایید و پرداخت'},{icon:'🎫',label:'دریافت بلیت'}]
  if(paymentInfo.value?.bookingType==='hotel'){
   return[
   //  {icon:'🏨',label:'انتخاب هتل'},
@@ -2662,6 +2664,10 @@ const updateContract = async (
           ? responseData.contractPassengers
           : contract.contractPassengers,
 
+      contractBuses:
+        Array.isArray(responseData.contractBuses)
+          ? responseData.contractBuses : contract.contractBuses,
+
       contractFlights:
         Array.isArray(responseData.contractFlights)
           ? responseData.contractFlights
@@ -3810,6 +3816,183 @@ await sendHotelSms(
   throw error
  }
 }
+// Nira Bus: one PNR for all passengers. Never infer tickets from array position.
+const busText=(value:any)=>String(value??'').trim()
+const busError=(r:any)=>r?.success===false||r?.isSuccess===false||
+  (!!busText(r?.error)&&busText(r.error).toLowerCase()!=='no error')||r?.requiresReconciliation===true
+const busReservationOf=(session:PaymentSession,contract:any)=>{
+  const buses=(Array.isArray(contract?.contractBuses)?contract.contractBuses:[])
+    .filter((b:any)=>busText(b.providerCode).toUpperCase()==='NIRABUS')
+  const passengers=Array.isArray(contract?.contractPassengers)?contract.contractPassengers:[]
+  const pnrs=[...new Set(passengers.map((p:any)=>busText(p.goTicketPNR)).filter(Boolean))]
+  const sessionPnr=busText(session.busReservation?.pnr)
+  const pnr=busText(sessionPnr||pnrs[0]||buses[0]?.providerPnr)
+  const origin=busText(session.busReservation?.origin||buses[0]?.providerOrigin)
+  const co=busText(session.busReservation?.co||buses[0]?.providerCompanyCode)
+  if(!buses.length||!passengers.length||!pnr||!origin||!co)
+    throw new Error('اطلاعات قرارداد اتوبوس یا PNR نیرا کامل نیست.')
+  if(pnrs.some(x=>x!==pnr)||passengers.some((p:any)=>busText(p.goTicketPNR)!==pnr))
+    throw new Error('PNR همه مسافران با رزرو نیرا یکسان نیست.')
+  if(buses.some((b:any)=>
+    (busText(b.providerPnr)&&busText(b.providerPnr)!==pnr)||
+    busText(b.providerOrigin)!==origin||busText(b.providerCompanyCode)!==co))
+    throw new Error('اطلاعات شرکت، مبدأ یا PNR سرویس‌های اتوبوس یکسان نیست.')
+  return{pnr,origin,co,buses}
+}
+const busChangeStatus=async(r:ReturnType<typeof busReservationOf>,AT:'T'|'X')=>{
+  const result=await $fetch<any>('https://api.ahuan.ir/api/nira-bus/change-pnr-status',{
+    method:'POST',body:{origin:r.origin,co:r.co,pnr:r.pnr,AT}
+  })
+  if(busError(result)||busText(result?.operationStatus).toUpperCase()!=='COMPLETED')
+    throw new Error(busText(result?.error||result?.message)||'نتیجه تغییر وضعیت PNR قطعی نیست.')
+  if(result?.data?.pnr&&busText(result.data.pnr)!==r.pnr)
+    throw new Error('PNR پاسخ تغییر وضعیت با قرارداد مطابقت ندارد.')
+  return result
+}
+const busPnrInfo=async(r:ReturnType<typeof busReservationOf>)=>{
+  const result=await $fetch<any>('https://api.ahuan.ir/api/nira-bus/pnr-info',{
+    method:'GET',query:{origin:r.origin,co:r.co,pnr:r.pnr}
+  })
+  if(busError(result)||!result?.data||busText(result.data.pnr)!==r.pnr)
+    throw new Error('اطلاعات PNR نیرا دریافت نشد یا با قرارداد مطابقت ندارد.')
+  return result.data
+}
+const busSave=async(contract:any,step:string)=>{
+  const saved=await trySaveContractStep(contract,step)
+  contractData.value=saved.contract
+  if(!saved.success)throw new Error(`ثبت قرارداد در مرحله ${step} ناموفق بود: ${saved.error}`)
+  return saved.contract
+}
+const busRecordPayment=(session:PaymentSession,contract:any)=>{
+  const bank=getBankPaymentDetails(session)
+  if(bank.paymentId||bank.rrn||bank.traceNo)
+    contract.paymentId=[bank.amount,bank.rrn,bank.traceNo,bank.paymentId].join('-')
+}
+const busMark=(r:ReturnType<typeof busReservationOf>,status:string,operation:string,pending:string|null=null,error:string|null=null)=>{
+  for(const bus of r.buses){
+    bus.providerPnr=r.pnr;bus.providerStatus=status
+    bus.providerOperationStatus=operation;bus.providerPendingAction=pending;bus.lastProviderError=error
+  }
+}
+const busSendSms=async(session:PaymentSession,contract:any)=>{
+  const mobile=busText(session.mobile||contract?.userName)
+  if(!/^09\d{9}$/.test(mobile))return
+  const url=`https://ahuan.ir/downloadticket/${encodeContractId(contract.id)}`
+  try{
+    const result=await $fetch<any>('https://api.ahuan.ir/api/Auth/Send-Sms',{
+      method:'POST',body:{mobile,sms:`لینک دریافت بلیت اتوبوس:
+${url}
+شرکت خدمات مسافرتی آهوان`}
+    })
+    if(result?.success===false||(result?.error&&busText(result.error).toLowerCase()!=='no error'))
+      throw new Error('ارسال پیامک ناموفق بود.')
+  }catch(error){console.error('Bus SMS failed:',error)}
+}
+const processBusVerify=async(session:PaymentSession)=>{
+  let contract=contractData.value
+  const r=busReservationOf(session,contract)
+  const key=`nira_bus_final_${session.contractId}_${r.pnr}`
+  const previous=sessionStorage.getItem(key)
+  const bankPayment=session.type==='gateway'||session.type==='travelcard-gateway'
+  const bankCode=busText(route.query.code)
+  if(previous==='SUCCESS'||(busText(contract.ticketStatus).toLowerCase()==='confirm'&&
+    (contract.contractPassengers||[]).every((p:any)=>busText(p.goTicketNumber)))){
+    statusStep.value='SUCCESS';return
+  }
+  if(previous==='X'||previous==='CANCELED'){
+    statusStep.value='BANK_FAILED';throw new Error('رزرو موقت اتوبوس لغو شده است.')
+  }
+  if(bankPayment&&bankCode!=='00'){
+    // No callback or an unknown result is not proof of failed payment.
+    if(!bankCode){statusStep.value='BANK_FAILED';throw new Error('نتیجه پرداخت بانکی مشخص نیست؛ از لغو رزرو خودداری شد.')}
+    busRecordPayment(session,contract)
+    try{
+      const response=await busChangeStatus(r,'X')
+      busMark(r,'CANCELED',busText(response.operationStatus))
+      sessionStorage.setItem(key,'X')
+    }catch(error:any){
+      busMark(r,'RESERVED','Unknown','X',busText(error?.message))
+      console.error('Nira bus cancel failed; temporary reservation expires automatically:',error)
+    }
+    contract.ticketStatus='temp-first';contract.confirmStatus='temp'
+    await busSave(contract,'bus-bank-failed')
+    statusStep.value='BANK_FAILED'
+    throw new Error(bankCode==='17'?'پرداخت لغو شد.':'پرداخت بانکی ناموفق بود؛ وضعیت رزرو ثبت شد.')
+  }
+  if(bankPayment){
+    try{contract=await verifyAndApplyBankPayment(session,contract)}
+    catch(error){statusStep.value='BANK_FAILED';throw error}
+    contract=await busSave(contract,'bus-bank-verified')
+  }
+  // Reconcile a previously sent T using PNR Info instead of issuing it again.
+  let info:any=null
+  if(previous==='T_SENT'||previous==='T_COMPLETED'){
+    info=await busPnrInfo(r)
+    if(busText(info.status).toUpperCase()!=='TICKETED'){
+      statusStep.value='ISSUE_FAILED'
+      throw new Error('')
+    }
+  }else{
+    if(previous==='X_PENDING')throw new Error('لغو قبلی رزرو در حال بررسی است.')
+    sessionStorage.setItem(key,'T_SENT')
+    try{
+      const response=await busChangeStatus(r,'T')
+      busMark(r,'TICKETED',busText(response.operationStatus))
+      sessionStorage.setItem(key,'T_COMPLETED')
+    }catch(error){
+      statusStep.value='ISSUE_FAILED'
+      throw new Error('نتیجه تأیید نیرا نامشخص است. درخواست را تکرار نکنید؛ PNR باید بررسی شود.')
+    }
+    info=await busPnrInfo(r)
+  }
+  if(busText(info.status).toUpperCase()!=='TICKETED'){
+    statusStep.value='ISSUE_FAILED'
+    throw new Error(`وضعیت PNR برابر ${busText(info.status)||'نامشخص'} است.`)
+  }
+  const passengers=Array.isArray(contract.contractPassengers)?contract.contractPassengers:[]
+  const tickets=Array.isArray(info.passengers)?info.passengers:[]
+  if(!passengers.length||tickets.length!==passengers.length)
+    throw new Error('تعداد مسافران نیرا با قرارداد برابر نیست.')
+  const bySeat=new Map<string,any>()
+  for(const ticket of tickets){
+    const seat=busText(ticket.seatNo)
+    if(!seat||bySeat.has(seat))throw new Error('شماره صندلی نامعتبر یا تکراری در PNR Info.')
+    bySeat.set(seat,ticket)
+  }
+  const numbers=new Set<string>()
+  for(const passenger of passengers){
+    const seat=busText(passenger.goBusSeatNo)
+    const ticket=bySeat.get(seat)
+    const number=busText(ticket?.ticketID)
+    if(!ticket||!number||numbers.has(number))
+      throw new Error(`شماره بلیت صندلی ${seat||'-'} صادر نشده یا تکراری است.`)
+    if(busText(ticket.refundUser)||Number(ticket.refundPenalty||0)>0||Number(ticket.refundCashPayment||0)>0||
+      ['2','CANCELED','REFUNDED'].includes(busText(ticket.cancel).toUpperCase()))
+      throw new Error(`صندلی ${seat} لغوشده یا مسترد است.`)
+    numbers.add(number)
+    passenger.goTicketPNR=r.pnr
+    passenger.goTicketNumber=number
+    passenger.goTicketStatus='TICKETED'
+  }
+  busMark(r,'TICKETED','Completed')
+  contract.ticketStatus='confirm';contract.confirmStatus='confirm'
+  contract=await busSave(contract,'bus-ticketed')
+  sessionStorage.setItem(key,'SUCCESS')
+  statusStep.value='SUCCESS'
+  // Settlement is not attempted before tickets are issued.
+  if((session.type==='travelcard'||session.type==='travelcard-gateway')&&Number(session.travelCardAmount||0)>0){
+    const amount=Math.floor(Number(session.travelCardAmount))
+    try{
+      const settlement=await updateSafarCardAfterIssue(session,contract,amount)
+      if(!settlement.success||!settlement.attempted)
+        throw new Error(settlement.error||'تسویه سفرکارت انجام نشد.')
+    }catch(error){console.error('Bus issued but SafarCard settlement needs follow-up:',error)
+      toast.error('بلیت صادر شد اما تسویه سفرکارت نیازمند پیگیری است؛ خرید را تکرار نکنید.')}
+  }
+  await busSendSms(session,contract)
+  toast.success('بلیت اتوبوس تمام مسافران صادر شد.')
+}
+
 const processVerify=async()=>{
   loading.value=true
   errorMessage.value=''
@@ -3853,6 +4036,10 @@ if(session.bookingType==='hotel'){
  await processHotelVerify(
   session
  )
+ return
+}
+if(session.bookingType==='bus'){
+ await processBusVerify(session)
  return
 }
     /*
@@ -4322,6 +4509,7 @@ ${voucherUrl}`
     console.error('Hotel SMS: Buyer mobile not found')
   }
 }
+const isBusBooking=computed(()=>paymentInfo.value?.bookingType==='bus')
 const isHotelBooking=computed(
  ()=>paymentInfo.value?.bookingType==='hotel'
 )
@@ -4344,530 +4532,3 @@ const getDownloadTicketRoute = (
 }
 </script>
 
-
-/*
-|--------------------------------------------------------------------------
-| FLOW کامل صفحه Verify و صدور بلیت
-|--------------------------------------------------------------------------
-|
-| این صفحه چهار نوع پرداخت را پشتیبانی می‌کند:
-|
-| 1) agency
-|    پرداخت اعتباری آژانس
-|
-| 2) travelcard
-|    پرداخت کامل با سفرکارت
-|
-| 3) travelcard-gateway
-|    پرداخت ترکیبی سفرکارت و درگاه بانکی
-|
-| 4) gateway
-|    پرداخت کامل از درگاه بانکی
-|
-|--------------------------------------------------------------------------
-| مرحله 1: خواندن اطلاعات پرداخت
-|--------------------------------------------------------------------------
-|
-| اطلاعات پرداخت از SessionStorage با کلید زیر خوانده می‌شود:
-|
-| flight_payment_session
-|
-| نمونه:
-|
-| {
-|   contractId:10824,
-|   type:'travelcard-gateway',
-|   totalPrice:1000000,
-|   payableAmount:700000,
-|   travelCardUsed:true,
-|   travelCardAmount:300000,
-|   travelCardNumber:'123456789',
-|   mobile:'09109306731',
-|   email:'asd@gmail.com',
-|   travelType:'round-trip'
-| }
-|
-| اگر Session وجود نداشته باشد:
-|
-| - فرآیند متوقف می‌شود.
-| - Issue انجام نمی‌شود.
-| - Refund انجام نمی‌شود.
-| - وضعیت صفحه BANK_FAILED می‌شود.
-|
-|--------------------------------------------------------------------------
-| مرحله 2: دریافت شناسه قرارداد
-|--------------------------------------------------------------------------
-|
-| شناسه قرارداد ابتدا از URL خوانده می‌شود:
-|
-| route.query.responseData
-|
-| در صورت نبودن آن، از Session خوانده می‌شود:
-|
-| session.contractId
-|
-| نمونه URL:
-|
-| /verify?responseData=10824
-|
-| اگر شناسه قرارداد نامعتبر باشد، فرآیند متوقف می‌شود.
-|
-|--------------------------------------------------------------------------
-| مرحله 3: دریافت قرارداد
-|--------------------------------------------------------------------------
-|
-| اطلاعات کامل قرارداد از این سرویس دریافت می‌شود:
-|
-| GET /api/Contract/{contractId}
-|
-| قیمت مسیرها از خود قرارداد خوانده می‌شود:
-|
-| contract.totalPrice
-|   قیمت نهایی Fare پرواز رفت یا پرواز یک‌طرفه
-|
-| contract.totalPrice2
-|   قیمت نهایی Fare پرواز برگشت
-|
-| مبلغ کل قرارداد:
-|
-| contract.totalPrice + contract.totalPrice2
-|
-| در پرواز یک‌طرفه totalPrice2 برابر صفر است.
-|
-|--------------------------------------------------------------------------
-| مرحله 4: تشخیص نیاز به Verify بانکی
-|--------------------------------------------------------------------------
-|
-| فقط این دو نوع پرداخت باید Verify بانکی شوند:
-|
-| gateway
-| travelcard-gateway
-|
-| این دو نوع بدون Verify بانکی وارد Issue نمی‌شوند.
-|
-| این دو نوع Verify بانکی ندارند:
-|
-| agency
-| travelcard
-|
-|--------------------------------------------------------------------------
-| مرحله 5: بررسی پاسخ بانک
-|--------------------------------------------------------------------------
-|
-| برای پرداخت‌های بانکی ابتدا code بررسی می‌شود:
-|
-| code === '00'
-|   تراکنش از سمت بانک موفق اعلام شده و باید Verify شود.
-|
-| code === '17'
-|   کاربر از پرداخت منصرف شده است.
-|   Issue و Refund انجام نمی‌شوند.
-|
-| هر code دیگری:
-|   پرداخت ناموفق است.
-|   Issue و Refund انجام نمی‌شوند.
-|
-| پارامترهای موردنیاز Verify:
-|
-| traceNo
-| rrn
-| token
-| paymentId
-| amount
-|
-| سپس سرویس زیر صدا زده می‌شود:
-|
-| POST /api/Tejarat/Verify
-|
-| فقط در صورتی که Verify موفق باشد، فرآیند ادامه پیدا می‌کند.
-|
-|--------------------------------------------------------------------------
-| مرحله 6: ذخیره اطلاعات بانکی
-|--------------------------------------------------------------------------
-|
-| بعد از Verify موفق، اطلاعات تراکنش داخل paymentId قرارداد
-| با ساختار زیر ذخیره می‌شود:
-|
-| amount-rrn-traceNo-paymentId
-|
-| نمونه:
-|
-| 700000-963258741852-45896321-987654321
-|
-| این اطلاعات برای Refund احتمالی آینده لازم هستند.
-|
-| همچنین Snapshot پرداخت داخل flightJson تمام پروازها ثبت می‌شود:
-|
-| {
-|   version:1,
-|   payment:{
-|     type:'travelcard-gateway',
-|     contractTotal:1000000,
-|     bankAmount:700000,
-|     travelCardUsed:true,
-|     travelCardAmount:300000,
-|     travelCardNumber:'****6789',
-|     recordedAt:'...'
-|   }
-| }
-|
-| سپس قرارداد با مرحله bank-verify ذخیره می‌شود.
-|
-| اگر Update این مرحله ناموفق شود:
-|
-| - اطلاعات در حافظه contract باقی می‌ماند.
-| - فرآیند Issue متوقف نمی‌شود.
-| - نام مرحله در failedSaveSteps ثبت می‌شود.
-| - در Update بعدی، اطلاعات قبلی همراه اطلاعات جدید دوباره ارسال می‌شود.
-|
-|--------------------------------------------------------------------------
-| مرحله 7: صدور مستقل پروازها
-|--------------------------------------------------------------------------
-|
-| هر پرواز بر اساس flightSupplier خودش صادر می‌شود.
-|
-| برای NIRA:
-|
-| GET /api/Nira/ETIssue
-|
-| پارامترها:
-|
-| AirLine
-| PNR
-| Email
-|
-| هر پرواز به‌صورت مستقل Issue می‌شود.
-|
-| بنابراین در رفت‌وبرگشت ممکن است:
-|
-| - هر دو موفق باشند.
-| - فقط رفت موفق باشد.
-| - فقط برگشت موفق باشد.
-| - هر دو ناموفق باشند.
-|
-| معیار موفقیت NIRA:
-|
-| وجود حداقل یک Tickets غیرخالی در AirNRSTICKETS
-|
-| نتیجه صدور هر پرواز داخل flightJson همان پرواز ثبت می‌شود:
-|
-| {
-|   issue:{
-|     provider:'NIRA',
-|     status:'success' | 'failed',
-|     pnr:'...',
-|     ticketNumbers:['...'],
-|     message:'...',
-|     response:{...},
-|     attemptedAt:'...'
-|   }
-| }
-|
-| اگر همه پروازها موفق باشند:
-|
-| ticketStatus = 'confirm'
-| confirmStatus = 'confirm'
-|
-| اگر حداقل یک پرواز ناموفق باشد:
-|
-| ticketStatus = 'incomplete'
-| confirmStatus = 'incomplete'
-|
-| بعد از صدور، قرارداد با مرحله flight-issue ذخیره می‌شود.
-|
-|--------------------------------------------------------------------------
-| مرحله 8: محاسبه نتیجه مالی
-|--------------------------------------------------------------------------
-|
-| مبلغ پروازهای موفق و ناموفق بر اساس نتیجه Issue محاسبه می‌شود.
-|
-| پرواز اول:
-|
-| contract.totalPrice
-|
-| پرواز دوم:
-|
-| contract.totalPrice2
-|
-| مثال:
-|
-| totalPrice  = 400000
-| totalPrice2 = 600000
-|
-| اگر فقط رفت موفق باشد:
-|
-| successfulAmount = 400000
-| failedAmount     = 600000
-|
-| اگر فقط برگشت موفق باشد:
-|
-| successfulAmount = 600000
-| failedAmount     = 400000
-|
-| اگر هر دو موفق باشند:
-|
-| successfulAmount = 1000000
-| failedAmount     = 0
-|
-| اگر هر دو ناموفق باشند:
-|
-| successfulAmount = 0
-| failedAmount     = 1000000
-|
-|--------------------------------------------------------------------------
-| مرحله 9: تسویه پرداخت آژانسی
-|--------------------------------------------------------------------------
-|
-| session.type === 'agency'
-|
-| در پرداخت آژانسی:
-|
-| - Verify بانک انجام نمی‌شود.
-| - سفرکارت کسر نمی‌شود.
-| - Refund بانکی انجام نمی‌شود.
-| - فقط نتیجه Issue و وضعیت قرارداد ذخیره می‌شود.
-| - برای پروازهای موفق و ناموفق پیامک مستقل ارسال می‌شود.
-|
-|--------------------------------------------------------------------------
-| مرحله 10: تسویه پرداخت فقط سفرکارت
-|--------------------------------------------------------------------------
-|
-| session.type === 'travelcard'
-|
-| بعد از مشخص‌شدن نتیجه Issue:
-|
-| فقط سهم پروازهای موفق از سفرکارت کسر می‌شود.
-|
-| اگر همه پروازها موفق باشند:
-|
-| کسر سفرکارت = کل مبلغ سفرکارت
-|
-| اگر فقط یک پرواز موفق باشد:
-|
-| کسر سفرکارت = سهم همان پرواز موفق
-|
-| اگر همه پروازها ناموفق باشند:
-|
-| کسر سفرکارت = صفر
-|
-| چون کسر سفرکارت بعد از Issue انجام می‌شود، برای پروازهای
-| ناموفق نیازی به بازگرداندن اعتبار نیست؛ از ابتدا کسر نمی‌شود.
-|
-| نتیجه کسر سفرکارت داخل flightJson پروازهای موفق ثبت می‌شود:
-|
-| {
-|   safarCard:{
-|     status:'success' | 'failed' | 'not-required',
-|     deductedAmount:...,
-|     response:{...},
-|     error:'...',
-|     attemptedAt:'...'
-|   }
-| }
-|
-| سپس قرارداد با مرحله safar-card ذخیره می‌شود.
-|
-|--------------------------------------------------------------------------
-| مرحله 11: تسویه پرداخت فقط درگاه
-|--------------------------------------------------------------------------
-|
-| session.type === 'gateway'
-|
-| اگر همه پروازها موفق باشند:
-|
-| bankRefund = 0
-|
-| اگر یک پرواز ناموفق باشد:
-|
-| bankRefund = قیمت همان مسیر ناموفق
-|
-| اگر همه پروازها ناموفق باشند:
-|
-| bankRefund = کل مبلغ پرداخت‌شده از بانک
-|
-| مبلغ Refund هرگز نباید بیشتر از مبلغ واقعی پرداخت‌شده
-| از درگاه باشد.
-|
-| قبل از فراخوانی Refund:
-|
-| refund.status = 'pending'
-|
-| داخل flightJson پروازهای ناموفق ذخیره می‌شود و قرارداد با
-| مرحله refund-pending Update می‌شود.
-|
-| سپس سرویس Refund فراخوانی می‌شود.
-|
-| نتیجه Refund داخل flightJson ثبت می‌شود:
-|
-| {
-|   refund:{
-|     status:'success' | 'failed',
-|     amount:...,
-|     response:{...},
-|     error:'...',
-|     attemptedAt:'...'
-|   }
-| }
-|
-| سپس قرارداد با مرحله refund-result ذخیره می‌شود.
-|
-|--------------------------------------------------------------------------
-| مرحله 12: تسویه سفرکارت + درگاه
-|--------------------------------------------------------------------------
-|
-| session.type === 'travelcard-gateway'
-|
-| مبلغ هر پرواز بین سهم بانک و سفرکارت تقسیم می‌شود.
-|
-| برای بخش موفق:
-|
-| - فقط سهم سفرکارت پروازهای موفق کسر می‌شود.
-| - سهم بانکی پروازهای موفق نزد شرکت باقی می‌ماند.
-|
-| برای بخش ناموفق:
-|
-| - سهم بانکی پروازهای ناموفق Refund می‌شود.
-| - سهم سفرکارت پروازهای ناموفق کسر نمی‌شود.
-|
-| مثال:
-|
-| مبلغ کل قرارداد: 1,000,000
-| بانک:             700,000
-| سفرکارت:          300,000
-|
-| سهم بانک:    70 درصد
-| سهم سفرکارت: 30 درصد
-|
-| اگر پرواز 400,000 ریالی موفق و پرواز 600,000 ریالی
-| ناموفق باشد:
-|
-| سهم بانکی پرواز موفق:    280,000
-| سهم سفرکارت پرواز موفق:  120,000
-| Refund بانکی:             420,000
-| سفرکارت کسرنشده:          180,000
-|
-| ابتدا نتیجه سفرکارت ذخیره می‌شود.
-| سپس Refund به حالت pending ذخیره می‌شود.
-| بعد Refund انجام و نتیجه نهایی ثبت می‌شود.
-|
-|--------------------------------------------------------------------------
-| مرحله 13: ذخیره نهایی قرارداد
-|--------------------------------------------------------------------------
-|
-| بعد از تمام عملیات مالی، Update نهایی با مرحله final
-| انجام می‌شود.
-|
-| این Update باید تمام اطلاعات انباشته‌شده را ذخیره کند:
-|
-| - paymentId
-| - payment داخل flightJson
-| - نتیجه Issue
-| - شماره بلیت‌ها
-| - وضعیت هر پرواز
-| - نتیجه سفرکارت
-| - وضعیت Refund
-| - پاسخ Providerها
-| - ticketStatus
-| - confirmStatus
-|
-| اگر ذخیره نهایی ناموفق باشد:
-|
-| - عملیات پرداخت، Issue، Refund یا سفرکارت دوباره اجرا نمی‌شود.
-| - وضعیت صفحه ISSUE_FAILED می‌شود.
-| - کاربر باید با پشتیبانی تماس بگیرد.
-|
-|--------------------------------------------------------------------------
-| مرحله 14: ارسال پیامک
-|--------------------------------------------------------------------------
-|
-| برای هر پرواز یک پیامک مستقل ساخته می‌شود.
-|
-| اگر پرواز موفق باشد:
-|
-| - اطلاعات پرواز
-| - شماره پرواز
-| - تاریخ و ساعت
-| - مسیر
-| - PNR
-| - لینک دانلود بلیت
-|
-| ارسال می‌شود.
-|
-| اگر پرواز ناموفق باشد:
-|
-| پیام عدم موفقیت صدور و پیگیری توسط کارشناسان ارسال می‌شود.
-|
-| خطای پیامک نباید نتیجه اصلی پرداخت و صدور را تغییر دهد.
-|
-|--------------------------------------------------------------------------
-| مرحله 15: تعیین وضعیت نهایی صفحه
-|--------------------------------------------------------------------------
-|
-| BANK_FAILED:
-|
-| - انصراف از بانک
-| - code ناموفق
-| - پارامترهای ناقص بانک
-| - Verify ناموفق
-| - خطا در ارتباط با Verify
-|
-| ISSUE_FAILED:
-|
-| - یک یا چند پرواز صادر نشده‌اند.
-| - کسر سفرکارت ناموفق شده است.
-| - Refund ناموفق شده است.
-| - ذخیره نهایی قرارداد ناموفق شده است.
-|
-| SUCCESS:
-|
-| - تمام پروازها موفق صادر شده‌اند.
-| - عملیات مالی موردنیاز موفق بوده است.
-| - قرارداد نهایی ذخیره شده است.
-|
-|--------------------------------------------------------------------------
-| نکات مهم
-|--------------------------------------------------------------------------
-|
-| 1) برای پرواز یک‌طرفه:
-|
-| totalPrice  = قیمت پرواز
-| totalPrice2 = 0
-|
-| همین Flow بدون تغییر کار می‌کند.
-|
-| 2) برای رفت‌وبرگشت:
-|
-| totalPrice  = قیمت رفت
-| totalPrice2 = قیمت برگشت
-|
-| 3) نوع پرداخت باید دقیقاً یکی از این مقادیر باشد:
-|
-| agency
-| travelcard
-| travelcard-gateway
-| gateway
-|
-| مقدار اشتباه agancy نباید استفاده شود.
-|
-| 4) paymentId فقط پس از Verify موفق بانک ذخیره می‌شود.
-|
-| 5) اگر بانک پرداخت را تأیید نکرده باشد، Refund نباید
-| فراخوانی شود.
-|
-| 6) Refund فقط وقتی انجام می‌شود که:
-|
-| - پرداخت بانکی Verify شده باشد.
-| - یک یا چند پرواز ناموفق باشند.
-| - bankRefund بیشتر از صفر باشد.
-|
-| 7) totalPrice و totalPrice2 بعد از کنسلی یا Refund تغییر
-| نمی‌کنند؛ این دو قیمت اصلی Fare مسیرها هستند.
-|
-| 8) وضعیت‌های مالی و سوابق عملیات داخل flightJson ثبت می‌شوند.
-|
-| 9) Update ناموفق در مراحل میانی نباید Issue یا عملیات مالی
-| انجام‌شده را دوباره اجرا کند. اطلاعات در حافظه باقی می‌ماند
-| و در Update بعدی دوباره برای ذخیره ارسال می‌شود.
-|
-|--------------------------------------------------------------------------
-*/
