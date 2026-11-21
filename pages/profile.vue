@@ -1845,10 +1845,46 @@
 
 
      <!-- ================================================= -->
+      <!-- ================================================= -->
+      <!-- Bus Contract - same responsive pattern as flight -->
+      <!-- ================================================= -->
+      <section v-if="isBusContract(selectedContract)" class="mt-7">
+        <h2 class="mb-4 text-[15px] font-black text-gray-800 sm:mb-5 sm:text-lg">لیست بلیت‌ها</h2>
+        <div v-if="busTicketRows.length" class="space-y-3 md:hidden">
+          <div v-for="row in busTicketRows" :key="row.key" class="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+            <div class="flex items-center justify-between bg-[#edf7ff] px-4 py-3">
+              <div><p class="text-[10px] text-gray-400">مسافر</p><p class="mt-1 text-[12px] font-black text-gray-800">{{ row.passengerName }}</p></div>
+              <span class="rounded-full bg-white px-3 py-1.5 text-[10px] font-bold text-[#14179e]">{{ row.status }}</span>
+            </div>
+            <div class="p-4">
+              <div class="grid grid-cols-2 gap-x-4 gap-y-5 text-[11px]">
+                <div v-for="field in busFields(row)" :key="field.label"><p class="text-gray-400">{{ field.label }}</p><p class="mt-1 break-all font-bold">{{ field.value }}</p></div>
+              </div>
+              <div class="mt-4 grid grid-cols-2 gap-2 border-t border-gray-100 pt-4">
+                <button type="button" class="w-full rounded-xl border px-4 py-3 text-[11px] font-bold" :class="row.canCancel ? 'border-amber-300 text-amber-700' : 'cursor-not-allowed border-gray-200 text-gray-400'" :disabled="!row.canCancel" @click="handleBusCancel(row)">کنسل کردن</button>
+                <button type="button" class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-[11px] font-bold text-[#14179e]" @click="downloadBusTicket()">دانلود بلیت</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div v-if="busTicketRows.length" class="hidden overflow-x-auto rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.08)] md:block">
+          <table class="w-full min-w-[1100px] border-collapse text-center text-sm">
+            <thead class="bg-[#d9effd] text-gray-800"><tr>
+              <th class="px-4 py-4">نام مسافر</th><th class="px-4 py-4">مبدأ</th><th class="px-4 py-4">مقصد</th><th class="px-4 py-4">مبلغ</th><th class="px-4 py-4">شماره بلیت</th><th class="px-4 py-4">شماره صندلی</th><th class="px-4 py-4">تاریخ حرکت</th><th class="px-4 py-4">ساعت حرکت</th><th class="px-4 py-4">شرکت مسافربری</th><th class="px-4 py-4">وضعیت</th><th class="px-4 py-4">عملیات</th>
+            </tr></thead>
+            <tbody><tr v-for="row in busTicketRows" :key="row.key" class="border-b border-gray-100 last:border-b-0">
+              <td class="px-4 py-5">{{ row.passengerName }}</td><td class="px-4 py-5">{{ row.origin }}</td><td class="px-4 py-5">{{ row.destination }}</td><td class="px-4 py-5">{{ formatPrice(row.amount) }}</td><td class="px-4 py-5">{{ row.ticketNumber }}</td><td class="px-4 py-5">{{ row.seatNo }}</td><td class="px-4 py-5">{{ row.departureDate }}</td><td class="px-4 py-5">{{ row.departureTime }}</td><td class="px-4 py-5">{{ row.company }}</td><td class="px-4 py-5">{{ row.status }}</td>
+              <td class="px-4 py-5"><div class="flex justify-center gap-2"><button type="button" class="rounded border px-4 py-2.5 text-xs font-bold" :class="row.canCancel ? 'border-amber-300 text-amber-700' : 'cursor-not-allowed border-gray-200 text-gray-400'" :disabled="!row.canCancel" @click="handleBusCancel(row)">کنسل کردن</button><button type="button" class="rounded border border-gray-300 px-4 py-2.5 text-xs text-[#14179e]" @click="downloadBusTicket()">دانلود بلیت</button></div></td>
+            </tr></tbody>
+          </table>
+        </div>
+        <div v-if="!busTicketRows.length" class="rounded-xl bg-gray-50 p-8 text-center text-sm text-gray-500">اطلاعات بلیتی برای این سفارش ثبت نشده است.</div>
+      </section>
+
      <!-- Flight Contract -->
      <!-- ================================================= -->
      <section
-      v-if="isFlightContract(selectedContract)"
+      v-else-if="isFlightContract(selectedContract)"
       class="mt-7"
      >
       <h2
@@ -4480,6 +4516,14 @@ function getPassengerCount(contract) {
 
 function getRouteCountTitle(contract) {
   if (!contract) return '-'
+  if (isBusContract(contract)) {
+    const buses = Array.isArray(contract.contractBuses) ? contract.contractBuses : []
+    const uniqueRoutes = new Set(buses.map(bus => [
+      bus.providerCode || '', bus.providerMoveCode || '', bus.direction ?? '',
+      bus.orgCityName || '', bus.dstCityName || '', bus.date || '', bus.time || ''
+    ].join('|')))
+    return `${uniqueRoutes.size} مسیر`
+  }
 
   const flights = Array.isArray(contract.contractFlights)
     ? contract.contractFlights
@@ -4570,7 +4614,15 @@ function getContractStatusTitle(contract) {
   return status || '-'
 }
 
+function isBusContract(contract) {
+  return Boolean(
+    (Array.isArray(contract?.contractBuses) && contract.contractBuses.length > 0) ||
+    ['اتوبوس', 'BUS'].includes(String(contract?.travelVehicle || '').trim().toUpperCase())
+  )
+}
+
 function isFlightContract(contract) {
+  if (isBusContract(contract)) return false
   return Boolean(
     contract?.ticket === true ||
     (
@@ -4584,6 +4636,7 @@ function isFlightContract(contract) {
 }
 
 function getContractServiceType(contract) {
+  if (isBusContract(contract)) return 'بلیت اتوبوس'
   if (contract?.hotel === true) {
     return 'هتل'
   }
@@ -5156,6 +5209,50 @@ function upsertCancellation(
   }
 
   documentValue.cancellations=list
+}
+
+
+const busTicketRows = computed(() => {
+  const contract = selectedContract.value
+  if (!isBusContract(contract)) return []
+  const buses = Array.isArray(contract?.contractBuses) ? contract.contractBuses : []
+  const passengers = Array.isArray(contract?.contractPassengers) ? contract.contractPassengers : []
+  return passengers.flatMap((p, i) => {
+    const bus = buses[0] || {}
+    const number = String(p.goTicketNumber || '').trim()
+    const rawStatus = String(p.goTicketStatus || contract?.ticketStatus || '').trim().toUpperCase()
+    const status = /CANCEL|REFUND|لغو|استرداد/.test(rawStatus) ? 'لغو شده' : number ? 'صادر شده' : 'در انتظار صدور'
+    return [{
+      key: `bus-${contract?.id}-${p.id ?? i}`, passengerName: [p.fName, p.lName].filter(Boolean).join(' ') || '-',
+      origin: bus.orgCityName || bus.originName || bus.tripOriginName || bus.originCity || bus.origin || '-',
+      destination: bus.dstCityName || bus.destinationName || bus.selectedDestinationName || bus.destinationCity || bus.destination || '-',
+      departureDate: bus.date || bus.departureDate || bus.depDate || bus.moveDate || '-',
+      departureTime: bus.time || bus.departureTime || bus.depTime || bus.moveTime || '-',
+      company: bus.companyName || bus.busCompanyName || '-',
+      ticketNumber: number || '-', seatNo: p.goBusSeatNo || '-',
+      amount: Number(p.goTicketPrice || bus.price || 0), status,
+      canCancel: Boolean(number && status === 'صادر شده')
+    }]
+  })
+})
+function busFields(row) {
+  return [
+    { label: 'مبدأ', value: row.origin }, { label: 'مقصد', value: row.destination },
+    { label: 'تاریخ حرکت', value: row.departureDate }, { label: 'ساعت حرکت', value: row.departureTime },
+    { label: 'شرکت مسافربری', value: row.company }, { label: 'شماره بلیت', value: row.ticketNumber },
+    { label: 'شماره صندلی', value: row.seatNo }, { label: 'مبلغ', value: formatPrice(row.amount) }
+  ]
+}
+function downloadBusTicket() {
+  const id = selectedContract.value?.id
+  if (!id) return toast.error('شناسه قرارداد یافت نشد.')
+  navigateTo(`/downloadticket/${window.btoa(String(id))}`)
+}
+function handleBusCancel(row) {
+  if (!row?.canCancel) return
+  // No Nira Bus cancellation/penalty API is present in this component.
+  // Never call the flight cancellation flow for bus tickets.
+  toast.error('سرویس بررسی جریمه و کنسلی اتوبوس هنوز به این صفحه متصل نشده است.')
 }
 
 const ticketRows=computed(()=>{
@@ -7241,6 +7338,7 @@ const contractsError = ref('')
 const contracts = ref([])
 const showAllContracts = ref(false)
 function isTicketContract(contract) {
+  if (isBusContract(contract)) return true
   return Boolean(
     contract?.ticket === true ||
     (
@@ -7351,6 +7449,7 @@ function getContractTimestamp(contract) {
 }
 
 function getContractType(contract) {
+  if (isBusContract(contract)) return 'بلیت اتوبوس'
   const types = []
 
   if (
