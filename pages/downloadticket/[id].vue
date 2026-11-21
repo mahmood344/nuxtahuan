@@ -169,27 +169,7 @@
 
 <!-- Nira Bus Tickets -->
 <div v-else-if="isBusBooking && busTickets.length" id="ticket-print-area" class="pdf-only-area">
-  <article v-for="ticket in busTickets" :key="ticket.key" class="ticket-sheet mx-auto mb-5 max-w-5xl overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-sm" dir="rtl">
-    <div class="flex flex-wrap items-center justify-between gap-3 bg-blue-900 px-6 py-5 text-white">
-      <div><h2 class="text-xl font-bold">بلیت اتوبوس</h2><p class="mt-1 text-sm">{{ ticket.companyName }}</p></div>
-      <div class="text-left"><p class="text-sm">شماره رزرو (PNR)</p><p dir="ltr" class="text-xl font-bold">{{ ticket.pnr }}</p></div>
-    </div>
-    <div v-if="ticket.isCancelled" class="border-b border-red-200 bg-red-50 px-6 py-3 text-center font-bold text-red-700">این بلیت کنسل شده است</div>
-    <div v-else-if="!ticket.isIssued" class="border-b border-amber-200 bg-amber-50 px-6 py-3 text-center font-bold text-amber-800">بلیت هنوز قطعی نشده است</div>
-    <div class="grid grid-cols-1 gap-5 px-6 py-6 sm:grid-cols-2">
-      <div><p class="text-xs text-slate-500">مسافر</p><p class="mt-1 font-bold">{{ ticket.passengerName }}</p></div>
-      <div><p class="text-xs text-slate-500">شماره بلیت</p><p dir="ltr" class="mt-1 text-right font-bold">{{ ticket.ticketNo || 'صادر نشده' }}</p></div>
-      <div><p class="text-xs text-slate-500">مبدأ / پایانه</p><p class="mt-1 font-bold">{{ ticket.originName }}</p></div>
-      <div><p class="text-xs text-slate-500">مقصد / پایانه</p><p class="mt-1 font-bold">{{ ticket.destinationName }}</p></div>
-      <div><p class="text-xs text-slate-500">تاریخ حرکت</p><p class="mt-1 font-bold">{{ ticket.departureDate }}</p></div>
-      <div><p class="text-xs text-slate-500">ساعت حرکت</p><p dir="ltr" class="mt-1 text-right font-bold">{{ ticket.departureTime }}</p></div>
-      <div><p class="text-xs text-slate-500">شماره صندلی</p><p class="mt-1 font-bold">{{ ticket.seatNo }}</p></div>
-      <div><p class="text-xs text-slate-500">کد حرکت</p><p dir="ltr" class="mt-1 break-all text-right text-sm font-semibold">{{ ticket.segment }}</p></div>
-      <div><p class="text-xs text-slate-500">مقصد نهایی سرویس</p><p class="mt-1 font-semibold">{{ ticket.finalDestination }}</p></div>
-      <div><p class="text-xs text-slate-500">وضعیت</p><p class="mt-1 font-semibold">{{ ticket.isCancelled ? 'کنسل شده' : ticket.isIssued ? 'صادر شده' : 'در انتظار صدور' }}</p></div>
-    </div>
-    <div class="border-t border-slate-200 px-6 py-3 text-xs text-slate-500">شرکت خدمات مسافرتی آهوان · شماره قرارداد: {{ contractData?.id }}</div>
-  </article>
+  <BusTicketPrintComponent :tickets="busTickets" :contract-id="contractData?.id" />
 </div>
 
 <!-- Flight Tickets -->
@@ -613,7 +593,7 @@ const isDownloadingPdf = ref(false)
 const errorMessage = ref('')
 
 const contractData = ref<any>(null)
-type BusPrintableTicket = { key:string; pnr:string; ticketNo:string; seatNo:string; passengerName:string; originName:string; destinationName:string; departureDate:string; departureTime:string; segment:string; finalDestination:string; companyName:string; isCancelled:boolean; isIssued:boolean }
+type BusPrintableTicket = { key:string; pnr:string; ticketNo:string; seatNo:string; passengerName:string; originName:string; destinationName:string; departureDate:string; departureTime:string; segment:string; finalDestination:string; companyName:string; sex:string; nationalCode:string; isCancelled:boolean; isIssued:boolean }
 const busTickets=ref<BusPrintableTicket[]>([])
 const canDownloadBusTickets=computed(()=>busTickets.value.length>0&&busTickets.value.every(t=>String(t.ticketNo??'').trim().length>0))
 const isBusBooking=computed(()=>{
@@ -5489,6 +5469,8 @@ const processBusTickets=async(contract:any)=>{
     segment:String(info.segment||bus?.providerMoveCode||'-'),
     finalDestination:String(info.serviceFinalDestinationName||info.serviceFinalDestination||'-'),
     companyName:String(bus?.companyName||bus?.providerCompanyName||co),
+    sex:String(item?.sex??'').trim().toUpperCase(),
+    nationalCode:String(passenger?.codeMelli??passenger?.nationalCode??'').trim(),
     isCancelled,isIssued:status==='TICKETED'&&!!ticketNo&&!isCancelled
    })
   }
