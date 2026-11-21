@@ -4,9 +4,9 @@ import MenuBottomNav from '~/components/Menu/MenuBottomNav.vue'
 
 const route = useRoute()
 
-const isProductPage = computed(() =>
+const isMenuPage = computed(() =>
   route.path.startsWith('/links/menu/restaurant') ||
-  /^\/links\/menu\/coffeeshop\/[^/]+\/?$/.test(route.path)
+  route.path.startsWith('/links/menu/coffeeshop')
 )
 
 const isRestaurant = computed(() =>
@@ -23,7 +23,7 @@ const menuHome = computed(() =>
 <template>
   <div dir="rtl" class="min-h-dvh bg-gray-100">
     <header
-      v-if="!isProductPage"
+      v-if="!isMenuPage"
       class="sticky top-0 z-40 flex h-[76px] items-center justify-between border-b border-gray-200 bg-white px-4"
     >
       <NuxtLink to="/links">

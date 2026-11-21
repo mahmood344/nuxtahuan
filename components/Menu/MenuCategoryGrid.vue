@@ -22,7 +22,15 @@ const isAdmin = computed(() => adminCookie.value === true || adminCookie.value =
 
 
 
-const logoutAdmin = () => { adminCookie.value = null; editorOpen.value = false; deleteProductTarget.value = null; language.value = 'fa'; showCart.value = false }
+const logoutAdmin = async () => {
+  if (savingProduct.value || deletingProduct.value) return
+  adminCookie.value = null
+  editorOpen.value = false
+  deleteProductTarget.value = null
+  language.value = 'fa'
+  showCart.value = false
+  await navigateTo('/links/menu/login')
+}
 
 
 
@@ -53,12 +61,20 @@ const specialObjectUrls = new Set()
 const specialKey = product => String(product?.id || `${props.menu}:${product?.title || ''}`)
 
 const clearSpecialImage = () => {
-
   specialImageFile.value = null
-
   specialImagePreview.value = ''
-
 }
+
+// حذف تصویر اسلایدر از فرم؛ تصویر انتخاب‌شده و تصویر قبلی پاک می‌شوند.
+const removeSpecialImage = () => {
+  specialImageFile.value = null
+  specialImagePreview.value = ''
+  editorForm.specialImage = ''
+  formErrors.value = { ...formErrors.value, specialImage: '' }
+  if (specialImageInput.value) specialImageInput.value.value = ''
+}
+
+const specialImageInput = ref(null)
 
 const onSpecialImage = event => {
 
@@ -207,6 +223,15 @@ const requestDeleteProduct = product => {
 
 const closeEditor = () => { editorOpen.value = false; imageFile.value = null; specialImageFile.value = null }
 
+// حذف تصویر انتخاب‌شده یا تصویر قبلی از فرم؛ ثبت نهایی با دکمه ذخیره انجام می‌شود.
+const removeEditorImage = () => {
+  if (imagePreview.value.startsWith('blob:')) URL.revokeObjectURL(imagePreview.value)
+  imageFile.value = null
+  imagePreview.value = ''
+  editorForm.image = ''
+  formErrors.value = { ...formErrors.value, image: '' }
+}
+
 const onEditorImage = event => {
 
   const file = event.target.files?.[0]
@@ -327,6 +352,9 @@ const saveEditor = async () => {
     savingProduct.value = false
   }
 }
+
+const productOperationLoading = computed(() => savingProduct.value || deletingProduct.value)
+const productOperationMessage = computed(() => deletingProduct.value ? 'در حال حذف محصول و بروزرسانی لیست...' : editorMode.value === 'edit' ? 'در حال ویرایش محصول و بروزرسانی لیست...' : 'در حال افزودن محصول و بروزرسانی لیست...')
 
 const deletingProduct = ref(false)
 const deleteError = ref('')
@@ -3609,20 +3637,24 @@ onUnmounted(() => {
 
               <div class="flex flex-col gap-3">
 
-                <label class="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-gray-300 p-3 text-sm text-gray-600">
-
+                <div v-if="imagePreview" class="relative overflow-hidden rounded-xl">
+                  <label class="block cursor-pointer" title="ویرایش تصویر">
+                    <img :src="imagePreview" alt="پیش‌نمایش محصول" class="h-32 w-full object-cover" />
+                    <span class="absolute bottom-2 left-2 grid size-7 place-items-center rounded-full bg-white text-gray-800 shadow-md" aria-label="ویرایش تصویر">
+                      <i class="bi bi-pencil-square text-xs"></i>
+                    </span>
+                    <input type="file" accept="image/*" class="hidden" @change="onEditorImage" />
+                  </label>
+                  <button type="button" class="absolute right-2 top-2 z-10 grid size-7 place-items-center rounded-full bg-red-600 text-white shadow-md" title="حذف تصویر" aria-label="حذف تصویر" @click.stop.prevent="removeEditorImage">
+                    <i class="bi bi-trash3 text-xs"></i>
+                  </button>
+                </div>
+                <label v-else class="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-gray-300 p-3 text-sm text-gray-600">
                   <i class="bi bi-paperclip"></i> انتخاب تصویر
-
                   <input type="file" accept="image/*" class="hidden" @change="onEditorImage" />
-
                 </label>
-
                 <p v-if="formErrors.image" class="text-xs text-red-600">{{ formErrors.image }}</p>
-
-                <img v-if="imagePreview" :src="imagePreview" alt="پیش‌نمایش محصول" class="h-32 w-full rounded-xl object-cover" />
-
                 <span v-if="imageFile" class="break-all text-xs text-gray-500">{{ imageFile.name }}</span>
-
               </div>
 
             </div>
@@ -3675,13 +3707,18 @@ onUnmounted(() => {
 
                   <span>انتخاب تصویر اسلایدر</span>
 
-                  <input type="file" accept="image/*" class="hidden" @change="onSpecialImage" />
+                  <input ref="specialImageInput" type="file" accept="image/*" class="hidden" @change="onSpecialImage" />
 
                 </label>
 
                 <p v-if="formErrors.specialImage" class="text-xs text-red-600">{{ formErrors.specialImage }}</p>
 
-                <img v-if="specialImagePreview" :src="specialImagePreview" alt="پیش‌نمایش تصویر پیشنهاد ویژه" class="aspect-[16/6] w-full rounded-xl object-cover" />
+                <div v-if="specialImagePreview" class="relative overflow-hidden rounded-xl">
+                  <img :src="specialImagePreview" alt="پیش‌نمایش تصویر پیشنهاد ویژه" class="aspect-[16/6] w-full object-cover" />
+                  <button type="button" class="absolute right-2 top-2 z-10 grid size-7 place-items-center rounded-full bg-red-600 text-white shadow-md" title="حذف تصویر اسلایدر" aria-label="حذف تصویر اسلایدر" @click.stop.prevent="removeSpecialImage">
+                    <i class="bi bi-trash3 text-xs"></i>
+                  </button>
+                </div>
 
                 <span v-if="specialImageFile" class="block break-all text-xs text-gray-500">{{ specialImageFile.name }}</span>
 
@@ -3733,6 +3770,18 @@ onUnmounted(() => {
 
       </div>
 
+    </Teleport>
+
+    <!-- لودینگ عملیات افزودن، ویرایش و حذف؛ تا پایان درخواست و دریافت مجدد محصولات -->
+    <Teleport to="body">
+      <div v-if="productOperationLoading" dir="rtl" role="status" aria-live="polite"
+        class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/65 p-5 backdrop-blur-[2px]">
+        <div class="flex w-full max-w-[320px] flex-col items-center gap-4 rounded-[22px] bg-white px-6 py-8 text-center shadow-2xl">
+          <i class="bi bi-arrow-repeat inline-block animate-spin text-[38px] text-primary" aria-hidden="true"></i>
+          <p class="text-[14px] font-bold leading-7 text-gray-800">{{ productOperationMessage }}</p>
+          <p class="text-[11px] text-gray-500">لطفاً منتظر بمانید</p>
+        </div>
+      </div>
     </Teleport>
 
   </main>

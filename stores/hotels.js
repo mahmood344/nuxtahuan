@@ -56,7 +56,11 @@ export const useHotelStore=defineStore(
  // =========================
 // Restaurant / CoffeeShop Foods
 // =========================
-foods: [],
+menuUsers: [
+  { username: 'admin', password: 'admin' },
+  { username: '09109306731', password: '123456' }
+ ],
+ foods: [],
 foodsLoading: false,
 foodsLoaded: false,
 foodsError: null,
@@ -84,6 +88,10 @@ getSearchRooms:(state)=>
 
 
   actions:{
+ validateMenuUser(username, password) {
+  return this.menuUsers.some(user => user.username === String(username).trim() && user.password === String(password))
+ },
+
     /*
 |--------------------------------------------------------------------------
 | Load SnappTrip Cities

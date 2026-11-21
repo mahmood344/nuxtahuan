@@ -1,7 +1,7 @@
 <script setup>
 
 definePageMeta({
-  layout: 'menu'
+  layout: false
 })
 </script>
 
