@@ -2612,7 +2612,7 @@ onUnmounted(() => {
 
 
 
-    <div class="mx-auto max-w-[680px]">
+    <div class="mx-auto w-full transition-[max-width] duration-200" :class="isAdmin ? 'max-w-[1440px] px-0 lg:px-6' : 'max-w-[680px]'">
 
 
 
@@ -2988,7 +2988,7 @@ onUnmounted(() => {
 
 
 
-        <div class="relative h-[175px] touch-pan-y select-none overflow-hidden rounded-[22px] bg-primary text-white"
+        <div class="relative h-[175px] touch-pan-y select-none overflow-hidden rounded-[22px] bg-primary text-white" :class="isAdmin ? 'md:h-[260px]' : ''"
 
 
 
@@ -3224,11 +3224,11 @@ onUnmounted(() => {
 
 
 
-      <section v-else class="flex flex-col gap-2 px-5">
+      <section v-else class="grid grid-cols-1 gap-3 px-5" :class="isAdmin ? 'md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4' : ''">
 
 
 
-        <article v-for="product in visibleProducts" :key="product.id" class="flex items-center gap-3 rounded-[18px] bg-white px-3 py-3">
+        <article v-for="product in visibleProducts" :key="product.id" class="flex items-center gap-3 rounded-[18px] bg-white px-3 py-3" :class="isAdmin ? 'border border-gray-200 shadow-sm hover:shadow-md transition-shadow min-h-[110px]' : ''">
 
 
 
@@ -3336,7 +3336,7 @@ onUnmounted(() => {
 
 
 
-        <section role="dialog" aria-modal="true" :aria-label="productTitle(selectedProduct)" class="flex max-h-[90dvh] w-full max-w-[420px] flex-col items-center overflow-y-auto rounded-[28px] bg-white px-6 py-7 text-center shadow-2xl">
+        <section role="dialog" aria-modal="true" :aria-label="productTitle(selectedProduct)" class="flex max-h-[90dvh] w-full flex-col items-center overflow-y-auto rounded-[28px] bg-white px-6 py-7 text-center shadow-2xl" :class="isAdmin ? 'max-w-[560px]' : 'max-w-[420px]'">
 
 
 

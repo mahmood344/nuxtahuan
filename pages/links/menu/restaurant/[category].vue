@@ -2,7 +2,7 @@
 <script setup>
 import MenuCategoryGrid from '~/components/Menu/MenuCategoryGrid.vue'
 
-definePageMeta({ layout: 'false' })
+definePageMeta({ layout: 'menu' })
 </script>
 
 <template>

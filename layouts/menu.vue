@@ -1,4 +1,3 @@
-
 <script setup>
 import MenuBottomNav from '~/components/Menu/MenuBottomNav.vue'
 
@@ -45,6 +44,6 @@ const menuHome = computed(() =>
       <slot />
     </main>
 
-    <MenuBottomNav />
+    <MenuBottomNav v-if="isMenuPage" />
   </div>
 </template>
