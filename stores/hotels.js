@@ -57,8 +57,10 @@ export const useHotelStore=defineStore(
 // Restaurant / CoffeeShop Foods
 // =========================
 menuUsers: [
-  { username: 'admin', password: 'admin' },
-  { username: '09109306731', password: '123456' }
+  // { username: 'admin', password: 'admin' },
+  { username: '09109306731', password: 'Ahuan@1348' },
+  { username: '09127273100', password: 'Ahuan@1348' },
+  { username: '09384369416', password: 'Ahuan@1348' }
  ],
  foods: [],
 foodsLoading: false,
