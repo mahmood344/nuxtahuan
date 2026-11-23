@@ -1242,6 +1242,29 @@
     </div>
   </div>
   
+  <!-- پیش نمایش جریمه و تایید کنسلی اتوبوس؛ بدون استرداد وجه مشتری -->
+  <Teleport to="body">
+    <div v-if="busCancelModalOpen" dir="rtl" class="fixed inset-0 z-[2900] flex items-center justify-center bg-black/50 p-4" @click.self="!busCancelBusy && closeBusCancelModal()">
+      <div class="w-full max-w-[460px] rounded-2xl bg-white p-5 shadow-2xl">
+        <h3 class="mb-3 text-lg font-black">{{ busCancelAll ? 'کنسلی کل بلیت‌های اتوبوس' : 'کنسلی یک بلیت اتوبوس' }}</h3>
+        <p class="mb-4 text-sm text-gray-600">{{ busCancelAll ? `تعداد بلیت‌های قابل کنسلی: ${busCancelTargetCount}` : `مسافر: ${busCancelRow?.passengerName || '-'}` }}</p>
+        <div v-if="busCancelLoading" class="py-6 text-center text-sm">در حال دریافت جریمه کنسلی...</div>
+        <template v-else-if="busCancelPreview">
+          <div class="space-y-3 rounded-xl bg-gray-50 p-4 text-sm">
+            <div class="flex justify-between"><span>مبلغ بلیت{{ busCancelAll ? '‌ها' : '' }}</span><b>{{ formatPrice(busCancelPreview.fare) }}</b></div>
+            <div class="flex justify-between text-red-600"><span>جریمه کنسلی</span><b>{{ formatPrice(busCancelPreview.penalty) }}</b></div>
+            <div class="flex justify-between border-t pt-3"><span>مبلغ قابل استرداد</span><b>{{ formatPrice(busCancelPreview.cashPayment) }}</b></div>
+          </div>
+          <p class="mt-2 text-sm font-bold">آیا با جریمه فوق موافقید و کنسلی را تأیید می‌کنید؟</p>
+        </template>
+        <p v-if="busCancelError" class="mt-3 text-sm text-red-600">{{ busCancelError }}</p>
+        <div class="mt-5 flex gap-3">
+          <button type="button" class="flex-1 rounded-xl border px-4 py-3 text-sm" :disabled="busCancelBusy" @click="closeBusCancelModal">انصراف</button>
+          <button type="button" class="flex-1 rounded-xl bg-red-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-50" :disabled="busCancelBusy || busContractUpdatePending || !busCancelPreview" @click="confirmBusCancel">{{ busCancelSubmitting ? 'در حال کنسلی...' : 'تأیید کنسلی' }}</button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
   <Teleport to="body">
   <Transition name="profile-edit-modal">
     <div
@@ -1849,7 +1872,10 @@
       <!-- Bus Contract - same responsive pattern as flight -->
       <!-- ================================================= -->
       <section v-if="isBusContract(selectedContract)" class="mt-7">
-        <h2 class="mb-4 text-[15px] font-black text-gray-800 sm:mb-5 sm:text-lg">لیست بلیت‌ها</h2>
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 class="text-[15px] font-black text-gray-800 sm:text-lg">لیست بلیت‌ها</h2>
+          <button v-if="busTicketRows.some(row => row.canCancel)" type="button" class="rounded-xl bg-red-600 px-5 py-2.5 text-xs font-bold text-white disabled:opacity-50" :disabled="busCancelBusy || busContractUpdatePending" @click="handleBusCancelAll">کنسلی کل بلیت‌های اتوبوس</button>
+        </div>
         <div v-if="busTicketRows.length" class="space-y-3 md:hidden">
           <div v-for="row in busTicketRows" :key="row.key" class="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
             <div class="flex items-center justify-between bg-[#edf7ff] px-4 py-3">
@@ -5212,18 +5238,45 @@ function upsertCancellation(
 }
 
 
+// استرداد وجه بانکی/سفرکارت اتوبوس عمداً تا اضافه شدن busJson غیرفعال است.
+const BUS_CUSTOMER_SETTLEMENT_ENABLED = false
+const BUS_API = 'https://api.ahuan.ir/api/nira-bus'
+const busCancelModalOpen = ref(false)
+const busCancelLoading = ref(false)
+const busCancelSubmitting = ref(false)
+const busCancelError = ref('')
+const busCancelPreview = ref(null)
+const busCancelRow = ref(null)
+const busCancelAll = ref(false)
+const busCancelTargetCount = ref(0)
+const busCancelledLocally = ref(new Set())
+const busCancelBusy = computed(() => busCancelLoading.value || busCancelSubmitting.value)
+
+function busValue(...values) { return values.find(v => v !== null && v !== undefined && String(v).trim() !== '') ?? '' }
+function getBusIdentifiers(contract, row, requirePnr = false) {
+  const bus = row?.bus || contract?.contractBuses?.[0] || {}
+  const passenger = row?.passenger || contract?.contractPassengers?.[0] || {}
+  const origin = String(busValue(bus.origin, bus.originCode, bus.orgCityCode, bus.originAMSCode, bus.tripOrigin, bus.providerOrigin, contract?.originCode)).trim()
+  const co = String(busValue(bus.companyCode, bus.co, bus.providerCompanyCode, bus.providerCode, contract?.companyCode)).trim()
+  const pnr = String(busValue(bus.pnr, bus.PNR, bus.providerPNR, passenger.goTicketPNR, passenger.ticketPNR, contract?.pnr, contract?.PNR, contract?.providerPNR)).trim()
+  if (!origin || !co) throw new Error('Bus penalty identifiers missing: origin or co')
+  if (requirePnr && !pnr) throw new Error('Bus refund identifier missing: PNR')
+  return { origin, co, pnr }
+}
 const busTicketRows = computed(() => {
   const contract = selectedContract.value
   if (!isBusContract(contract)) return []
   const buses = Array.isArray(contract?.contractBuses) ? contract.contractBuses : []
   const passengers = Array.isArray(contract?.contractPassengers) ? contract.contractPassengers : []
-  return passengers.flatMap((p, i) => {
+  return passengers.map((p, i) => {
     const bus = buses[0] || {}
     const number = String(p.goTicketNumber || '').trim()
+    const key = `bus-${contract?.id}-${p.id ?? i}`
     const rawStatus = String(p.goTicketStatus || contract?.ticketStatus || '').trim().toUpperCase()
-    const status = /CANCEL|REFUND|لغو|استرداد/.test(rawStatus) ? 'لغو شده' : number ? 'صادر شده' : 'در انتظار صدور'
-    return [{
-      key: `bus-${contract?.id}-${p.id ?? i}`, passengerName: [p.fName, p.lName].filter(Boolean).join(' ') || '-',
+    const cancelled = busCancelledLocally.value.has(key) || /CANCEL|REFUND|لغو|استرداد/.test(rawStatus)
+    const status = cancelled ? 'لغو شده' : number ? 'صادر شده' : 'در انتظار صدور'
+    return {
+      key, bus, passenger: p, passengerName: [p.fName, p.lName].filter(Boolean).join(' ') || '-',
       origin: bus.orgCityName || bus.originName || bus.tripOriginName || bus.originCity || bus.origin || '-',
       destination: bus.dstCityName || bus.destinationName || bus.selectedDestinationName || bus.destinationCity || bus.destination || '-',
       departureDate: bus.date || bus.departureDate || bus.depDate || bus.moveDate || '-',
@@ -5231,8 +5284,8 @@ const busTicketRows = computed(() => {
       company: bus.companyName || bus.busCompanyName || '-',
       ticketNumber: number || '-', seatNo: p.goBusSeatNo || '-',
       amount: Number(p.goTicketPrice || bus.price || 0), status,
-      canCancel: Boolean(number && status === 'صادر شده')
-    }]
+      canCancel: Boolean(number && !cancelled)
+    }
   })
 })
 function busFields(row) {
@@ -5248,11 +5301,122 @@ function downloadBusTicket() {
   if (!id) return toast.error('شناسه قرارداد یافت نشد.')
   navigateTo(`/downloadticket/${window.btoa(String(id))}`)
 }
-function handleBusCancel(row) {
-  if (!row?.canCancel) return
-  // No Nira Bus cancellation/penalty API is present in this component.
-  // Never call the flight cancellation flow for bus tickets.
-  toast.error('سرویس بررسی جریمه و کنسلی اتوبوس هنوز به این صفحه متصل نشده است.')
+function closeBusCancelModal() {
+  if (busCancelBusy.value) return
+  busCancelModalOpen.value = false
+  busCancelPreview.value = null
+  busCancelError.value = ''
+}
+async function handleBusCancel(row) { await openBusCancel(row, false) }
+async function handleBusCancelAll() { await openBusCancel(null, true) }
+async function openBusCancel(row, refundAll) {
+  if (busCancelBusy.value || busContractUpdatePending.value) return
+  const active = busTicketRows.value.filter(x => x.canCancel)
+  if (!active.length || (!refundAll && !row?.canCancel)) return
+  busCancelAll.value = refundAll
+  busCancelRow.value = refundAll ? active[0] : row
+  busCancelTargetCount.value = refundAll ? active.length : 1
+  busCancelPreview.value = null
+  busCancelError.value = ''
+  busCancelModalOpen.value = true
+  busCancelLoading.value = true
+  try {
+    const { origin, co } = getBusIdentifiers(selectedContract.value, busCancelRow.value)
+    const ticketId = busCancelRow.value.ticketNumber
+    if (!ticketId || ticketId === '-') throw new Error('شماره بلیت برای بررسی جریمه یافت نشد.')
+    const response = await $fetch(`${BUS_API}/penalty`, { method: 'GET', query: { origin, co, ticketId } })
+    if (response?.error && String(response.error).toLowerCase() !== 'no error') throw new Error(String(response.error))
+    const data = response?.data
+    if (!data || ![data.fare, data.penalty, data.cashPayment].every(v => v !== null && v !== undefined && Number.isFinite(Number(v)))) throw new Error('پاسخ جریمه معتبر نیست.')
+    const count = busCancelTargetCount.value
+    // Penalty for one ticket is the same for each active ticket in the PNR, per provider contract.
+    busCancelPreview.value = {
+      fare: Number(data.fare) * count,
+      penalty: Number(data.penalty) * count,
+      cashPayment: Number(data.cashPayment) * count
+    }
+  } catch (error) {
+    console.error('Bus penalty failed:', error)
+    busCancelError.value = 'دریافت جریمه کنسلی ناموفق بود. لطفاً دوباره تلاش کنید.'
+  } finally { busCancelLoading.value = false }
+}
+// پس از تأیید کنسلی توسط شرکت مسافربری، وضعیت بلیت‌ها در قرارداد آهوان ثبت می‌شود.
+// بازگشت وجه بانکی و سفرکارت عمداً در این مسیر فراخوانی نمی‌شود.
+const busContractUpdatePending = ref(false)
+function buildCancelledBusContract(contract, affectedRows) {
+  const updated = structuredClone(toRaw(contract))
+  const passengers = Array.isArray(updated.contractPassengers) ? updated.contractPassengers : []
+  const ids = new Set(affectedRows.map(x => String(x.passenger?.id ?? '')))
+  const ticketNumbers = new Set(affectedRows.map(x => String(x.ticketNumber ?? '').trim()))
+  let changed = 0
+  for (const passenger of passengers) {
+    if (ids.has(String(passenger.id ?? '')) || ticketNumbers.has(String(passenger.goTicketNumber ?? '').trim())) {
+      passenger.goTicketStatus = 'cancelled'
+      changed++
+    }
+  }
+  if (changed !== affectedRows.length) throw new Error('Bus contract passenger matching failed')
+  updated.reduceFlightLoad = 0
+  updated.reduceHotelLoad = 0
+  const issued = passengers.filter(p => String(p.goTicketNumber || '').trim())
+  if (issued.length && issued.every(p => String(p.goTicketStatus || '').trim().toLowerCase() === 'cancelled')) {
+    updated.ticketStatus = 'cancelled'
+    updated.confirmStatus = 'cancelled'
+  }
+  return updated
+}
+async function saveCancelledBusContract(contract, affectedRows) {
+  const payload = buildCancelledBusContract(contract, affectedRows)
+  const response = await updateCancelledContract(payload)
+  // قرارداد آپدیت‌شده را از پاسخ سرور یا payload برمی‌داریم.
+  const result = response && typeof response === 'object' && response.id ? response : payload
+  selectedContract.value = result
+  const index = contracts.value.findIndex(item => String(item?.id) === String(result.id))
+  if (index >= 0) contracts.value.splice(index, 1, result)
+  return result
+}
+async function confirmBusCancel() {
+  if (!busCancelPreview.value || busCancelBusy.value || busContractUpdatePending.value) return
+  busCancelSubmitting.value = true
+  busCancelError.value = ''
+  let providerConfirmed = false
+  let affected = []
+  try {
+    const contract = selectedContract.value
+    const row = busCancelRow.value
+    const { origin, co, pnr } = getBusIdentifiers(contract, row, true)
+    affected = busCancelAll.value ? busTicketRows.value.filter(x => x.canCancel) : [row]
+    if (!affected.length) throw new Error('No cancellable bus tickets')
+    const payload = { origin, co, PNR: pnr, TicketID: busCancelAll.value ? '' : row.ticketNumber, refundAll: busCancelAll.value }
+    const response = await $fetch(`${BUS_API}/refund`, { method: 'POST', body: payload })
+    const errorText = String(response?.error || '').trim()
+    if (errorText && errorText.toLowerCase() !== 'no error') throw new Error(errorText)
+    if (response?.success === false || response?.data?.success === false || response?.data?.isSuccess === false || response?.data?.statusCode === '0') throw new Error('Nira bus refund rejected')
+    const operationStatus = String(response?.operationStatus ?? '').trim().toLowerCase()
+    const requiresReconciliation = response?.requiresReconciliation === true
+    const providerError = String(response?.data?.err ?? '').trim().toLowerCase()
+    if (providerError && providerError !== 'no error') throw new Error(String(response.data.err))
+    if (operationStatus && operationStatus !== 'completed') throw new Error(`Bus refund status: ${operationStatus}`)
+    if (requiresReconciliation) throw new Error('Bus refund requires reconciliation')
+    const confirmed = operationStatus === 'completed' || response?.success === true || response?.data?.success === true || response?.data?.isSuccess === true || response?.data?.statusCode === '1'
+    if (!confirmed) throw new Error('Bus refund success not confirmed')
+    providerConfirmed = true
+    // بلافاصله پس از موفقیت کنسلی، از ارسال دوباره refund جلوگیری می‌کنیم.
+    busContractUpdatePending.value = true
+    const keys = new Set(busCancelledLocally.value)
+    for (const item of affected) keys.add(item.key)
+    busCancelledLocally.value = keys
+    await saveCancelledBusContract(contract, affected)
+    busContractUpdatePending.value = false
+    busCancelModalOpen.value = false
+    busCancelPreview.value = null
+    toast.success('کنسلی بلیت اتوبوس با موفقیت انجام شد.')
+  } catch (error) {
+    console.error(providerConfirmed ? 'Bus contract update failed after provider cancellation:' : 'Bus cancellation failed:', error)
+    busCancelError.value = providerConfirmed
+      ? 'کنسلی انجام شد، اما ثبت وضعیت سفارش ناموفق بود. لطفاً با پشتیبانی تماس بگیرید.'
+      : 'کنسلی بلیت اتوبوس ناموفق بود. لطفاً وضعیت بلیت را بررسی کنید.'
+  } finally { busCancelSubmitting.value = false }
 }
 
 const ticketRows=computed(()=>{
@@ -5824,7 +5988,7 @@ async function fetchNiraPenaltyNow(row){
 
     throw new Error(
       rawMessage||
-      'اطلاعات جریمه از نیرا دریافت نشد.'
+      'اطلاعات جریمه دریافت نشد.'
     )
   }
 
@@ -5977,7 +6141,7 @@ async function cancelNiraSeat(row){
 
   if(!success){
     throw new Error(
-      'آزادسازی صندلی مسافر در نیرا ناموفق بود.'
+      'آزادسازی صندلی مسافر ناموفق بود.'
     )
   }
 
@@ -6060,7 +6224,7 @@ async function executeNiraEtRefund(
   if(!success){
     throw new Error(
       description||
-      'استرداد بلیت در نیرا ناموفق بود.'
+      'استرداد بلیت ناموفق بود.'
     )
   }
 

@@ -4406,6 +4406,72 @@ const fetchFlightPrintableTickets=async(
   }
 
 }
+// Convert modern CSS OKLCH/OKLAB colors to RGB in the html2canvas clone only.
+// The visible page and its Tailwind styles remain unchanged.
+const normalizePdfCanvasColors = (doc: Document) => {
+  const convert = (input: string): string => input.replace(/oklch\([^()]*\)|oklab\([^()]*\)/gi, (token) => {
+    const isLch = token.toLowerCase().startsWith('oklch(')
+    const body = token.slice(token.indexOf('(') + 1, -1).replace(/,/g, ' ').trim()
+    const [channels, alphaText] = body.split('\/').map(v => v.trim())
+    const values = channels.split(/\s+/).filter(Boolean)
+    if (values.length < 3 || values.some(v => v === 'none')) return token
+    const L = parseFloat(values[0]) / (values[0].endsWith('%') ? 100 : 1)
+    let a: number, b: number
+    if (isLch) {
+      const C = parseFloat(values[1]) / (values[1].endsWith('%') ? 100 : 1)
+      const hue = parseFloat(values[2]) * (values[2].endsWith('turn') ? 2 * Math.PI : values[2].endsWith('rad') ? 1 : values[2].endsWith('grad') ? Math.PI / 200 : Math.PI / 180)
+      a = C * Math.cos(hue); b = C * Math.sin(hue)
+    } else {
+      a = parseFloat(values[1]) / (values[1].endsWith('%') ? 100 : 1)
+      b = parseFloat(values[2]) / (values[2].endsWith('%') ? 100 : 1)
+    }
+    if (![L, a, b].every(Number.isFinite)) return token
+    const l = (L + 0.3963377774*a + 0.2158037573*b)**3
+    const m = (L - 0.1055613458*a - 0.0638541728*b)**3
+    const ss = (L - 0.0894841775*a - 1.291485548*b)**3
+    const gamma = (v: number) => Math.round(Math.min(1, Math.max(0, v <= 0.0031308 ? 12.92*v : 1.055*Math.pow(Math.max(v, 0), 1/2.4)-0.055))*255)
+    const r = gamma(4.0767416621*l - 3.3077115913*m + 0.2309699292*ss)
+    const g = gamma(-1.2684380046*l + 2.6097574011*m - 0.3413193965*ss)
+    const blue = gamma(-0.0041960863*l - 0.7034186147*m + 1.707614701*ss)
+    let alpha = alphaText ? parseFloat(alphaText) : 1
+    if (alphaText?.endsWith('%')) alpha /= 100
+    return `rgba(${r}, ${g}, ${blue}, ${Number.isFinite(alpha) ? Math.max(0, Math.min(1, alpha)) : 1})`
+  })
+
+  const win = doc.defaultView
+  if (!win) return
+  const colorProps = ['color','background-color','border-top-color','border-right-color','border-bottom-color','border-left-color','outline-color','text-decoration-color','column-rule-color','fill','stroke','caret-color','box-shadow','text-shadow','background-image','border-image-source']
+  const nodes = [doc.documentElement, ...Array.from(doc.querySelectorAll('*'))]
+  const pseudoRules: string[] = []
+  let index = 0
+  for (const node of nodes) {
+    if (node.nodeType !== 1) continue
+    const element = node as HTMLElement
+    const computed = win.getComputedStyle(element)
+    for (const prop of colorProps) {
+      const original = computed.getPropertyValue(prop)
+      if (/oklch\(|oklab\(/i.test(original)) element.style.setProperty(prop, convert(original), 'important')
+    }
+    for (const pseudo of ['::before', '::after']) {
+      const style = win.getComputedStyle(element, pseudo)
+      if (!style || style.content === 'none') continue
+      const overrides = colorProps.map(prop => {
+        const value = style.getPropertyValue(prop)
+        return /oklch\(|oklab\(/i.test(value) ? `${prop}:${convert(value)} !important;` : ''
+      }).filter(Boolean)
+      if (!overrides.length) continue
+      const id = `pdf-color-${index++}`
+      element.setAttribute('data-pdf-color', id)
+      pseudoRules.push(`[data-pdf-color="${id}"]${pseudo}{${overrides.join('')}}`)
+    }
+  }
+  if (pseudoRules.length) {
+    const sheet = doc.createElement('style')
+    sheet.textContent = pseudoRules.join('\n')
+    doc.head.appendChild(sheet)
+  }
+}
+
 const downloadHotelVoucherPdf = async () => {
 
   if(typeof window === 'undefined'){
@@ -4468,6 +4534,7 @@ isDownloadingPdf.value = true
           windowHeight:1400,
 
           onclone:(clonedDocument:Document)=>{
+            normalizePdfCanvasColors(clonedDocument)
             const clonedPrintArea =
   clonedDocument.getElementById('ticket-print-area')
 
@@ -5279,6 +5346,7 @@ isDownloadingPdf.value = true
               windowHeight:1000,
 
              onclone: (clonedDocument: Document) => {
+  normalizePdfCanvasColors(clonedDocument)
 
   const clonedPrintArea =
     clonedDocument.getElementById('ticket-print-area')
