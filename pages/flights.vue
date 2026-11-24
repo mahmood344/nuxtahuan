@@ -2453,6 +2453,14 @@ const handleResetTravelCard = () => {
   // console.log('Travel card reset. Price reverted to original.')
 }
 const handleApplyTravelCard = async (cardNumber) => {
+  if (travelCardLoading.value || paymentLoading.value) return
+  const user = getUserData()
+  const account = user?.data ?? user
+  if (account?.noLimit !== false || ![0, '0'].includes(account?.credit)) {
+    handleResetTravelCard()
+    travelCardError.value = 'امکان استفاده از سفر کارت برای حساب شما وجود ندارد.'
+    return
+  }
   try {
     travelCardLoading.value = true
     travelCardApplied.value = false
@@ -2471,7 +2479,8 @@ const handleApplyTravelCard = async (cardNumber) => {
 
     if (
       response &&
-      response.credit !== undefined
+      response.credit !== undefined &&
+      Number.isFinite(Number(response.credit)) && Number(response.credit) > 0
     ) {
       travelCardData.value = response
       travelCardCredit.value =
@@ -4113,6 +4122,9 @@ const contactInfo = {
 }
     
 
+    // بررسی اعتبار و تعیین روش پرداخت قبل از رزرو
+    await createPaymentData(contactInfo.mobile)
+
     /*
      * ۱. رزرو پرواز
      */
@@ -4158,7 +4170,7 @@ const contactInfo = {
      * اطلاعات پرداخت ساخته می‌شود.
      */
     const paymentData =
-  createPaymentData(contactInfo.mobile)
+  await createPaymentData(contactInfo.mobile)
 
     /*
      * ۶. ذخیره در sessionStorage
@@ -4369,133 +4381,54 @@ function getUserData() {
   return userData
 }
 
-function createPaymentData(recipientMobile)  {
-  const totalPrice = Number(
-    flightStore.finalBookingPrice || 0
-  )
-
-  if (
-    !Number.isFinite(totalPrice) ||
-    totalPrice <= 0
-  ) {
-    throw new Error('مبلغ کل قرارداد معتبر نیست')
+async function fetchPaymentAccount() {
+  const mobile = getLoggedInMobile()
+  let response
+  try {
+    response = await $fetch(`https://api.ahuan.ir/api/Auth/users/${encodeURIComponent(mobile)}`, {
+      method: 'GET', cache: 'no-store', retry: 0
+    })
+  } catch (error) {
+    console.error('User account request failed:', error)
+    throw new Error('دریافت اعتبار حساب امکان‌پذیر نیست. لطفاً دوباره تلاش کنید.')
   }
-const email = String(
-    bookingData.value?.contact?.email || ''
-  ).trim()
-
- const mobile = normalizeDigits(recipientMobile || '')
-  .replace(/\D/g, '')
-
-if (!/^09\d{9}$/.test(mobile)) {
-  throw new Error('شماره موبایل دریافت‌کننده بلیط معتبر نیست')
+  const account = response?.data ?? response
+  const raw = account?.credit
+  if (typeof account?.noLimit !== 'boolean' ||
+      !['number', 'string'].includes(typeof raw) ||
+      String(raw).trim() === '' || !Number.isFinite(Number(raw))) {
+    throw new Error('اطلاعات اعتبار حساب معتبر نیست.')
+  }
+  return { noLimit: account.noLimit, credit: Number(raw) }
 }
-  const userData = getUserData()
 
-  const isAgency =
-    userData?.noLimit === true
+async function createPaymentData(recipientMobile) {
+  const totalPrice = Number(flightStore.finalBookingPrice || 0)
+  if (!Number.isFinite(totalPrice) || totalPrice <= 0)
+    throw new Error('مبلغ کل قرارداد معتبر نیست')
+  const email = String(bookingData.value?.contact?.email || '').trim()
+  const mobile = normalizeDigits(recipientMobile || '').replace(/\D/g, '')
+  if (!/^09\d{9}$/.test(mobile))
+    throw new Error('شماره موبایل دریافت‌کننده بلیط معتبر نیست')
 
-  const travelCardUsed =
-    travelCardApplied.value === true
-
-const travelCardNumber =
-  travelCardUsed
-    ? String(
-        appliedTravelCardNumber.value || ''
-      ).trim()
-    : ''
-
-  const availableTravelCardCredit = Math.max(
-    Number(travelCardCredit.value || 0),
-    0
-  )
-
-  const travelCardAmount =
-    travelCardUsed
-      ? Math.min(
-          availableTravelCardCredit,
-          totalPrice
-        )
-      : 0
-
-  const gatewayAmount = Math.max(
-    totalPrice - travelCardAmount,
-    0
-  )
-
-  /*
-   * آژانس:
-   * مبلغ قرارداد در هر دو فیلد ذخیره می‌شود،
-   * ولی به درگاه بانکی نمی‌رود.
-   */
-  if (isAgency) {
-    return {
-      type: 'agency',
-      totalPrice,
-      payableAmount: totalPrice,
-      travelCardUsed: false,
-      travelCardAmount: 0,
-      travelCardNumber:'',
-        email, // اضافه شد
-        mobile 
-    }
+  const { noLimit, credit } = await fetchPaymentAccount()
+  const base = { totalPrice, payableAmount: totalPrice, travelCardUsed: false,
+    travelCardAmount: 0, travelCardNumber: '', email, mobile }
+  if (noLimit || credit !== 0) {
+    handleResetTravelCard()
+    if (noLimit) return { ...base, type: 'agency' }
+    if (credit >= totalPrice) return { ...base, type: 'credit' }
+    throw new Error('امکان خرید وجود ندارد. لطفاً با پشتیبانی تماس بگیرید.')
   }
-
-  /*
-   * کل مبلغ با سفرکارت پرداخت شده است.
-   *
-   * payableAmount همچنان مبلغ کل قرارداد است؛
-   * تصمیم عدم انتقال به بانک براساس type است.
-   */
-  if (
-    travelCardUsed &&
-    travelCardAmount >= totalPrice
-  ) {
-    return {
-      type: 'travelcard',
-      totalPrice,
-      payableAmount: totalPrice,
-      travelCardUsed: true,
-      travelCardAmount: totalPrice,
-      travelCardNumber,
-        email, // اضافه شد
-        mobile 
-    }
+  const cardCredit = Number(travelCardCredit.value)
+  const cardNumber = String(appliedTravelCardNumber.value || '').trim()
+  if (travelCardApplied.value && cardNumber && Number.isFinite(cardCredit) && cardCredit > 0) {
+    const travelCardAmount = Math.min(cardCredit, totalPrice)
+    return { ...base, type: cardCredit >= totalPrice ? 'travelcard' : 'travelcard-gateway',
+      payableAmount: cardCredit >= totalPrice ? totalPrice : totalPrice - travelCardAmount,
+      travelCardUsed: true, travelCardAmount, travelCardNumber: cardNumber }
   }
-
-  /*
-   * بخشی با سفرکارت و باقی‌مانده با درگاه.
-   */
-  if (
-    travelCardUsed &&
-    travelCardAmount > 0 &&
-    gatewayAmount > 0
-  ) {
-    return {
-      type: 'travelcard-gateway',
-      totalPrice,
-      payableAmount: gatewayAmount,
-      travelCardUsed: true,
-      travelCardAmount,
-      travelCardNumber,
-        email, // اضافه شد
-        mobile 
-    }
-  }
-
-  /*
-   * کل مبلغ با درگاه پرداخت می‌شود.
-   */
-  return {
-    type: 'gateway',
-    totalPrice,
-    payableAmount: totalPrice,
-    travelCardUsed: false,
-    travelCardAmount: 0,
-    travelCardNumber:'',
-      email, // اضافه شد
-      mobile 
-  }
+  return { ...base, type: 'gateway' }
 }
 function savePaymentSession({
   contractId,
@@ -4691,6 +4624,7 @@ async function continuePaymentAfterUpdate(
     /*
      * آژانس به درگاه بانکی نمی‌رود.
      */
+    case 'credit':
     case 'agency':
       await router.push({
         path: '/verify',
