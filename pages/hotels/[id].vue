@@ -2380,6 +2380,8 @@ function buildHotelContractPayload(
 
   customerId:4,
 
+  companyId: getLoggedInCompanyId(),
+
   userName:
    getHotelLoginMobile(),
 
@@ -3031,6 +3033,8 @@ function buildHotelUpdateContractPayload({
 
   ...addResponse,
 
+  companyId: normalizeCompanyId(addPayload?.companyId),
+
   id:
    contractId,
 
@@ -3140,6 +3144,16 @@ function getHotelRecipientMobile(contact){
   throw new Error('شماره موبایل دریافت‌کننده واچر معتبر نیست')
  }
  return mobile
+}
+function normalizeCompanyId(value) {
+ if (typeof value !== 'number' && typeof value !== 'string') return null
+ if (String(value).trim() === '') return null
+ const companyId = Number(value)
+ return Number.isSafeInteger(companyId) && companyId > 0 ? companyId : null
+}
+function getLoggedInCompanyId() {
+ const user = getUserData()
+ return normalizeCompanyId(user?.companyId ?? user?.data?.companyId)
 }
 function getUserData(){
 

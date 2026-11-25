@@ -454,12 +454,12 @@ const PARTO_MAX_RETRIES=3
 const statusStep = ref<'PENDING' | 'BANK_FAILED' | 'ISSUE_FAILED' | 'SUCCESS'>('PENDING')
 const PAYMENT_SESSION_KEY = 'flight_payment_session'
 const REFUND_ENABLED = false
-const CREDIT_UPDATE_URL = '' // TODO: آدرس واقعی API کسر اعتبار
+const CREDIT_UPDATE_URL = 'https://api.ahuan.ir/api/Auth/UpdateCredit'
 const userCookie = useCookie<any>('user_data')
 const getCreditMobile = (): string => {
   const raw = userCookie.value
   const user = typeof raw === 'string' ? JSON.parse(raw) : raw
-  const mobile = String(user?.data?.mobile ?? user?.mobile ?? '').trim()
+  const mobile = String(user?.data?.phoneNumber || user?.data?.mobile || user?.phoneNumber || user?.mobile || '').trim()
   if (!/^09\d{9}$/.test(mobile)) throw new Error('شماره موبایل حساب معتبر نیست.')
   return mobile
 }
@@ -470,15 +470,15 @@ const creditContractAmount = (contract: any): number => {
 }
 const updateCreditAfterIssue = async (contract: any, amount: number) => {
   if (amount === 0) return
-  if (!CREDIT_UPDATE_URL) throw new Error('سرویس کسر اعتبار هنوز تنظیم نشده است؛ تسویه نیازمند پیگیری است.')
   if (!Number.isSafeInteger(amount) || amount < 0 || amount > creditContractAmount(contract)) throw new Error('اطلاعات تسویه اعتبار معتبر نیست.')
-  const mobile = getCreditMobile()
-  // TODO: روش HTTP و ساختار پاسخ را با قرارداد واقعی API هماهنگ کنید.
+  const phoneNumber = getCreditMobile()
+  const contractId = Number(contract?.id)
+  if (!Number.isSafeInteger(contractId) || contractId <= 0) throw new Error('شناسه قرارداد معتبر نیست.')
   // بک‌اند باید مالکیت قرارداد، مبلغ و جلوگیری از کسر تکراری را کنترل کند.
   const response = await $fetch<any>(CREDIT_UPDATE_URL, {
     method: 'POST', retry: 0,
-    headers: { 'Idempotency-Key': `credit-${contract.id}` },
-    body: { mobile, amount }
+    headers: { 'Idempotency-Key': `credit-${contractId}` },
+    body: { phoneNumber, contractId, amount }
   })
   if (response !== true && response?.success !== true) throw new Error('کسر اعتبار حساب تأیید نشد. لطفاً خرید را تکرار نکنید و با پشتیبانی تماس بگیرید.')
 }

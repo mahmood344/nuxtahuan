@@ -2345,6 +2345,7 @@ toast.error(
       id:0,
 
      userName: getLoggedInMobile(),
+      companyId: getLoggedInCompanyId(),
 
       email:
         String(
@@ -4329,6 +4330,7 @@ const contractPassengers=
 
   return {
     ...addPayload,
+    companyId: normalizeCompanyId(addPayload?.companyId),
 
   id: contractId,
 
@@ -4379,6 +4381,21 @@ function getUserData() {
   }
 
   return userData
+}
+
+function normalizeCompanyId(value) {
+  if (typeof value !== 'number' && typeof value !== 'string') return null
+  if (String(value).trim() === '') return null
+
+  const companyId = Number(value)
+  return Number.isSafeInteger(companyId) && companyId > 0
+    ? companyId
+    : null
+}
+
+function getLoggedInCompanyId() {
+  const user = getUserData()
+  return normalizeCompanyId(user?.companyId ?? user?.data?.companyId)
 }
 
 async function fetchPaymentAccount() {
