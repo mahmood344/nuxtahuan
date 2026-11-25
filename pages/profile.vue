@@ -385,6 +385,24 @@
     }}
   </span>
 </div>
+      <div class="profile-detail-item">
+        <span class="profile-detail-label">
+          نام شرکت:
+        </span>
+        <span class="min-w-0 break-words">
+          {{ user.companyName || '-' }}
+        </span>
+      </div>
+
+      <div class="profile-detail-item">
+        <span class="profile-detail-label">
+          شماره شبا:
+        </span>
+        <span dir="ltr" class="min-w-0 break-all">
+          {{ user.shebaNo || '-' }}
+        </span>
+      </div>
+
       <div class="profile-detail-item profile-detail-email">
         <span class="profile-detail-label">
           ایمیل:
@@ -7023,6 +7041,8 @@ const userLoading = ref(false)
 const userError = ref('')
 
 const user = ref({
+  companyName:'',
+  shebaNo:'',
   firstName:'',
   lastName:'',
   mobile:'',
@@ -7134,6 +7154,8 @@ async function fetchUserProfile() {
     }
 
     user.value = {
+      companyName:String(data?.companyName || '').trim(),
+      shebaNo:String(data?.shebaNo || '').trim(),
           firstName:String(data?.firstName || '').trim(),
   lastName:String(data?.lastName || '').trim(),
   mobile:String(data?.phoneNumber || mobile).trim(),

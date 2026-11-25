@@ -2380,6 +2380,8 @@ function buildHotelContractPayload(
 
   customerId:4,
 
+  companyId: getLoggedInCompanyId(),
+
   userName:
    getHotelLoginMobile(),
 
@@ -3031,6 +3033,8 @@ function buildHotelUpdateContractPayload({
 
   ...addResponse,
 
+  companyId: normalizeCompanyId(addPayload?.companyId),
+
   id:
    contractId,
 
@@ -3141,6 +3145,16 @@ function getHotelRecipientMobile(contact){
  }
  return mobile
 }
+function normalizeCompanyId(value) {
+ if (typeof value !== 'number' && typeof value !== 'string') return null
+ if (String(value).trim() === '') return null
+ const companyId = Number(value)
+ return Number.isSafeInteger(companyId) && companyId > 0 ? companyId : null
+}
+function getLoggedInCompanyId() {
+ const user = getUserData()
+ return normalizeCompanyId(user?.companyId ?? user?.data?.companyId)
+}
 function getUserData(){
 
  const userCookie=
@@ -3223,259 +3237,49 @@ function handleEditHotelRoom(){
  })
 
 }
-function createHotelPaymentData(){
-
- const totalPrice =
-  Number(hotelFinalPrice.value || 0)
-
- if(
-  !Number.isFinite(totalPrice) ||
-  totalPrice <= 0
- ){
-  throw new Error(
-   'مبلغ کل قرارداد معتبر نیست'
-  )
+async function fetchPaymentAccount(){
+ const mobile=getHotelLoginMobile()
+ let response
+ try{
+  response=await $fetch(`https://api.ahuan.ir/api/Auth/users/${encodeURIComponent(mobile)}`,{
+   method:'GET',cache:'no-store',retry:0
+  })
+ }catch(error){
+  console.error('Payment account request failed:',error)
+  throw new Error('دریافت اطلاعات حساب امکان‌پذیر نیست. لطفاً دوباره تلاش کنید.')
  }
-
-
- const email = String(
-  bookingData.value?.contact?.email ||
-  ''
- ).trim()
-
-
- const mobile = getHotelRecipientMobile(
-  bookingData.value?.contact || {}
- )
-
-
- /* =========================
-    اطلاعات کاربر
- ========================= */
-
- const userData =
-  getUserData()
-
-
- /* =========================
-    Role
- ========================= */
-
- const roles =
-  Array.isArray(userData?.roles)
-   ? userData.roles.map(role =>
-      String(role || '')
-       .trim()
-       .toLowerCase()
-     )
-   : []
-
-
- const isAdmin =
-  roles.includes('admin')
-
-
- const isHotel =
-  roles.includes('hotel')
-
-
- /* =========================
-    اعتبار کاربر
- ========================= */
-
- const hasNoLimit =
-  userData?.noLimit === true
-
-
- const userCredit =
-  Number(userData?.credit || 0)
-
-
- const hasEnoughCredit =
-  userData?.hasCredit === true &&
-  Number.isFinite(userCredit) &&
-  userCredit >= totalPrice
-
-
- /* =========================
-    پرداخت اعتباری / آژانسی
- ========================= */
-
- const isAgency =
-  isAdmin ||
-  isHotel ||
-  hasNoLimit ||
-  hasEnoughCredit
-
-
-//  console.log(
-//   'HOTEL PAYMENT ACCESS',
-//   {
-//    roles,
-//    isAdmin,
-//    isHotel,
-//    hasNoLimit,
-//    userCredit,
-//    totalPrice,
-//    hasEnoughCredit,
-//    isAgency
-//   }
-//  )
-
-
- /* =========================
-    سفرکارت
- ========================= */
-
- const travelCardUsed =
-  travelCardApplied.value === true
-
-
- const travelCardNumber =
-  travelCardUsed
-   ? String(
-      appliedTravelCardNumber.value ||
-      ''
-     ).trim()
-   : ''
-
-
- const availableCredit =
-  Math.max(
-   Number(
-    travelCardCredit.value || 0
-   ),
-   0
-  )
-
-
- const travelCardAmount =
-  travelCardUsed
-   ? Math.min(
-      availableCredit,
-      totalPrice
-     )
-   : 0
-
-
- const gatewayAmount =
-  Math.max(
-   totalPrice - travelCardAmount,
-   0
-  )
-
-
- /* =========================
-    Agency
- ========================= */
-
- if(isAgency){
-
-  return{
-   type: 'agency',
-
-   totalPrice,
-
-   payableAmount:
-    totalPrice,
-
-   travelCardUsed: false,
-
-   travelCardAmount: 0,
-
-   travelCardNumber: '',
-
-   email,
-
-   mobile
-  }
+ const noLimit=response?.data?.noLimit ?? response?.noLimit
+ const rawCredit=response?.data?.credit ?? response?.credit
+ if(typeof noLimit!=='boolean'||!['number','string'].includes(typeof rawCredit)||
+  String(rawCredit).trim()===''||!Number.isFinite(Number(rawCredit))){
+  throw new Error('اطلاعات اعتبار حساب از سرور به‌درستی دریافت نشد.')
  }
-
-
- /* =========================
-    پرداخت کامل سفرکارت
- ========================= */
-
- if(
-  travelCardUsed &&
-  travelCardAmount >= totalPrice
- ){
-
-  return{
-   type: 'travelcard',
-
-   totalPrice,
-
-   payableAmount:
-    totalPrice,
-
-   travelCardUsed: true,
-
-   travelCardAmount:
-    totalPrice,
-
-   travelCardNumber,
-
-   email,
-
-   mobile
-  }
+ const credit=Number(rawCredit)
+ if(noLimit||credit!==0) handleResetTravelCard()
+ return {noLimit,credit}
+}
+async function createHotelPaymentData(){
+ const {noLimit,credit}=await fetchPaymentAccount()
+ const totalPrice=Number(hotelFinalPrice.value||0)
+ if(!Number.isFinite(totalPrice)||totalPrice<=0) throw new Error('مبلغ کل قرارداد معتبر نیست')
+ const email=String(bookingData.value?.contact?.email||'').trim()
+ const mobile=getHotelRecipientMobile(bookingData.value?.contact||{})
+ const base={totalPrice,payableAmount:totalPrice,travelCardUsed:false,travelCardAmount:0,travelCardNumber:'',email,mobile}
+ if(noLimit) return {...base,type:'agency'}
+ if(credit!==0){
+  if(credit>=totalPrice) return {...base,type:'credit'}
+  throw new Error('امکان خرید وجود ندارد. لطفاً با پشتیبانی تماس بگیرید.')
  }
-
-
- /* =========================
-    سفرکارت + بانک
- ========================= */
-
- if(
-  travelCardUsed &&
-  travelCardAmount > 0 &&
-  gatewayAmount > 0
- ){
-
-  return{
-   type: 'travelcard-gateway',
-
-   totalPrice,
-
-   payableAmount:
-    gatewayAmount,
-
-   travelCardUsed: true,
-
-   travelCardAmount,
-
-   travelCardNumber,
-
-   email,
-
-   mobile
-  }
+ const cardCredit=Number(travelCardCredit.value)
+ const cardNumber=String(appliedTravelCardNumber.value||'').trim()
+ if(travelCardApplied.value&&cardNumber&&Number.isFinite(cardCredit)&&cardCredit>0){
+  const travelCardAmount=Math.min(cardCredit,totalPrice)
+  const full=travelCardAmount>=totalPrice
+  return {...base,type:full?'travelcard':'travelcard-gateway',
+   payableAmount:full?totalPrice:totalPrice-travelCardAmount,
+   travelCardUsed:true,travelCardAmount,travelCardNumber:cardNumber}
  }
-
-
- /* =========================
-    پرداخت بانکی
- ========================= */
-
- return{
-  type: 'gateway',
-
-  totalPrice,
-
-  payableAmount:
-   totalPrice,
-
-  travelCardUsed: false,
-
-  travelCardAmount: 0,
-
-  travelCardNumber: '',
-
-  email,
-
-  mobile
- }
+ return {...base,type:'gateway'}
 }
 function saveHotelPaymentSession({
  contractId,
@@ -3731,6 +3535,7 @@ async function continueHotelPayment(
 
  switch(paymentSession.type){
 
+  case'credit':
   case'agency':
 
    await router.push({
@@ -4400,7 +4205,7 @@ function extractSnappTripReservationCode(
 
 async function handleFinalPayment(){
 
- if(paymentLoading.value)
+ if(paymentLoading.value||travelCardLoading.value)
   return
 
  try{
@@ -4412,6 +4217,9 @@ async function handleFinalPayment(){
    throw new Error(
     'اطلاعات قرارداد موجود نیست.'
    )
+
+  // اعتبار حساب قبل از رزرو تامین‌کننده بررسی می‌شود.
+  await createHotelPaymentData()
 
   let providerResult=null
   let reservationCode=''
@@ -4516,14 +4324,15 @@ async function handleFinalPayment(){
    )
 
   /*
-   * منطق قبلی نوع پرداخت دست‌نخورده است:
+   * استعلام مجدد اعتبار و تعیین نوع پرداخت:
+   * credit
    * agency
    * travelcard
    * travelcard-gateway
    * gateway
    */
   const paymentData=
-   createHotelPaymentData()
+   await createHotelPaymentData()
 
   /*
    * اطلاعات در همان flight_payment_session ذخیره می‌شود
@@ -4549,7 +4358,7 @@ async function handleFinalPayment(){
 
   /*
    * ادامه Flow قبلی:
-   * agency/travelcard -> /verify
+   * agency/credit/travelcard -> /verify
    * gateway/travelcard-gateway -> Bank -> /verify
    */
   await continueHotelPayment(
@@ -4660,6 +4469,8 @@ const handleResetTravelCard=()=>{
 
 const handleApplyTravelCard=async(cardNumber)=>{
 
+ if(paymentLoading.value||travelCardLoading.value) return
+
  try{
 
   travelCardLoading.value=true
@@ -4676,6 +4487,12 @@ const handleApplyTravelCard=async(cardNumber)=>{
   if(!normalizedCardNumber)
    return
 
+  const {noLimit,credit}=await fetchPaymentAccount()
+  if(noLimit||credit!==0){
+   travelCardError.value='امکان استفاده از سفر کارت برای حساب کاربری شما وجود ندارد.'
+   return
+  }
+
   const response=
    await $fetch(
     `https://api.ahuan.ir/api/SafarCard/${encodeURIComponent(normalizedCardNumber)}`
@@ -4683,7 +4500,8 @@ const handleApplyTravelCard=async(cardNumber)=>{
 
   if(
    response &&
-   response.credit!==undefined
+   response.credit!==undefined && response.credit!==null &&
+   String(response.credit).trim()!=='' && Number.isFinite(Number(response.credit)) && Number(response.credit)>=0
   ){
 
    travelCardData.value=response
@@ -4726,7 +4544,7 @@ const handleApplyTravelCard=async(cardNumber)=>{
   }
   else{
    travelCardError.value=
-    'چنین شماره کارتی یافت نشد.'
+    error?.message||'چنین شماره کارتی یافت نشد.'
   }
 
   console.error(
