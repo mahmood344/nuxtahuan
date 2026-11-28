@@ -76,13 +76,7 @@ const selectProvince = province => {
 
 }
 
-const openPlace = place => {
 
-  if (!place?._id) return
-
-  navigateTo(`/mehmansara/${encodeURIComponent(place._id)}`)
-
-}
 
 await useAsyncData('mehmansara-places', async () => {
 
@@ -308,19 +302,13 @@ useHead({ title: 'مهمانسراهای بانک تجارت' })
 
         <div v-else class="place-grid">
 
-          <button
-
-            v-for="place in filteredPlaces"
-
-            :key="place._id"
-
-            class="place-card"
-
-            type="button"
-
-            @click="openPlace(place)"
-
-          >
+          <NuxtLink
+  v-for="place in filteredPlaces"
+  :key="place._id"
+  :to="`/mehmansara/${encodeURIComponent(place._id)}`"
+  class="place-card"
+  prefetch
+>
 
             <span class="card-shape" aria-hidden="true"></span>
 
@@ -362,7 +350,7 @@ useHead({ title: 'مهمانسراهای بانک تجارت' })
 
             </span>
 
-          </button>
+          </NuxtLink>
 
         </div>
 

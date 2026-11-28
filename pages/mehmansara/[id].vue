@@ -1,6 +1,6 @@
 <script setup>
 
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, nextTick } from 'vue'
 
 definePageMeta({ layout: 'menu' })
 
@@ -10,7 +10,7 @@ const id = computed(() => String(route.params.id ?? ''))
 
 const API = 'https://mehmansara.ahuan.ir/api/places'
 
-const { data: response, pending, error, refresh } = await useFetch(() => `${API}/${encodeURIComponent(id.value)}`, { method: 'GET', server: false })
+const { data: response, pending, status, error, refresh } = await useFetch(() => `${API}/${encodeURIComponent(id.value)}`, { method: 'GET', server: false, lazy: true, deep: false })
 
 const place = computed(() => response.value?.data ?? null)
 
@@ -21,12 +21,13 @@ const current = ref(0)
 const dialog = ref(null)
 
 const zoomed = ref(false)
+const galleryOpen = ref(false)
 
 const activeImage = computed(() => images.value[current.value])
 
 const previewImages = computed(() => images.value.slice(0, 5))
 
-function openGallery(index = 0) {
+async function openGallery(index = 0) {
 
   if (!images.value.length) return
 
@@ -34,11 +35,19 @@ function openGallery(index = 0) {
 
   zoomed.value = false
 
-  dialog.value?.showModal()
+  galleryOpen.value = true
+  await nextTick()
+  if (galleryOpen.value && dialog.value && !dialog.value.open) {
+    dialog.value.showModal()
+  }
 
 }
 
-function closeGallery() { dialog.value?.close() }
+function closeGallery() {
+  if (dialog.value?.open) dialog.value.close()
+  galleryOpen.value = false
+  zoomed.value = false
+}
 
 function move(step) {
 
@@ -114,7 +123,81 @@ const detailItems = p => [
 
       <!-- <NuxtLink to="/mehmansara" class="back"><i class="bi bi-arrow-right"></i> بازگشت به مهمانسراها</NuxtLink> -->
 
-      <div v-if="pending" class="empty-state">در حال دریافت اطلاعات مهمانسرا...</div>
+      <!-- Skeleton Loading -->
+<div
+  v-if="pending || status === 'idle'"
+  class="skeleton-wrapper"
+  role="status"
+  aria-live="polite"
+  aria-busy="true"
+>
+  <!-- Loading Header -->
+  <div class="loading-header">
+    <div class="loading-icon">
+      <div class="loading-ring"></div>
+      <i class="bi bi-house-door"></i>
+    </div>
+
+    <div class="loading-text">
+      <h3>در حال آماده‌سازی مهمانسرا</h3>
+      <p>در حال دریافت اطلاعات و تصاویر...</p>
+    </div>
+  </div>
+
+  <!-- Heading Skeleton -->
+  <div class="skeleton-heading" aria-hidden="true">
+    <div class="skeleton skeleton-title"></div>
+    <div class="skeleton skeleton-subtitle"></div>
+  </div>
+
+  <!-- Gallery Skeleton -->
+  <div class="skeleton-gallery" aria-hidden="true">
+    <div class="skeleton skeleton-main-image"></div>
+
+    <div
+      v-for="n in 4"
+      :key="n"
+      class="skeleton skeleton-small-image"
+    ></div>
+  </div>
+
+  <!-- Table Skeleton -->
+  <div class="skeleton-table" aria-hidden="true">
+    <div
+      v-for="n in 5"
+      :key="n"
+      class="skeleton-table-item"
+    >
+      <div class="skeleton skeleton-table-label"></div>
+      <div class="skeleton skeleton-table-value"></div>
+    </div>
+  </div>
+
+  <!-- Details Skeleton -->
+  <div class="skeleton-details" aria-hidden="true">
+    <div class="skeleton-sidebar">
+      <div class="skeleton skeleton-sidebar-title"></div>
+      <div class="skeleton skeleton-line"></div>
+      <div class="skeleton skeleton-line"></div>
+      <div class="skeleton skeleton-line short"></div>
+    </div>
+
+    <div class="skeleton-details-grid">
+      <div
+        v-for="n in 9"
+        :key="n"
+        class="skeleton-detail-item"
+      >
+        <div class="skeleton skeleton-detail-icon"></div>
+
+        <div class="skeleton-detail-text">
+          <div class="skeleton skeleton-detail-label"></div>
+          <div class="skeleton skeleton-detail-value"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
       <div v-else-if="error || !place" class="empty-state">دریافت اطلاعات مهمانسرا انجام نشد.<button class="retry" @click="refresh()">تلاش مجدد</button></div>
 
@@ -132,7 +215,7 @@ const detailItems = p => [
 
         :aria-label="`نمایش تصویر ${i+1}`" @click="openGallery(i)">
 
-        <img :src="img.image" :alt="img.description || place.name" :loading="i === 0 ? 'eager' : 'lazy'" />
+        <img :src="img.image" :alt="img.description || place.name" :loading="i === 0 ? 'eager' : 'lazy'" decoding="async" />
 
         <span v-if="i === 4 && images.length > 5" class="more-overlay">+{{ images.length - 5 }} تصویر</span>
 
@@ -144,9 +227,9 @@ const detailItems = p => [
 
     <dialog ref="dialog" class="lightbox" aria-label="گالری تصاویر مهمانسرا" dir="rtl"
 
-      @keydown.left.prevent="move(1)" @keydown.right.prevent="move(-1)" @click.self="closeGallery">
+      @close="galleryOpen = false; zoomed = false" @keydown.left.prevent="move(1)" @keydown.right.prevent="move(-1)" @click.self="closeGallery">
 
-      <div v-if="activeImage" class="lightbox-layout">
+      <div v-if="galleryOpen && activeImage" class="lightbox-layout">
 
         <header class="lightbox-header">
 
@@ -162,7 +245,7 @@ const detailItems = p => [
 
           <div class="image-scroll" :class="{zoomed}">
 
-            <img :key="current" :src="activeImage.image" :alt="activeImage.description || place.name" />
+            <img :key="current" :src="activeImage.image" :alt="activeImage.description || place.name" decoding="async" />
 
           </div>
 
@@ -178,7 +261,7 @@ const detailItems = p => [
 
         <div class="lightbox-thumbs" v-if="images.length > 1">
 
-          <button v-for="(img,i) in images" :key="img._id || i" type="button" :class="{selected: current === i}" :aria-label="`تصویر ${i+1}`" :aria-pressed="current === i" @click="current = i; zoomed = false"><img :src="img.image" :alt="img.description || `تصویر ${i+1}`" loading="lazy" /></button>
+          <button v-for="(img,i) in images" :key="img._id || i" type="button" :class="{selected: current === i}" :aria-label="`تصویر ${i+1}`" :aria-pressed="current === i" @click="current = i; zoomed = false"><img :src="img.image" :alt="img.description || `تصویر ${i+1}`" loading="lazy" decoding="async" /></button>
 
         </div>
 
@@ -189,7 +272,7 @@ const detailItems = p => [
 
         <!-- <h2 class="section-title">اطلاعات مهمانسرا</h2> -->
 
-        <div class="table-scroll"><table class="places-table"><thead><tr><th>نام مهمانسرا</th><th>استان</th><th>شهر</th><th>کلیددار</th><th>موبایل</th></tr></thead><tbody><tr><td>{{ place.name }}</td><td>{{ place.province }}</td><td>{{ place.city }}</td><td>{{ place.keyHolder || '—' }}</td><td dir="ltr">{{ place.mobile || '—' }}</td></tr></tbody></table></div>
+        <div class="table-scroll"><table class="places-table" aria-label="اطلاعات مهمانسرا"><thead><tr><th>نام مهمانسرا</th><th>استان</th><th>شهر</th><th>کلیددار</th><th>موبایل</th></tr></thead><tbody><tr><td data-label="نام مهمانسرا"><span>{{ place.name }}</span></td><td data-label="استان"><span>{{ place.province }}</span></td><td data-label="شهر"><span>{{ place.city }}</span></td><td data-label="کلیددار"><span>{{ place.keyHolder || '—' }}</span></td><td data-label="موبایل"><span dir="ltr">{{ place.mobile || '—' }}</span></td></tr></tbody></table></div>
 
         <!-- <h2 class="section-title">امکانات و اطلاعات تکمیلی</h2> -->
 
@@ -262,5 +345,471 @@ const detailItems = p => [
 @media(max-width:700px){.gallery-grid{height:clamp(220px,65vw,340px);grid-template-columns:2fr 1fr;grid-template-rows:repeat(2,minmax(0,1fr));border-radius:14px}.gallery-tile:nth-child(n+4){display:none}.count-1{grid-template-columns:1fr;grid-template-rows:1fr}.count-2{grid-template-rows:1fr}.show-all{bottom:9px;left:9px;padding:8px 10px;font-size:11px}.lightbox-layout{padding:10px}.lightbox-thumbs button{flex-basis:65px;height:48px}}
 
 @media(prefers-reduced-motion:reduce){.gallery-tile img{transition:none}}
+/* ==============================
+   Skeleton Loading
+================================ */
 
+.skeleton-wrapper {
+  width: 100%;
+  animation: skeleton-enter .25s ease;
+}
+
+@keyframes skeleton-enter {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* Loading Header */
+
+.loading-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 22px;
+  margin-bottom: 26px;
+  background: #fff;
+  border: 1px solid #e9e9f1;
+  border-radius: 20px;
+}
+
+.loading-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: color-mix(
+    in srgb,
+    var(--primary) 5%,
+    white
+  );
+  color: var(--primary);
+}
+
+.loading-icon i {
+  font-size: 25px;
+}
+
+.loading-ring {
+  position: absolute;
+  inset: 0;
+  border: 2px solid color-mix(
+    in srgb,
+    var(--primary) 12%,
+    white
+  );
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: loading-spin 1s linear infinite;
+}
+
+@keyframes loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-text h3 {
+  margin: 0 0 6px;
+  color: var(--primary);
+  font-size: 15px;
+  font-weight: 850;
+}
+
+.loading-text p {
+  margin: 0;
+  color: #8c96aa;
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+/* Shimmer Animation */
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: #e8e9f0;
+  border-radius: 8px;
+}
+
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, .65),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: skeleton-shimmer 1.7s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Heading */
+
+.skeleton-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 22px 0;
+}
+
+.skeleton-title {
+  width: 260px;
+  max-width: 75%;
+  height: 28px;
+}
+
+.skeleton-subtitle {
+  width: 160px;
+  max-width: 50%;
+  height: 13px;
+}
+
+/* Gallery */
+
+.skeleton-gallery {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  height: clamp(300px, 34vw, 420px);
+  overflow: hidden;
+  border-radius: 20px;
+  margin-bottom: 24px;
+}
+
+.skeleton-main-image {
+  grid-row: span 2;
+}
+
+.skeleton-small-image,
+.skeleton-main-image {
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+}
+
+/* Table */
+
+.skeleton-table {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+  background: white;
+  border: 1px solid #e9e9f1;
+  border-radius: 18px;
+}
+
+.skeleton-table-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.skeleton-table-label {
+  width: 65%;
+  height: 12px;
+}
+
+.skeleton-table-value {
+  width: 85%;
+  height: 16px;
+}
+
+/* Details */
+
+.skeleton-details {
+  display: grid;
+  grid-template-columns: minmax(300px, 1fr) minmax(0, 2fr);
+  gap: 32px;
+  padding: 30px;
+  background: white;
+  border: 1px solid #e9e9f1;
+  border-radius: 24px;
+}
+
+.skeleton-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-left: 24px;
+  border-left: 1px solid #ededf4;
+}
+
+.skeleton-sidebar-title {
+  width: 45%;
+  height: 22px;
+  margin-bottom: 10px;
+}
+
+.skeleton-line {
+  width: 100%;
+  height: 13px;
+}
+
+.skeleton-line.short {
+  width: 65%;
+}
+
+.skeleton-details-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.skeleton-detail-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 85px;
+  padding: 12px;
+  border-bottom: 1px solid #eeeef3;
+}
+
+.skeleton-detail-icon {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: 13px;
+}
+
+.skeleton-detail-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.skeleton-detail-label {
+  width: 80%;
+  height: 10px;
+}
+
+.skeleton-detail-value {
+  width: 60%;
+  height: 14px;
+}
+
+/* Tablet */
+
+@media (max-width: 1000px) {
+  .skeleton-details {
+    grid-template-columns: 1fr;
+    padding: 24px;
+    gap: 24px;
+  }
+
+  .skeleton-sidebar {
+    border-left: 0;
+    padding-left: 0;
+  }
+
+  .skeleton-details-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Mobile */
+
+@media (max-width: 700px) {
+  .loading-header {
+    padding: 14px;
+    gap: 12px;
+    border-radius: 15px;
+    margin-bottom: 20px;
+  }
+
+  .loading-icon {
+    width: 48px;
+    height: 48px;
+  }
+
+  .loading-icon i {
+    font-size: 21px;
+  }
+
+  .loading-text h3 {
+    font-size: 13px;
+  }
+
+  .loading-text p {
+    font-size: 11px;
+  }
+
+  .skeleton-gallery {
+    height: clamp(220px, 65vw, 340px);
+    grid-template-columns: 2fr 1fr;
+    border-radius: 14px;
+  }
+
+  .skeleton-small-image:nth-child(n+4) {
+    display: none;
+  }
+
+  .skeleton-table {
+    padding: 14px 10px;
+    gap: 8px;
+  }
+
+  .skeleton-table-label {
+    width: 85%;
+    height: 9px;
+  }
+
+  .skeleton-table-value {
+    height: 12px;
+  }
+
+  .skeleton-details {
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .skeleton-detail-item {
+    padding: 8px 0;
+    min-height: 70px;
+    gap: 8px;
+  }
+
+  .skeleton-detail-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+  }
+}
+
+/* Accessibility */
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after,
+  .loading-ring,
+  .skeleton-wrapper {
+    animation: none;
+  }
+}
+
+/* Compact top spacing */
+.mehmansara-page { padding-top: 10px; }
+.page-wrap { margin-top: 0; }
+.heading { margin: 0 0 16px; }
+.skeleton-wrapper { margin-top: 0; padding-top: 0; }
+.loading-header { margin-top: 0; margin-bottom: 12px; padding: 12px 16px; }
+.skeleton-heading { margin: 12px 0; gap: 8px; }
+@media (max-width: 700px) {
+  .mehmansara-page { padding-top: 6px; }
+  .loading-header { padding: 10px 12px; margin-bottom: 10px; }
+  .skeleton-heading { margin: 10px 0; }
+  .heading { margin: 0 0 12px; }
+}
+
+/* Responsive layout overrides */
+.mehmansara-page { box-sizing: border-box; width: 100%; min-width: 0; min-height: 100dvh; }
+.page-wrap, .gallery, .gallery-grid, .details-card, .details-side, .details-grid, .skeleton-wrapper, .skeleton-details, .skeleton-details-grid, .table-scroll { min-width: 0; max-width: 100%; box-sizing: border-box; }
+.heading h1, .detail-section p, .detail-item strong, .places-table td, .lightbox-caption { overflow-wrap: anywhere; }
+.detail-item > div { flex: 1; }
+.lightbox { height: 100dvh; }
+.lightbox-layout { min-height: 0; padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+.lightbox-header > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lightbox-header > button, .lightbox-header > span:nth-child(2) { flex-shrink: 0; }
+.lightbox-caption { max-height: 15dvh; overflow-y: auto; }
+@media (max-width: 1000px) {
+  .details-card, .skeleton-details { gap: 18px; padding: 20px; }
+  .details-side, .skeleton-sidebar { border-left: 0; padding-left: 0; padding-bottom: 16px; border-bottom: 1px solid #ededf4; }
+  .detail-item { min-height: 86px; }
+}
+@media (max-width: 700px) {
+  .mehmansara-page { padding: 6px 12px 24px; }
+  .heading h1 { font-size: clamp(18px, 4.8vw, 22px); line-height: 1.6; }
+  .heading p { font-size: 12px; }
+  .gallery { margin-bottom: 14px; }
+  .gallery-grid, .skeleton-gallery { height: clamp(180px, 60vw, 340px); gap: 4px; }
+  .gallery-grid.count-1 { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+  .gallery-grid.count-2 { grid-template-columns: 2fr 1fr; grid-template-rows: 1fr; }
+  .gallery-grid.count-4 .gallery-tile:nth-child(4) { grid-column: auto; }
+  .show-all { max-width: calc(100% - 18px); white-space: normal; }
+  .table-scroll { overflow: visible; margin-bottom: 14px; }
+  .places-table { display: block; width: 100%; min-width: 0; border: 1px solid #e9e9f1; border-radius: 16px; background: white; padding: 4px 12px; box-sizing: border-box; }
+  .places-table thead { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .places-table tbody, .places-table tr { display: block; width: 100%; }
+  .places-table td, .places-table tr > td:first-child, .places-table tr > td:last-child { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); align-items: center; gap: 10px; padding: 12px 0; border-radius: 0; background: transparent; text-align: start; font-size: 13px; border-bottom: 1px solid #eeeef3; }
+  .places-table td:last-child { border-bottom: 0; }
+  .places-table td::before { content: attr(data-label); color: #657086; font-size: 12px; font-weight: 600; }
+  .places-table td > span { min-width: 0; text-align: end; overflow-wrap: anywhere; font-weight: 700; }
+  .details-card, .skeleton-details { padding: 14px; gap: 14px; border-radius: 16px; }
+  .details-grid, .skeleton-details-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 10px; }
+  .detail-item, .skeleton-detail-item { padding: 10px 0; gap: 8px; min-height: 76px; }
+  .tile-icon, .skeleton-detail-icon { width: 36px; height: 36px; border-radius: 10px; }
+  .detail-heading h3 { font-size: 16px; }
+  .detail-label { font-size: 11px; }
+  .detail-item strong { font-size: 12px; }
+  .detail-section p { font-size: 13px; }
+  .detail-section + .detail-section { margin-top: 16px; padding-top: 16px; }
+  .skeleton-table { grid-template-columns: 1fr; padding: 4px 12px; gap: 0; margin-bottom: 14px; }
+  .skeleton-table-item { flex-direction: row; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #eeeef3; }
+  .skeleton-table-item:last-child { border-bottom: 0; }
+  .skeleton-table-label { width: 30%; height: 11px; }
+  .skeleton-table-value { width: 48%; height: 14px; }
+  .lightbox-layout { padding: 10px; padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+}
+@media (max-width: 360px) {
+  .mehmansara-page { padding-inline: 8px; }
+  .details-grid, .skeleton-details-grid { grid-template-columns: 1fr; }
+  .detail-item { min-height: 64px; }
+  .loading-header { gap: 8px; padding: 10px; }
+  .loading-text h3 { font-size: 12px; }
+}
+/* Desktop - Remove extra top spacing */
+@media (min-width: 1024px) {
+  .mehmansara-page {
+    padding-top: 0;
+  }
+
+  .page-wrap {
+    margin-top: 0;
+    padding-top: 0;
+  }
+
+  .heading {
+    margin-top: -70px;
+    margin-bottom: 16px;
+  }
+
+  .skeleton-wrapper {
+    margin-top: 0;
+    padding-top: 0;
+  }
+
+  .loading-header {
+    margin-top: 0;
+  }
+}
+@media (max-width: 700px) {
+  .places-table td[data-label="موبایل"] > span {
+    direction: ltr;
+    text-align: left;
+    justify-self: end;
+    width: 100%;
+    white-space: nowrap;
+  }
+}
 </style>
