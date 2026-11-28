@@ -4029,7 +4029,22 @@ const gregorianMonthOptions=[
   {label:'November',value:'11'},
   {label:'December',value:'12'}
 ]
-
+const airlineOfficeCodes = [
+  { code: 'I3', username: 'THR155' },
+  { code: 'W5', username: 'THR0498' },
+  { code: 'Y9', username: 'THR100' },
+  { code: 'J1', username: 'THR158' },
+  { code: 'QB', username: 'THR166' },
+  { code: 'HH', username: 'THR168' },
+  { code: 'EP', username: 'THR100' },
+  { code: 'ZV', username: 'THR197' },
+  { code: 'NV', username: 'THR100' },
+  { code: 'VR', username: 'THR215' },
+  { code: 'IRZ', username: 'THR140' },
+  { code: 'FP', username: 'THR106' },
+  { code: 'CPN', username: 'THR100' },
+  { code: 'PA', username: 'THR226' }
+]
 const scrollableMenuProps={
   maxHeight:'220px',
   overflowY:'auto'
@@ -4144,7 +4159,7 @@ function isConfirmedTicket() {
 }
 function handleCancelTicket(row) {
 
-  if (!row)
+  if (!row?.canCancel || row.isCancelled)
     return
 
 
@@ -4557,7 +4572,20 @@ function getRouteCountTitle(contract) {
 }
 
 
+function isCancelledTicketStatus(value) {
+  return ['cancel', 'cancelled', 'canceled'].includes(
+    String(value ?? '').trim().toLowerCase()
+  )
+}
+
 function getContractStatusTitle(contract) {
+  if (
+    isCancelledTicketStatus(contract?.confirmStatus) ||
+    isCancelledTicketStatus(contract?.ticketStatus)
+  ) {
+    return 'لغو شده'
+  }
+
   const status = String(
     contract?.confirmStatus ||
     contract?.ticketStatus ||
@@ -5344,7 +5372,7 @@ const ticketRows=computed(()=>{
           cancellationStatus,
 
           isCancelled:Boolean(
-            ticketStatus==='cancelled'||
+            isCancelledTicketStatus(ticketStatus)||
             cancellationStatus===
               CANCELLATION_STATUS.SUCCESS||
             cancellationStatus===
@@ -5362,7 +5390,7 @@ const ticketRows=computed(()=>{
       : cancellationProviders[provider] && ticketNumber
   ) &&
   !flightExpired &&
-  ticketStatus !== 'cancelled' &&
+  !isCancelledTicketStatus(ticketStatus) &&
   !lockedStatuses.includes(cancellationStatus)
 ),
 
@@ -5546,112 +5574,86 @@ function downloadContractTicket(row) {
   navigateTo(`/downloadticket/${encodedContractId}`)
 }
 
-function downloadAirlineTicket(row){
+function downloadAirlineTicket(row) {
 
-  
-
-  if(!row){
-    toast.error(
-      'اطلاعات بلیط یافت نشد.'
-    )
+  if (!row) {
+    toast.error('اطلاعات بلیط یافت نشد.')
     return
   }
 
-  const airlineCode=
-    String(
-      row?.airlineCode||
-      row?.flight?.airlineIataCode||
-      ''
-    )
-      .trim()
-      .toUpperCase()
-
-  const airline=
-    (flightStore.airlines||[])
-      .find(item=>
-        String(item?.code||'')
-          .trim()
-          .toUpperCase()===
-        airlineCode
-      )
-
-  if(!airline){
-    toast.error(
-      'اطلاعات ایرلاین یافت نشد.'
-    )
-    return
-  }
-
-  const website=
-    String(
-      airline?.website||''
-    )
-      .trim()
-      .replace(/\/+$/,'')
-
-  if(!website){
-    toast.error(
-      'آدرس سایت ایرلاین تعریف نشده است.'
-    )
-    return
-  }
-
-  const pnr=
-    String(
-      row?.pnr||
-      row?.flight?.pnr||
-      ''
-    )
-      .trim()
-
-  if(!pnr){
-    toast.error(
-      'PNR بلیط یافت نشد.'
-    )
-    return
-  }
-
-  const ticketNo=
-    String(
-      row?.ticketNumber||
-      ''
-    )
-      .trim()
-
-  if(!ticketNo){
-    toast.error(
-      'شماره بلیط یافت نشد.'
-    )
-    return
-  }
-
- 
-
- const oc=
-  String(
-    airline?.credentials?.username||
+  const airlineCode = String(
+    row?.airlineCode ||
+    row?.flight?.airlineIataCode ||
     ''
   )
     .trim()
-    .split('.')[0]
+    .toUpperCase()
 
-  if(!oc){
-    toast.error(
-      'کد دفتر ایرلاین تعریف نشده است.'
+  // دریافت اطلاعات ایرلاین از Store
+  const airline = (flightStore.airlines || [])
+    .find(item =>
+      String(item?.code || '')
+        .trim()
+        .toUpperCase() === airlineCode
     )
+
+  if (!airline) {
+    toast.error('اطلاعات ایرلاین یافت نشد.')
     return
   }
 
-  const url=
-    `${website}/TicketPrint.aspx`+
-    `?PNR=${encodeURIComponent(pnr)}`+
-    `&TicketNo=${encodeURIComponent(ticketNo)}`+
-    `&OC=${encodeURIComponent(oc)}`+
+  const website = String(
+    airline?.website || ''
+  )
+    .trim()
+    .replace(/\/+$/, '')
+
+  if (!website) {
+    toast.error('آدرس سایت ایرلاین تعریف نشده است.')
+    return
+  }
+
+  const pnr = String(
+    row?.pnr ||
+    row?.flight?.pnr ||
+    ''
+  ).trim()
+
+  if (!pnr) {
+    toast.error('PNR بلیط یافت نشد.')
+    return
+  }
+
+  const ticketNo = String(
+    row?.ticketNumber || ''
+  ).trim()
+
+  if (!ticketNo) {
+    toast.error('شماره بلیط یافت نشد.')
+    return
+  }
+
+  // دریافت Office Code از آرایه داخلی Profile
+  const oc = airlineOfficeCodes.find(
+    item => item.code === airlineCode
+  )?.username || ''
+
+  if (!oc) {
+    toast.error('کد دفتر ایرلاین تعریف نشده است.')
+    return
+  }
+
+  const url =
+    `${website}/TicketPrint.aspx` +
+    `?PNR=${encodeURIComponent(pnr)}` +
+    `&TicketNo=${encodeURIComponent(ticketNo)}` +
+    `&OC=${encodeURIComponent(oc)}` +
     `&lang=FA`
 
   window.open(
     url,
-    '_blank'
+    '_blank',
+    'noopener,noreferrer'
   )
 }
 function unwrapApiResponse(response){
@@ -6675,7 +6677,7 @@ function isEveryContractTicketCancelled(
           .trim()
           .toLowerCase()
 
-        return status==='cancelled'
+        return isCancelledTicketStatus(status)
       })
   )
 }
@@ -6703,9 +6705,9 @@ function applyCancelledTicketStatus(
   }
 
   if(row.flightIndex===0){
-    passenger.goTicketStatus='cancelled'
+    passenger.goTicketStatus='cancel'
   }else{
-    passenger.retTicketStatus='cancelled'
+    passenger.retTicketStatus='cancel'
   }
 
   contract.reduceFlightLoad=1
@@ -6716,8 +6718,8 @@ function applyCancelledTicketStatus(
       contract
     )
   ){
-    contract.ticketStatus='cancelled'
-    contract.confirmStatus='cancelled'
+    contract.ticketStatus='cancel'
+    contract.confirmStatus='cancel'
   }
 }
 
@@ -8921,7 +8923,7 @@ watch(
   }
 }
 </style>
-/*
+<!--
 |--------------------------------------------------------------------------
 | FLOW کامل کنسل‌کردن بلیت در Profile
 |--------------------------------------------------------------------------
@@ -8971,7 +8973,7 @@ watch(
 | - Provider برای کنسلی Handler داشته باشد.
 | - شماره بلیت موجود باشد.
 | - زمان پرواز نگذشته باشد.
-| - وضعیت بلیت cancelled نباشد.
+| - وضعیت بلیت cancel، cancelled یا canceled نباشد.
 | - عملیات کنسلی قبلاً وارد وضعیت قفل‌شده نشده باشد.
 |
 | وضعیت‌های قفل‌شده:
@@ -9319,11 +9321,11 @@ watch(
 |
 | برای مسیر اول:
 |
-| goTicketStatus = 'cancelled'
+| goTicketStatus = 'cancel'
 |
 | برای مسیر دوم:
 |
-| retTicketStatus = 'cancelled'
+| retTicketStatus = 'cancel'
 |
 |--------------------------------------------------------------------------
 | مرحله 16: تنظیم Load قرارداد
@@ -9344,8 +9346,8 @@ watch(
 |
 | اگر تمام بلیت‌های تمام مسافران و تمام مسیرها کنسل شده باشند:
 |
-| ticketStatus = 'cancelled'
-| confirmStatus = 'cancelled'
+| ticketStatus = 'cancel'
+| confirmStatus = 'cancel'
 |
 |--------------------------------------------------------------------------
 | مرحله 18: Update قرارداد
@@ -9402,4 +9404,4 @@ watch(
 | از همین تکرار داخل flightJson ذخیره می‌شوند.
 |
 |--------------------------------------------------------------------------
-*/
+-->

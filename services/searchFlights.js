@@ -325,15 +325,9 @@ export async function searchAllProviders(searchParams){
   |--------------------------------------------------------------------------
   */
 
-  const niraAirlines=
-    (flightStore.airlines||[])
-      .filter(airline=>{
-        return(
-          airline?.credentials&&
-          airline.credentials.username&&
-          airline.credentials.password
-        )
-      })
+  const niraAirlines =
+  (flightStore.airlines || [])
+    .filter(airline => Boolean(airline?.code))
 
   const providerTasks=[]
 

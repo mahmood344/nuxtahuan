@@ -384,105 +384,91 @@ export const useFlightStore = defineStore('flights', {
 airportCache:{},
 airportLoading:{},
     airlines: [
-      {
-        code: 'I3',
-        name: 'آتا',
-        credentials: { username: 'THR155.WS', password: 'Ahuan1348' },
-        logo: '/imgs/flight/airlines/ata.png',
-        website:'http://ra.ataair.ir'
-      },
-    {
-        code: 'W5',
-        name: 'ماهان',
-        credentials: { username: 'THR0498.WS', password: '04479F' },
-        logo: '/imgs/flight/airlines/mahan.png',
-        website:'http://ra.ataair.ir'
-      },
-      {
-        code: 'Y9',
-        name: 'کیش‌ایر',
-        credentials: { username: 'THR100.WS', password: 'Ahuan1348' },
-        logo: '/imgs/flight/airlines/kishair.png',
-        website:'https://crs.kishairlines.ir'
-      },
-      {
-        code: 'J1',
-        name: 'معراج',
-        credentials: { username: 'THR158.WS', password: 'THR158AH' },
-        logo: '/imgs/flight/airlines/meraj.png',
-        website:'http://ra.meraj.aero'
-      },
-      {
-        code: 'QB',
-        name: 'قشم‌ایر',
-        credentials: { username: 'THR166.WS', password: 'Ahuan1348' },
-        logo: '/imgs/flight/airlines/gheshm.png',
-         website:'http://pra.qeshm-air.com'
-      },
-      {
-        code: 'HH',
-        name: 'تابان',
-        credentials: { username: 'THR168.WS', password: 'Ahuan1348' },
-        logo: '/imgs/flight/airlines/taban.png',
-        website:'http://epay.taban.aero'
-      },
-      {
-        code: 'EP',
-        name: 'آسمان',
-        credentials: { username: 'THR100.WS', password: 'Ahuan1348' },
-        logo: '/imgs/flight/airlines/aseman.png',
-        website:'http://ra.iaa.ir'
-      },
-      {
-        code: 'ZV',
-        name: 'زاگرس',
-        credentials: { username: 'THR197.WS', password: 'Ahuan1348' },
-        logo: '/imgs/flight/airlines/zagros.png',
-        website:'http://ra.zagrosairlines.com'
-      },
-      {
-        code: 'NV',
-        name: 'نفت',
-        credentials: { username: 'THR100.WS', password: 'Ahuan1348' },
-        logo: '/imgs/flight/airlines/naft.png',
-        website:'http://pra.karunair.ir'
-      },
-      {
-        code: 'VR',
-        name: 'وارش',
-        credentials: { username: 'THR215.WS', password: 'A2930' },
-        logo: '/imgs/flight/airlines/varesh.png',
-        website:'http://vr.nirasoft.ir'
-      },
-      {
-        code: 'IRZ',
-        name: 'ساها',
-        credentials: { username: 'THR140.WS', password: '123456789' },
-        logo: '/imgs/flight/airlines/saha.png',
-        website:'http://ra.sahaair.com/'
-      },
-      {
-        code: 'FP',
-        name: 'فلای‌پرشیا',
-        credentials: { username: 'THR106.WS', password: '123456789' },
-        logo: '/imgs/flight/airlines/flypersia.png',
-        website:'http://fp.nirasoft.ir'
-      },
-      {
-        code: 'CPN',
-        name: 'کاسپین',
-        credentials: { username: 'THR100.WS', password: 'Ahuan1348' },
-        logo: '/imgs/flight/airlines/caspian.png',
-        website:'http://ra.caspianairlines.com'
-      },
-      {
-        code: 'PA',
-        name: 'پارس‌ایر',
-        credentials: { username: 'THR226.WS', password: 'Ahouvan@2026' },
-        logo: '/imgs/flight/airlines/parsair1.png',
-        website:'https://nrs.parsair.ir/'
-      }
-    ],
+  {
+    code: 'I3',
+    name: 'آتا',
+    logo: '/imgs/flight/airlines/ata.png',
+    website: 'http://ra.ataair.ir'
+  },
+  {
+    code: 'W5',
+    name: 'ماهان',
+    logo: '/imgs/flight/airlines/mahan.png',
+    website: 'http://ra.ataair.ir'
+  },
+  {
+    code: 'Y9',
+    name: 'کیش‌ایر',
+    logo: '/imgs/flight/airlines/kishair.png',
+    website: 'https://crs.kishairlines.ir'
+  },
+  {
+    code: 'J1',
+    name: 'معراج',
+    logo: '/imgs/flight/airlines/meraj.png',
+    website: 'http://ra.meraj.aero'
+  },
+  {
+    code: 'QB',
+    name: 'قشم‌ایر',
+    logo: '/imgs/flight/airlines/gheshm.png',
+    website: 'http://pra.qeshm-air.com'
+  },
+  {
+    code: 'HH',
+    name: 'تابان',
+    logo: '/imgs/flight/airlines/taban.png',
+    website: 'http://epay.taban.aero'
+  },
+  {
+    code: 'EP',
+    name: 'آسمان',
+    logo: '/imgs/flight/airlines/aseman.png',
+    website: 'http://ra.iaa.ir'
+  },
+  {
+    code: 'ZV',
+    name: 'زاگرس',
+    logo: '/imgs/flight/airlines/zagros.png',
+    website: 'http://ra.zagrosairlines.com'
+  },
+  {
+    code: 'NV',
+    name: 'نفت',
+    logo: '/imgs/flight/airlines/naft.png',
+    website: 'http://pra.karunair.ir'
+  },
+  {
+    code: 'VR',
+    name: 'وارش',
+    logo: '/imgs/flight/airlines/varesh.png',
+    website: 'http://vr.nirasoft.ir'
+  },
+  {
+    code: 'IRZ',
+    name: 'ساها',
+    logo: '/imgs/flight/airlines/saha.png',
+    website: 'http://ra.sahaair.com/'
+  },
+  {
+    code: 'FP',
+    name: 'فلای‌پرشیا',
+    logo: '/imgs/flight/airlines/flypersia.png',
+    website: 'http://fp.nirasoft.ir'
+  },
+  {
+    code: 'CPN',
+    name: 'کاسپین',
+    logo: '/imgs/flight/airlines/caspian.png',
+    website: 'http://ra.caspianairlines.com'
+  },
+  {
+    code: 'PA',
+    name: 'پارس‌ایر',
+    logo: '/imgs/flight/airlines/parsair1.png',
+    website: 'https://nrs.parsair.ir/'
+  }
+],
 airlineIdMap : {
   I3: 489,
   Y9: 1016,

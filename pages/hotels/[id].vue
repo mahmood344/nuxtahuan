@@ -1445,6 +1445,12 @@ const router=useRouter()
 const flightStore=useFlightStore()
 const toast=useToast()
 
+function resetBookingSelection() {
+  flightStore.cancelAllPendingRequests()
+  flightStore.clearSelectedFlights()
+  hotelStore.clearRooms()
+}
+
 function getErrorMessage(
  error,
  fallback='خطایی رخ داده است'
@@ -3205,9 +3211,7 @@ async function handleHotelSearch(data){
     newCheckOut === checkOut.value
 
 
-  hotelStore.clearRooms()
-
-  flightStore.setCurrentStep(0)
+  resetBookingSelection()
 
   await nextTick()
 
@@ -3222,9 +3226,7 @@ async function handleHotelSearch(data){
 }
 function handleEditHotelRoom(){
 
- hotelStore.clearRooms()
-
- flightStore.setCurrentStep(0)
+ resetBookingSelection()
 
 
  nextTick(()=>{
@@ -6927,12 +6929,8 @@ watch(
       )
 
 
-    if(searchChanged){
-
-      hotelStore.clearRooms()
-
-      flightStore.setCurrentStep(0)
-
+    if (!hasPreviousSearch || searchChanged) {
+      resetBookingSelection()
     }
 
 
