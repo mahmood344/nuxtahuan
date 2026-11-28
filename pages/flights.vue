@@ -19,7 +19,7 @@
    <FlightSearchPanel
   mode="aside"
   :showServices="true"
-  @flight-search="isFilterModalOpen = false"
+  @flight-search="handleNewFlightSearch"
 />
 <!-- showSearchResults -->
     <FilterFlight
@@ -368,7 +368,7 @@
     <FlightSearchPanel
   mode="aside"
   :showServices="true"
-  @flight-search="isFilterModalOpen = false"
+  @flight-search="handleNewFlightSearch"
 />
 
      <!-- فیلتر واقعی پرواز -->
@@ -466,7 +466,9 @@
 
 <script setup>
 import moment from 'moment-jalaali'
-import { toGregorian } from 'jalaali-js'
+import jalaali from 'jalaali-js'
+
+const { toGregorian } = jalaali
 import {
   ref,
   reactive,
@@ -478,6 +480,7 @@ import {
 } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useFlightStore } from '~/stores/flights'
+import { useHotelStore } from '~/stores/hotels'
 import { searchAllProviders } from '~/services/searchFlights'
 import{
   getParoCredit,
@@ -489,6 +492,13 @@ moment.loadPersian({ usePersianDigits: false, dialect: 'persian-modern' })
 const route = useRoute()
 const router = useRouter()
 const flightStore = useFlightStore()
+const hotelStore = useHotelStore()
+
+function resetBookingSelection() {
+  flightStore.cancelAllPendingRequests()
+  flightStore.clearSelectedFlights()
+  hotelStore.clearRooms()
+}
 const showBackToTop = ref(false)
 
 function handleWindowScroll() {
@@ -1282,9 +1292,7 @@ const handleSelectFlight = async (flight) => {
 }
 
 const handleEditFlight = async () => {
-  flightStore.cancelAllPendingRequests()
-  flightStore.clearSelectedFlights()
-  flightStore.setCurrentStep(0)
+  resetBookingSelection()
 
   const departureDate = String(
     baseSearchParamsFromRoute.value.departureDate || ''
@@ -1305,6 +1313,17 @@ const handleEditFlight = async () => {
   )
 
   await scrollToTop()
+}
+
+// Explicit search with unchanged query still starts a new selection.
+const handleNewFlightSearch = async () => {
+  isFilterModalOpen.value = false
+  await nextTick()
+  if (flightStore.selectedDepartureFlight || flightStore.selectedReturnFlight || flightStore.currentStep > 0) {
+    await handleEditFlight()
+  } else {
+    hotelStore.clearRooms()
+  }
 }
 
 const editFlightButtonLabel = computed(() => {
@@ -1382,6 +1401,7 @@ async function loadRouteBasicInfo(){
   }
 }
 onMounted(async()=>{
+  resetBookingSelection()
   window.addEventListener('scroll', handleWindowScroll, {
     passive: true
   })
@@ -1393,8 +1413,6 @@ onMounted(async()=>{
     String(
       route.query.departDate||''
     )
-
-  flightStore.clearSelectedFlights()
 
   if(qDate){
     selectedDate.value=
@@ -1453,7 +1471,7 @@ watch(
     route.query.flightType,
     route.query.travelType
   ],
-  async()=>{
+  async(newValues, oldValues)=>{
     const searchParams=
       baseSearchParamsFromRoute.value
 
@@ -1465,18 +1483,25 @@ watch(
       return
     }
 
-    /*
-     * هر بار Query عوض شد:
-     * Airline + Airportهای Route جدید
-     */
-    await loadRouteBasicInfo()
+    // Preserve the outbound only when changing the return date alone.
+    const returnDateOnlyChanged = Array.isArray(oldValues) &&
+      newValues[3] !== oldValues[3] &&
+      newValues.every((value, index) => index === 3 || value === oldValues[index])
 
-    const isSelectingReturnFlight=
-      searchParams.travelType===
-        'round-trip'&&
-      flightStore.currentStep===1&&
-      !!flightStore
-        .selectedDepartureFlight
+    const isSelectingReturnFlight =
+      returnDateOnlyChanged &&
+      searchParams.travelType === 'round-trip' &&
+      flightStore.currentStep === 1 &&
+      !!flightStore.selectedDepartureFlight
+
+    if (isSelectingReturnFlight) {
+      flightStore.cancelAllPendingRequests()
+      hotelStore.clearRooms()
+    } else {
+      resetBookingSelection()
+    }
+
+    await loadRouteBasicInfo()
 
     const activeDate=
       isSelectingReturnFlight
@@ -1487,9 +1512,6 @@ watch(
       String(activeDate||'')
         .replace(/\//g,'-')
         .trim()
-
-    flightStore
-      .cancelAllPendingRequests()
 
     if(isSelectingReturnFlight){
       await performSearch(
@@ -1511,9 +1533,6 @@ watch(
 
       return
     }
-
-    flightStore.clearSelectedFlights()
-    flightStore.setCurrentStep(0)
 
     await performSearch(
       buildSearchPayload({

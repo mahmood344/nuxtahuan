@@ -14,17 +14,38 @@ const emit = defineEmits(['add-product', 'edit-product', 'delete-product'])
 
 
 
-const adminCookie = useCookie('admin', { path: '/', sameSite: 'lax' })
+// Decode cookie values in both browser and SSR.
+function decodeCookie(value, fallback = null) {
+  if (typeof value !== 'string' || !value) return fallback
 
+  try {
+    const bytes = Uint8Array.from(atob(value), char => char.charCodeAt(0))
+    return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes))
+  } catch {
+    return fallback
+  }
+}
 
+// Encode cookie names (ASCII names, no Base64 padding).
+function encodeCookieName(name) {
+  return btoa(name).replace(/=+$/, '')
+}
 
-const isAdmin = computed(() => adminCookie.value === true || adminCookie.value === 'true')
+const adminCookie = useCookie(encodeCookieName('admin'), { path: '/', sameSite: 'lax' })
+const rolesCookie = useCookie(encodeCookieName('roles'), { path: '/', sameSite: 'lax' })
+
+const isAdmin = computed(() => {
+  const roles = decodeCookie(rolesCookie.value, [])
+  return decodeCookie(adminCookie.value, false) === true &&
+    Array.isArray(roles) && roles.includes('menu')
+})
 
 
 
 const logoutAdmin = async () => {
   if (savingProduct.value || deletingProduct.value) return
   adminCookie.value = null
+  rolesCookie.value = null
   editorOpen.value = false
   deleteProductTarget.value = null
   language.value = 'fa'

@@ -579,22 +579,14 @@ cabinKnown: cabinInfo.cabinKnown,
 export async function searchNiraFlightForAirline(
   airlineCode,
   params
-){
-  const flightStore=useFlightStore()
+) {
+  const flightStore = useFlightStore()
 
-  const creds=
-    flightStore.airlines?.find(
-      airline=>airline.code===airlineCode
-    )?.credentials
-
-  if(
-    !creds?.username||
-    !creds?.password
-  ){
-    return[]
+  if (!airlineCode) {
+    return []
   }
 
-  try{
+  try {
     const raw=await $fetch(
       `${BASE_URL}/Nira/Availability`,
       {
